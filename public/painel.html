@@ -149,6 +149,7 @@
     <div class="vozbloco"><h3>Cobrinha e narrador</h3>
       <div class="linha"><select id="v-cobra" aria-label="Voz da cobrinha"></select><button data-testar="cobra">Testar</button></div>
       <div class="linha"><select id="v-narrador" aria-label="Voz do narrador"></select><button data-testar="narrador">Testar</button></div></div>
+    <div class="vozbloco"><label><input type="checkbox" id="v-espectador"> Voz de espectador: cada pessoa ganha uma voz própria e o comentário é lido "com a voz dela"</label></div>
     <div class="linha"><button class="pri" id="b-salvar-vozes">Salvar vozes</button></div>
   </section>
 
@@ -222,7 +223,7 @@ function preencherConfig(c){
   $('usuario').value=c.usuario||'';
   $('m-cobrinha').setAttribute('aria-pressed',c.modo!=='abismo'); $('m-abismo').setAttribute('aria-pressed',c.modo==='abismo');
   for(const k of ['palhaco','serpente']){ $('v-'+k).value=c.vozes[k].voz; for(const q of ['tom','vel']){ $(`v-${k}-${q}`).value=c.vozes[k][q]; $(`o-${k}-${q}`).textContent=c.vozes[k][q]; } }
-  $('v-cobra').value=c.vozes.cobra; $('v-narrador').value=c.vozes.narrador;
+  $('v-cobra').value=c.vozes.cobra; $('v-narrador').value=c.vozes.narrador; $('v-espectador').checked=c.vozEspectador!==false;
   $('ia-modelo').value=c.openai.modelo; $('ia-chave').placeholder=c.openai.temChave?`chave salva (${c.openai.chave})`:'sk-...';
   $('aviso-ia').textContent=c.openai.temChave?'IA ligada: os personagens respondem com IA.':'Sem chave: os personagens usam frases prontas.'; $('aviso-ia').className='aviso'+(c.openai.temChave?' ok':'');
   $('mus-ligada').checked=c.musica.ligada!==false; $('mus-vol').value=c.musica.volume; $('o-mus-vol').textContent=c.musica.volume;
@@ -259,7 +260,7 @@ document.addEventListener('click',async ev=>{ const b=ev.target.closest('button'
 $('b-falar').onclick=async()=>{ const r=await api('falar',{quem:$('f-quem').value,texto:$('f-texto').value}); if(r.ok){ toast('Falando no jogo.'); $('f-texto').value=''; } else toast(r.erro||'Não deu certo.'); };
 for(const k of ['palhaco','serpente']) for(const q of ['tom','vel']) $(`v-${k}-${q}`).oninput=e=>$(`o-${k}-${q}`).textContent=e.target.value;
 async function salvarVozes(quieto){ const v=k=>({voz:$('v-'+k).value,tom:+$(`v-${k}-tom`).value,vel:+$(`v-${k}-vel`).value});
-  await api('config',{vozes:{palhaco:v('palhaco'),serpente:v('serpente'),cobra:$('v-cobra').value,narrador:$('v-narrador').value}}); if(!quieto) toast('Vozes salvas.'); }
+  await api('config',{vozEspectador:$('v-espectador').checked,vozes:{palhaco:v('palhaco'),serpente:v('serpente'),cobra:$('v-cobra').value,narrador:$('v-narrador').value}}); if(!quieto) toast('Vozes salvas.'); }
 $('b-salvar-vozes').onclick=()=>salvarVozes();
 $('b-ia-salvar').onclick=async()=>{ const chave=$('ia-chave').value.trim(); if(chave&&!chave.startsWith('sk-')){ toast('A chave da OpenAI começa com sk-'); return; }
   const e=await api('config',{openai:{...(chave?{chave}:{}),modelo:$('ia-modelo').value}}); $('ia-chave').value=''; cfgCarregada=false; mostrar(e); toast('IA salva.'); };

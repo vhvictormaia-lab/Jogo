@@ -51,6 +51,13 @@ const CFG = require('./config');
 const hz = (n) => (n >= 0 ? '+' : '') + Math.round(n) + 'Hz', pc = (n) => (n >= 0 ? '+' : '') + Math.round(n) + '%';
 const vozCobra = () => (process.env.VOZ || CFG.get().vozes.cobra || 'pt-BR-FranciscaNeural').trim();
 const vozNarrador = () => (process.env.VOZ_NARRADOR || CFG.get().vozes.narrador || 'pt-BR-AntonioNeural').trim();
+// Voz de espectador: cada pessoa ganha uma voz própria (sempre a mesma), que lê o comentário dela
+function vozEspectador(user) {
+  let h = 0; for (const c of String(user && user.id || 'x')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const V = ['pt-BR-AntonioNeural', 'pt-BR-FranciscaNeural', 'pt-BR-ThalitaMultilingualNeural'];
+  return { quem: 'espectador', voz: V[h % V.length], pitch: hz(-20 + (h >>> 3) % 51), rate: pc(-5 + (h >>> 9) % 21) };
+}
+const usaVozEspectador = () => CFG.get().vozEspectador !== false;
 // Abismo: cada personagem com a sua voz (tom e velocidade ajustáveis no painel)
 function vozesAbismo() {
   const v = CFG.get().vozes;
@@ -287,13 +294,15 @@ function criarVoz(broadcast, modoInicial = 'cobrinha') {
       if (ABISMO) {
         const partes = F.ABISMO.comentario(user, t);
         const quem = partes[1].quem;
+        if (usaVozEspectador()) partes[0] = { ...vozEspectador(user), texto: t, acao: null }; // a própria pessoa "lê" o comentário
         const persona = quem === 'palhaco'
           ? 'Você é o Palhaço do Abismo, um palhaço doido, engraçado e carinhoso de uma live interativa no TikTok. Ri muito (rá rá rá). '
           : 'Você é a Serpente das Trevas, uma serpente dramática e divertida de uma live interativa no TikTok. Alonga os S (ssss). ';
         return respostaIA(t, n, persona).then((ia) => { if (ia) partes[1].texto = ia; por(1, partes, { user, kind: 'comentario' }); });
       }
       respostaIA(t, n).then((ia) => {
-        por(1, [{ texto: lido, voz: vozNarrador() }, { texto: ia || responder(t, n), voz: vozCobra() }], { user, kind: 'comentario' });
+        const leitura = usaVozEspectador() ? { ...vozEspectador(user), texto: t } : { texto: lido, voz: vozNarrador() };
+        por(1, [leitura, { texto: ia || responder(t, n), voz: vozCobra() }], { user, kind: 'comentario' });
       });
     },
     compartilhou(user) {

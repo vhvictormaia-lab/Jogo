@@ -55,6 +55,7 @@ module.exports = function painel(ctx) {
       novo.vozes = nv;
     }
     if (b.musica) novo.musica = { ligada: b.musica.ligada !== undefined ? !!b.musica.ligada : atual.musica.ligada, volume: num(b.musica.volume ?? atual.musica.volume, 0, 100, 22) };
+    if (b.vozEspectador !== undefined) novo.vozEspectador = !!b.vozEspectador;
     if (b.falaSolta) { const mi = num(b.falaSolta.min, 5, 600, 20), ma = num(b.falaSolta.max, 5, 600, 30); novo.falaSolta = { min: Math.min(mi, ma), max: Math.max(mi, ma) }; }
     if (b.atualizacao) {
       novo.atualizacao = {};

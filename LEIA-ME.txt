@@ -18,6 +18,8 @@ Ao abrir o atalho, o painel abre sozinho no navegador: http://localhost:3000/pai
 - Eventos de teste (rosa, galáxia, GG, seguir, compartilhar, curtidas, comentário, entrou).
 - TOP 6 com botão de zerar, e a lista do que está acontecendo na live.
 - Vozes: escolher a voz de cada personagem, ajustar tom e velocidade, e testar.
+- Voz de espectador: cada pessoa ganha uma voz própria (sempre a mesma) e o comentário é lido "com a voz dela"
+  antes do personagem responder. Dá pra desligar no painel.
 - Inteligência artificial: colar ou remover a chave da OpenAI e escolher o modelo.
 - Música: ligar/desligar e volume; tempo entre as falas sozinhas.
 - Cantorias: enviar um MP3 para cada presente direto pelo painel.

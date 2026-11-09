@@ -17,6 +17,7 @@ const PADRAO = {
     palhaco: { voz: 'pt-BR-AntonioNeural', tom: -14, vel: -6 },
     serpente: { voz: 'pt-BR-FranciscaNeural', tom: -28, vel: -14 },
   },
+  vozEspectador: true,                    // cada espectador lê o próprio comentário com uma voz só dele
   musica: { ligada: true, volume: 22 },   // 0 a 100
   falaSolta: { min: 20, max: 30 },        // segundos entre as falas sozinhas
   atualizacao: { repo: 'vhvictormaia-lab/Jogo', token: '', instalado: '' },

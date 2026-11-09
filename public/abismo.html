@@ -236,7 +236,7 @@ function rodarFaixa(){ if(performance.now()<faixaAte||!faixaQ.length) return; co
 // ---------- falas (voz do servidor; boca mexe conforme o volume) ----------
 let acFala=null, analisador=null; const buf=new Uint8Array(256);
 // vozes sombrias: tom mais grave (toca mais devagar sem corrigir o tom) + eco de circo abandonado
-const SOMBRIO={palhaco:{vel:.88,eco:.32,rev:.45},serpente:{vel:.8,eco:.4,rev:.6}};
+const SOMBRIO={palhaco:{vel:.88,eco:.32,rev:.45},serpente:{vel:.8,eco:.4,rev:.6},espectador:{vel:1,eco:.1,rev:.15}};
 let efeitoEntrada=null;
 function montarEfeitos(){
   const ac=acFala; analisador=ac.createAnalyser(); analisador.fftSize=512; analisador.connect(ac.destination);
@@ -266,10 +266,11 @@ function proximaFala(){
   const partes=m.partes&&m.partes.length?m.partes:[{quem:'palhaco',texto:m.text,url:m.url||null,acao:null}];
   if(m.user){ $('placa-t').textContent=m.user.name; $('placa-av').style.display=m.user.avatar?'':'none'; $('placa-av').style.backgroundImage=m.user.avatar?`url('${m.user.avatar}')`:''; }
   let k=0;
-  const tocarParte=()=>{ if(falaAtual!==m) return; if(k>=partes.length) return fimFala(); const pa=partes[k++]; const P=PERS[pa.quem]||palhaco;
-    m.quem=P; if(pa.acao) P.acao(pa.acao); if(pa.acao==='cantar'){ musica.cantoria(true); trupe.forEach(d=>d.acao('dancar',8)); }
-    focar(P,9000); if(m.user) $('placa').classList.add('on');
-    const fim=()=>{ musica.cantoria(false); P.falar(0); tocarParte(); };
+  const tocarParte=()=>{ if(falaAtual!==m) return; if(k>=partes.length) return fimFala(); const pa=partes[k++];
+    const P=pa.quem==='espectador'?null:(PERS[pa.quem]||palhaco); // espectador lendo o próprio comentário: nenhum personagem mexe a boca
+    m.quem=P; if(P&&pa.acao) P.acao(pa.acao); if(pa.acao==='cantar'){ musica.cantoria(true); trupe.forEach(d=>d.acao('dancar',8)); }
+    if(P){ focar(P,9000); if(m.user) $('placa').classList.add('on'); }
+    const fim=()=>{ musica.cantoria(false); if(P) P.falar(0); tocarParte(); };
     if(pa.url){ const a=new Audio(pa.url); a.crossOrigin='anonymous'; const sb=SOMBRIO[pa.quem]||SOMBRIO.palhaco; a.preservesPitch=false; a.mozPreservesPitch=false; a.webkitPreservesPitch=false; a.playbackRate=sb.vel; m.audio=a; m.analisa=ligarAnalisador(a,pa.quem); a.onended=fim; a.onerror=fim; a.play().catch(()=>setTimeout(fim,1500)); }
     else falarNavegador(pa.texto,pa.quem,fim,m);
   };
