@@ -183,6 +183,7 @@ function handleLike(user, likes) {
   broadcast({ type: 'like', user, likes });
   somar(user, likes * PTS.curtida);
   likesTotal += likes; voz.curtidas(likesTotal);
+  if (noQuiz()) quiz.curtidas(user, likes);
 }
 function handleChat(user, text) {
   stats.comentarios++; registrar('comentario', user, text);

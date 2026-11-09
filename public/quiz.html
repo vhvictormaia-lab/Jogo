@@ -114,7 +114,7 @@
   #feed{position:absolute;left:52px;right:52px;bottom:8px;height:64px;z-index:4;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;overflow:hidden;
     -webkit-mask-image:linear-gradient(transparent,#000 40%);mask-image:linear-gradient(transparent,#000 40%)}
   #feed .m{font:800 22px Nunito,sans-serif;color:#e8cfcf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #feed .m b{color:#ff8a8a;margin-right:8px} #feed .m.ok{color:var(--verde)}
+  #feed .m b{color:#ff8a8a;margin-right:8px} #feed .m.ok{color:var(--verde)} #feed .m.quase{color:var(--ouro)}
   #conn{position:absolute;right:40px;top:118px;z-index:5;font:800 18px Nunito,sans-serif;color:rgba(255,200,200,.5)}
   /* ---------- efeitos ---------- */
   .fx{position:absolute;inset:0;z-index:20;pointer-events:none}
@@ -318,7 +318,7 @@ function falarNavegador(texto,quem,fim,m){ m.analisa=false; m.simula=true;
     ss.speak(u); setTimeout(()=>{ if(!ok&&!ss.speaking) fim(); },900+texto.length*90); }catch(e){ setTimeout(fim,1500); } }
 
 // ---------- LED (letreiro) ----------
-const LED_PADRAO=['💬 ESCREVA A RESPOSTA NO <b>CHAT</b>','🏆 OS 3 MAIS RÁPIDOS GANHAM <b>10 · 6 · 4</b> PONTOS','🔥 ACERTOU <b>3 SEGUIDAS</b> = PONTOS EM DOBRO','🌹 <b>ROSA</b> = UMA LETRA DE DICA','🍩 <b>ROSQUINHA</b> = PONTOS x2 NAS PRÓXIMAS 3','🦁 <b>100+ MOEDAS</b> = PERGUNTA BÔNUS x3','➕ <b>SIGA</b> PRA JOGAR TODO DIA'];
+const LED_PADRAO=['💬 ESCREVA A RESPOSTA NO <b>CHAT</b>','🏆 OS 3 MAIS RÁPIDOS GANHAM <b>10 · 6 · 4</b> PONTOS','🔥 ACERTOU <b>3 SEGUIDAS</b> = PONTOS EM DOBRO','🌹 <b>ROSA</b> = UMA LETRA DE DICA','🍩 <b>ROSQUINHA</b> = PONTOS x2 NAS PRÓXIMAS 3','🦁 <b>100+ MOEDAS</b> = PERGUNTA BÔNUS x3','❤️ A CADA <b>300 CURTIDAS</b> SAI UMA LETRA','➕ <b>SIGA</b> PRA JOGAR TODO DIA'];
 const ledQ=[]; let ledI=0, ultEntrou=0;
 function led(html,tipo){ if(tipo==='entrou'){ if(Date.now()-ultEntrou<2500||ledQ.length>2) return; ultEntrou=Date.now(); } ledQ.push(html); if(ledQ.length>5) ledQ.shift(); }
 function rodarLed(){ const html=ledQ.shift()||LED_PADRAO[ledI++%LED_PADRAO.length]; const el=$('trilho'), box=$('led'); el.innerHTML=html;
@@ -341,7 +341,7 @@ function relogio(r,t){ Q.restante=r; $('seg').textContent=r; $('seg').classList.
   b.classList.toggle('pouco',r<=5); b.classList.toggle('meio',r>5&&r<=t/2); }
 function revelar(m){ Q.fase='revelar'; $('cartao').classList.add('revelando'); $('rEmoji').textContent=m.e; $('rResp').textContent=m.resposta||'';
   const a=m.acertos||[]; $('rQuem').innerHTML=a.length?a.map(w=>`<div class="w">${['🥇','🥈','🥉'][w.pos]||'✅'} ${avatar(w)} ${esc(w.name)} <b>+${w.ganho}</b>${w.seq>=3?` <span class="fogo quente">🔥${w.seq}</span>`:''}</div>`).join(''):'<div class="ninguem">💀 Ninguém acertou!</div>';
-  SFX.revela(); chuva(m.e); if(!a.length){ serpente.acao('bote'); $('stage').classList.remove('treme'); void stage.offsetWidth; } }
+  SFX.revela(); chuva(m.e); if(!a.length){ serpente.acao('bote'); tremer(); } }
 function chuva(emojis){ const lista=[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(emojis||'')].map(s=>s.segment).filter(s=>s.trim()); if(!lista.length) return;
   const el=document.createElement('div'); el.className='fx chuva'; el.innerHTML=Array.from({length:26},()=>`<span style="left:${Math.random()*96}%;font-size:${60+Math.random()*70}px;animation-duration:${2.2+Math.random()*1.6}s;animation-delay:${Math.random()*1.4}s;--r:${(Math.random()*2-1)*360}deg">${lista[Math.floor(Math.random()*lista.length)]}</span>`).join('');
   stage.appendChild(el); setTimeout(()=>el.remove(),5600); }
@@ -378,26 +378,27 @@ function campeao(m){ const t=m.top||[]; if(!t.length) return; const el=$('campea
   el.classList.add('on'); SFX.fanfarra(); coracoes(16); clearTimeout(campeao.t); campeao.t=setTimeout(()=>el.classList.remove('on'),15000); }
 
 // ---------- feed ----------
-function feed(u,txt,ok){ const el=document.createElement('div'); el.className='m'+(ok?' ok':''); el.innerHTML=`<b>${esc(u.name)}</b>${esc(txt)}`; $('feed').appendChild(el); while($('feed').children.length>3) $('feed').firstChild.remove(); }
+function feed(u,txt,ok,quase){ const el=document.createElement('div'); el.className='m'+(ok?' ok':'')+(quase?' quase':''); el.innerHTML=`<b>${esc(u.name)}</b>${esc(txt)}`; $('feed').appendChild(el); while($('feed').children.length>3) $('feed').firstChild.remove(); }
 
 // ---------- eventos ----------
 function onQuiz(m){
   switch(m.ev){
     case 'pergunta': mostrarPergunta(m); break;
     case 'tick': if(Q.fase==='pergunta'){ relogio(m.restante,m.tempo); if(m.restante<=5&&m.restante>0) SFX.tic(m.restante); } break;
-    case 'dica': desenharDica(m.mascara,true); if(m.motivo){ piscarPr('prDica'); led(`🌹 <b>${esc(m.motivo.user.name)}</b> ABRIU UMA LETRA!`); } break;
+    case 'dica': desenharDica(m.mascara,true); if(m.motivo&&m.motivo.user){ piscarPr('prDica'); led(`🌹 <b>${esc(m.motivo.user.name)}</b> ABRIU UMA LETRA!`); } break;
+    case 'curtidas': coracoes(16); banner(`❤️ ${m.total} CURTIDAS${m.abriu?'<small>uma letra de presente!</small>':''}`,'verde'); led(`❤️ <b>${m.total} CURTIDAS!</b> CONTINUA CURTINDO!`); break;
     case 'revelar': revelar(m); break;
     case 'acerto': SFX.certo(); musica.evento('presente',5);
       if(m.pos===0) vence(m); if(m.rapido) banner('⚡ RELÂMPAGO!');
       { const tier={3:'🔥 PEGANDO FOGO',5:'💀 IMPARÁVEL',10:'👑 LENDA DO ABISMO'}[m.seq]||(m.seq>10&&m.seq%5===0?`👑 LENDA x${m.seq}`:null); if(tier){ banner(`${tier}<small>${esc(m.name)}</small>`,m.seq>=10?'ouro':''); if(m.seq>=5) tremer(); } }
       break;
-    case 'chat': feed(m.user,m.texto,m.ok); break;
+    case 'chat': feed(m.user,m.texto,m.ok,m.quase); if(m.quase){ musica.evento('comentario'); } break;
     case 'placar': placarModo=m.modo||placarModo; ranking=m.top||[]; if(m.n) Q.n=m.n; desenharPlacar(m.bump); break;
     case 'top1': banner(`👑 NOVO TOP 1<small>${esc(m.user.name)}</small>`,'ouro'); SFX.fanfarra(); break;
     case 'presente': musica.evento('presente',m.coins,m.giftName);
       if(m.tipo==='bonus'){ susto(); setTimeout(()=>banner(`PRÓXIMA VALE x3<small>presente de ${esc(m.user.name)}</small>`,'ouro'),900); piscarPr('prBonus'); led(`🦁 <b>${esc(m.user.name)}</b> LIBEROU A PERGUNTA BÔNUS x3!`); }
       else if(m.tipo==='dobro'){ banner(`🍩 PONTOS x2<small>${esc(m.user.name)}</small>`,'verde'); piscarPr('prDobro'); led(`🍩 <b>${esc(m.user.name)}</b> GANHOU PONTOS EM DOBRO!`); }
-      else { piscarPr('prDica'); if(m.tipo!=='dica') led(`🎁 <b>${esc(m.user.name)}</b> MANDOU ${esc(m.giftName)}!`); }
+      else { piscarPr('prDica'); if(m.tipo!=='dica'){ const pg=window.Falas?window.Falas.presente(m.giftName).nome:m.giftName; led(`🎁 <b>${esc(m.user.name)}</b> MANDOU ${esc(String(pg).toUpperCase())}!`); } }
       break;
     case 'seguiu': coracoes(12); led(`➕ <b>${esc(m.user.name)}</b> SEGUIU O ABISMO!`); feed(m.user,'➕ seguiu!',false); break;
     case 'compartilhou': led(`🔁 <b>${esc(m.user.name)}</b> COMPARTILHOU A LIVE!`); break;
@@ -412,7 +413,7 @@ function handle(m){
   switch(m.type){
     case 'quiz': onQuiz(m); break;
     case 'say': falar(m); break;
-    case 'like': musica.esquentar(Math.min(.05,(m.likes||1)*.002)); break;
+    case 'like': musica.esquentar(Math.min(.05,(m.likes||1)*.002)); if(Math.random()<.35) coracoes(1+Math.min(3,Math.floor((m.likes||1)/10))); break;
     case 'snapshot': setConn(m.tiktok); musica.config(m.musica); estadoInicial(m.quiz); break;
     case 'tiktok': setConn(m); break; case 'config': musica.config(m.musica); break;
   }
@@ -432,7 +433,7 @@ let motorLocal=null;
 function sim(ev){
   if(motorLocal){ const L=motorLocal, u=ev.user;
     if(ev.type==='chat') L.chat(u,ev.text); else if(ev.type==='gift') L.presente(u,ev.giftName,ev.diamonds,ev.count||1); else if(ev.type==='follow') L.seguiu(u);
-    else if(ev.type==='join') L.entrou(u); else if(ev.type==='share') L.compartilhou(u); else if(ev.type==='like') handle({type:'like',likes:ev.likes}); return; }
+    else if(ev.type==='join') L.entrou(u); else if(ev.type==='share') L.compartilhou(u); else if(ev.type==='like'){ handle({type:'like',likes:ev.likes}); L.curtidas(u,ev.likes); } return; }
   fetch('/api/sim',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:ev.type,id:ev.user.id,name:ev.user.name,avatar:null,giftName:ev.giftName,diamonds:ev.diamonds,count:ev.count,likes:ev.likes,text:ev.text})}).catch(()=>{}); }
 const resposta=()=>motorLocal?motorLocal.respostaAtual():null;
 const CHUTES=['sei não','kkkkk','é difícil','titanic','rei leão','feijoada','batata','procurando nemo','socorro','que medo desse palhaço','frozen'];
@@ -449,7 +450,9 @@ function iniciarDemo(){ if(demoRodando) return; demoRodando=true;
     else if(r<.62) sim({type:'gift',user:u,giftName:'Rose',diamonds:1,count:1+Math.floor(Math.random()*3)});
     else if(r<.66) sim({type:'gift',user:u,giftName:'Donut',diamonds:30,count:1});
     else if(r<.675) sim({type:'gift',user:u,giftName:'Lion',diamonds:29999,count:1});
-    else if(r<.75) sim({type:'follow',user:u}); else if(r<.85) sim({type:'join',user:u}); else sim({type:'like',user:u,likes:5});
+    else if(r<.72) sim({type:'follow',user:u}); else if(r<.8) sim({type:'join',user:u});
+    else if(r<.84){ const a=resposta(); if(a&&a.length>=6) sim({type:'chat',user:u,text:a.slice(0,-1)+'x'}); else sim({type:'chat',user:u,text:rnd(['dica pfv','que medo desse palhaço','oi serpente'])}); }
+    else sim({type:'like',user:u,likes:10+Math.floor(Math.random()*40)});
     setTimeout(tick,1300+Math.random()*1900); })(); }
 if(new URLSearchParams(location.search).get('demo')==='1') iniciarDemo();
 // página hospedada (sem o servidor): roda o quiz inteiro aqui mesmo

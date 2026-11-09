@@ -26,6 +26,21 @@
     q._letras = q._chars.map((c, i) => (ehLetra(c) ? i : -1)).filter((i) => i >= 0);
     return q;
   }
+  // distância entre palavras (quantas letras trocar) para avisar "quase!"
+  function distancia(a, b) {
+    if (Math.abs(a.length - b.length) > 3) return 99;
+    let ant = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      for (let j = 1; j <= b.length; j++) cur[j] = Math.min(ant[j] + 1, cur[j - 1] + 1, ant[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      ant = cur;
+    }
+    return ant[b.length];
+  }
+  function quase(texto, q) {
+    const t = norm(texto); if (t.length < 4) return false;
+    return q._v.some((n) => n.length >= 5 && distancia(t, n) <= (n.length >= 12 ? 3 : 2));
+  }
   function acertou(texto, q) {
     const t = norm(texto); if (!t) return false;
     return q._v.some((n) => t === n || (n.length >= 5 && t.includes(n)));
@@ -39,11 +54,12 @@
     const emitir = (m) => { try { opc.emitir({ type: 'quiz', ...m }); } catch (e) {} };
     const falar = (partes, extra = {}) => { try { opc.falar && opc.falar(partes, extra); } catch (e) {} };
     const agora = opc.agora || (() => Date.now());
-    const cfg = Object.assign({ tempo: 30, revelar: 7, maxAcertos: 3, pts: [10, 6, 4], seqMin: 3, cats: null, placar: 'dia' }, opc.cfg || {});
+    const cfg = Object.assign({ tempo: 30, revelar: 7, maxAcertos: 3, pts: [10, 6, 4], seqMin: 3, cats: null, placar: 'dia', curtidasDica: 300 }, opc.cfg || {});
     const perguntas = (opc.perguntas || []).map(preparar);
     let db = Object.assign({ geral: {}, dias: {}, semanas: {} }, opc.placar || {});
     const jog = new Map();                      // id -> { seq, ult, dobro }
     const st = { fase: 'parado', n: 0, q: null, ini: 0, fim: 0, fecharEm: 0, acertos: [], abertos: new Set(), bonus: 1, bonusDe: null, proxBonus: null, deck: [], ultSeg: -1, dicaTempo: 0 };
+    let curtidasTotal = 0, proxMarco = cfg.curtidasDica, ultQuase = 0, ultResposta = 0, ultCompart = 0, falouCinco = 0;
     let top1 = null, ultTop1Fala = 0, timer = null, ultFalaPresente = 0, ultBoasVindas = 0, ctaIdx = 0;
     const nome = (u) => (F ? F.nomeFalado(u) : String(u.name || 'amigo'));
     const pres = (g, n) => { if (!F) return { art: 'o', nome: g }; const p = F.presente(g); return n > 1 ? F.plural(p) : p; };
@@ -114,7 +130,7 @@
       emitir({ ev: 'pergunta', ...publico() });
       const cat = st.q.c.toLowerCase();
       const linhas = st.bonus > 1
-        ? [{ quem: 'palhaco', acao: 'rir', texto: `Pergunta bônus${st.bonusDe ? ' do ' + nome(st.bonusDe) : ''}! Vale o triplo! ${st.q.c}!` }]
+        ? [{ quem: 'palhaco', acao: 'rir', texto: `Pergunta bônus${st.bonusDe ? ' de ' + nome(st.bonusDe) : ''}! Vale o triplo! ${st.q.c}!` }]
         : [rnd([
           { quem: 'palhaco', acao: 'acenar', texto: rnd([`Pergunta ${st.n}! ${st.q.c}!`, `Lá vem a pergunta ${st.n}! Categoria ${cat}!`, `Que ${singular(cat)} é esse? Escreve no chat!`]) },
           { quem: 'serpente', acao: 'sibilar', texto: rnd([`Ssss... pergunta ${st.n}. ${st.q.c}.`, `Ssss... adivinha esse, se for capaz. ${st.q.c}!`]) },
@@ -135,6 +151,7 @@
       { quem: 'palhaco', acao: 'comemorar', texto: 'Um presentão de cem moedas libera a pergunta bônus valendo o triplo!' },
       { quem: 'serpente', acao: 'sibilar', texto: 'Ssss... segue o perfil pra jogar com a gente todo dia no abismo.' },
       { quem: 'palhaco', acao: 'acenar', texto: 'Acertou três seguidas? Seus pontos dobram! Não erra, hein!' },
+      { quem: 'serpente', acao: 'sibilar', texto: 'Ssss... a cada trezentas curtidas eu solto uma letra. Curte aí!' },
     ];
     function cta() { falar([CTAS[ctaIdx++ % CTAS.length]], { pri: 1, kind: 'quiz-cta' }); }
 
@@ -146,7 +163,8 @@
         const passou = (t - st.ini) / (cfg.tempo * 1000);
         if (st.dicaTempo < 1 && passou >= 0.4) { st.dicaTempo = 1; if (abrir(0, true)) emitir({ ev: 'dica', mascara: mascara(), motivo: null }); }
         if (st.dicaTempo < 2 && passou >= 0.7) { st.dicaTempo = 2; if (abrir(Math.ceil(st.q._letras.length * 0.2))) emitir({ ev: 'dica', mascara: mascara(), motivo: null }); }
-        if (restante !== st.ultSeg) { st.ultSeg = restante; emitir({ ev: 'tick', fase: 'pergunta', restante, tempo: cfg.tempo }); }
+        if (restante !== st.ultSeg) { st.ultSeg = restante; emitir({ ev: 'tick', fase: 'pergunta', restante, tempo: cfg.tempo });
+          if (restante === 6 && !st.acertos.length && falouCinco !== st.n && Math.random() < 0.6) { falouCinco = st.n; falar([{ quem: 'serpente', acao: 'sibilar', texto: rnd(['Ssss... cinco segundos!', 'Acaba o tempo, ssss... corre!', 'Ninguém? Ssss... cinco segundos!']) }], { pri: 2, kind: 'quiz-tempo' }); } }
         if (t >= st.fim) revelar();
       } else if (st.fase === 'revelar' && t >= st.fim) proxima();
     }
@@ -159,9 +177,17 @@
 
     // ---------- eventos da live ----------
     function chat(u, texto) {
-      if (st.fase !== 'pergunta' || !st.q) { emitir({ ev: 'chat', user: u, texto: String(texto).slice(0, 80), ok: false }); return false; }
+      const limpo = F && F.proibido(String(texto)) ? '***' : String(texto).slice(0, 80);
+      if (st.fase !== 'pergunta' || !st.q) { emitir({ ev: 'chat', user: u, texto: limpo, ok: false }); reagir(u, texto); return false; }
       if (st.acertos.some((a) => a.id === u.id)) return true;
-      if (!acertou(texto, st.q)) { emitir({ ev: 'chat', user: u, texto: String(texto).slice(0, 80), ok: false }); return false; }
+      if (!acertou(texto, st.q)) {
+        if (quase(texto, st.q)) { // chegou perto: não mostra o texto (entregaria a resposta) e a serpente provoca
+          emitir({ ev: 'chat', user: u, texto: '🔥 quase acertou!', ok: false, quase: true });
+          if (agora() - ultQuase > 12000) { ultQuase = agora(); falar([{ quem: 'serpente', acao: 'sibilar', texto: rnd([`Quase, ${nome(u)}! Ssss... tá quente!`, `Ssss... ${nome(u)} chegou pertinho!`, `Tá quente, ${nome(u)}! Tenta de novo!`]) }], { pri: 2, kind: 'quiz-quase', user: u }); }
+          return false;
+        }
+        emitir({ ev: 'chat', user: u, texto: limpo, ok: false }); reagir(u, texto); return false;
+      }
       const pos = st.acertos.length; if (pos >= cfg.maxAcertos) return true;
       const j = jogador(u);
       j.seq = j.ult === st.n - 1 ? j.seq + 1 : 1; j.ult = st.n;
@@ -182,6 +208,29 @@
       return true;
     }
 
+    // comentários que não são resposta: eles respondem de vez em quando (pedido de dica, chamando pelo nome...)
+    function reagir(u, texto) {
+      if (agora() - ultResposta < 20000 || (F && F.proibido(String(texto)))) return;
+      const t = semAc(texto), n = nome(u);
+      let linha = null;
+      if (/\b(dica|ajuda|dificil|socorro|nao sei|impossivel)\b/.test(t)) linha = { quem: 'palhaco', acao: 'rir', texto: rnd([`Quer dica, ${n}? Manda uma rosa que eu abro uma letra! Rá rá rá!`, `Tá difícil, ${n}? Uma rosinha e eu te ajudo!`]) };
+      else if (/\b(palhaco|palhacinho)\b/.test(t)) linha = { quem: 'palhaco', acao: 'acenar', texto: rnd([`Me chamou, ${n}? Rá rá rá! Responde a pergunta!`, `Tô de olho em você, ${n}!`]) };
+      else if (/\b(serpente|cobra|cobrinha)\b/.test(t)) linha = { quem: 'serpente', acao: 'sibilar', texto: rnd([`Ssss... me chamou, ${n}?`, `Ssss... cuidado comigo, ${n}.`]) };
+      else if (/\b(medo|assustador|credo|socorro|feio)\b/.test(t)) linha = { quem: 'palhaco', acao: 'rir', texto: rnd([`Medo de mim, ${n}? Rá rá rá rá!`, `Bu! Rá rá rá! Calma, ${n}, eu só mordo quem erra!`]) };
+      else if (/\b(oi|ola|salve|boa noite|boa tarde|bom dia|eae)\b/.test(t)) linha = { quem: rnd(['palhaco', 'serpente']), acao: 'acenar', texto: rnd([`Oi, ${n}! Bem-vindo ao abismo! Responde no chat!`, `Salve, ${n}! Vale ponto, hein!`]) };
+      if (!linha) return;
+      ultResposta = agora(); falar([linha], { pri: 1, kind: 'quiz-resposta', user: u });
+    }
+    // curtidas: a cada 300, uma letra de dica pra todo mundo
+    function curtidas(u, n) {
+      curtidasTotal += Math.max(0, Number(n) || 0);
+      if (curtidasTotal < proxMarco) return;
+      const marco = proxMarco; proxMarco = (Math.floor(curtidasTotal / cfg.curtidasDica) + 1) * cfg.curtidasDica;
+      const abriu = st.fase === 'pergunta' && !st.fecharEm ? abrir(1) : 0;
+      emitir({ ev: 'curtidas', total: marco, abriu: !!abriu });
+      if (abriu) emitir({ ev: 'dica', mascara: mascara(), motivo: { curtidas: marco } });
+      falar([{ quem: 'palhaco', acao: 'comemorar', texto: abriu ? `${marco} curtidas! Rá rá rá! Lá vai uma letra de presente!` : `${marco} curtidas! Continua curtindo que vale dica!` }], { pri: 2, kind: 'quiz-curtidas' });
+    }
     function presente(u, giftName, diamonds, count) {
       const coins = Math.max(1, Number(diamonds) || 1) * Math.max(1, Number(count) || 1);
       try { return presente_(u, giftName, coins, count); } finally { somar(u, coins * 2); }
@@ -207,11 +256,17 @@
       if (agora() - ultFalaPresente < 5000) return; ultFalaPresente = agora();
       falar([{ quem: 'palhaco', acao: abriu ? 'rir' : 'acenar', texto: abriu ? rnd([`${n} mandou ${p.art} ${pn}! Lá vai uma dica!`, `Valeu, ${n}! Abri uma letra pra galera!`]) : `Valeu ${F ? F.pelo(p.art) : 'pelo'} ${pn}, ${n}!` }], { pri: 2, kind: 'quiz-presente', user: u });
     }
+    const seguiram = new Set(); let ultSeguiu = 0;
     function seguiu(u) {
-      somar(u, 5); emitir({ ev: 'seguiu', user: u });
+      if (seguiram.has(u.id)) return; // seguir e deixar de seguir várias vezes não dá ponto de novo
+      seguiram.add(u.id); somar(u, 5); emitir({ ev: 'seguiu', user: u });
+      if (agora() - ultSeguiu < 4000) return; ultSeguiu = agora();
       falar([{ quem: rnd(['palhaco', 'serpente']), acao: 'comemorar', texto: rnd([`Valeu por seguir, ${nome(u)}! Mais cinco pontos!`, `${nome(u)} agora faz parte do abismo!`]) }], { pri: 2, kind: 'quiz-seguiu', user: u });
     }
-    function compartilhou(u) { somar(u, 5); emitir({ ev: 'compartilhou', user: u }); }
+    function compartilhou(u) {
+      somar(u, 5); emitir({ ev: 'compartilhou', user: u });
+      if (agora() - ultCompart > 15000) { ultCompart = agora(); falar([{ quem: 'serpente', acao: 'comemorar', texto: `Ssss... valeu por compartilhar, ${nome(u)}! Traz mais gente pro abismo!` }], { pri: 2, kind: 'quiz-compart', user: u }); }
+    }
     function entrou(u) {
       emitir({ ev: 'entrou', user: u });
       if (agora() - ultBoasVindas < 25000) return; ultBoasVindas = agora();
@@ -240,7 +295,7 @@
     function estado() { return { ...publico(), placar: { modo: cfg.placar, top: top() }, cfg: { ...cfg }, categorias: [...new Set(perguntas.map((q) => q.c))] }; }
     const respostaAtual = () => (st.fase === 'pergunta' && st.q ? st.q.a : null);
 
-    return { iniciar, parar, pular, config, zerar, campeao, estado, chat, presente, seguiu, compartilhou, entrou, respostaAtual, top,
+    return { iniciar, parar, pular, config, zerar, campeao, estado, chat, presente, seguiu, compartilhou, entrou, curtidas, respostaAtual, top,
       get rodando() { return !!timer; } };
   }
 
