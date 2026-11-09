@@ -21,10 +21,14 @@
     pontos.set(user.id, cur);
     entregar({ type: 'rank', top: top6() });
   }
+  const abismo = () => window.__demoLocal && window.__demoLocal.modo === 'abismo';
+  // texto simples (cobrinha) ou lista de partes { quem, texto, acao } (abismo)
   function falar(texto, user, kind) {
     if (!texto || !entregar) return;
     ultimaFala = Date.now();
-    entregar({ type: 'say', id: ++seq, text: texto, url: null, urls: null, user: user || null, kind: kind || 'fala', ms: Math.min(9000, 900 + texto.length * 70) });
+    const partes = Array.isArray(texto) ? texto.map((p) => ({ ...p, url: null })) : null;
+    const txt = partes ? partes.map((p) => p.texto).join(' ') : texto;
+    entregar({ type: 'say', id: ++seq, text: txt, url: null, urls: null, partes, user: user || null, kind: kind || 'fala', ms: Math.min(14000, 900 + txt.length * 70) });
   }
   const pode = (chave, ms) => { const a = Date.now(); if (a - (cooldown.get(chave) || 0) < ms) return false; cooldown.set(chave, a); return true; };
 
@@ -39,17 +43,17 @@
         if (bomba) handle({ type: 'bomb', user: u, giftName: ev.giftName, diamonds, count, coins, power: coins });
         else handle({ type: 'gift', user: u, giftName: ev.giftName, diamonds, count, coins, apples: coins, cantoria: null });
         somar(u, coins * PTS.diamante);
-        falar(F.textoPresente(u, ev.giftName, count, diamonds, bomba), u, bomba ? 'bomba' : 'presente');
+        falar(abismo() ? F.ABISMO.presente(u, ev.giftName, count, diamonds, bomba) : F.textoPresente(u, ev.giftName, count, diamonds, bomba), u, bomba ? 'bomba' : 'presente');
         break;
       }
       case 'follow':
         handle({ type: 'follow', user: u, apples: 1 });
         somar(u, PTS.seguir);
-        falar(F.textoSeguiu(u), u, 'seguiu');
+        falar(abismo() ? F.ABISMO.seguiu(u) : F.textoSeguiu(u), u, 'seguiu');
         break;
       case 'share':
         handle({ type: 'share', user: u });
-        if (pode('share:' + u.id, 60000)) { somar(u, PTS.compartilhar); falar(F.textoCompartilhou(u), u, 'seguiu'); }
+        if (pode('share:' + u.id, 60000)) { somar(u, PTS.compartilhar); falar(abismo() ? F.ABISMO.compartilhou(u) : F.textoCompartilhou(u), u, 'seguiu'); }
         break;
       case 'like':
         handle({ type: 'like', user: u, likes: ev.likes || 1 });
@@ -63,10 +67,14 @@
         if (t && Date.now() - ultimaResposta > 8000 && pode('chat:' + u.id, 25000)) {
           ultimaResposta = Date.now();
           const n = F.nomeFalado(u);
-          falar(F.textoLido(n, t) + ' ' + F.responder(t, n), u, 'comentario');
+          falar(abismo() ? F.ABISMO.comentario(u, t) : F.textoLido(n, t) + ' ' + F.responder(t, n), u, 'comentario');
         }
         break;
       }
+      case 'join':
+        handle({ type: 'join', user: u });
+        if (abismo() && Date.now() - ultimaFala > 6000 && pode('join:' + u.id, 600000)) falar(F.ABISMO.entrou(u), u, 'entrou');
+        break;
       default: handle(ev);
     }
   }
@@ -75,6 +83,7 @@
   let proxima = 20000 + Math.random() * 10000;
   setInterval(() => {
     if (!entregar || Date.now() - ultimaFala < proxima) return;
+    if (abismo()) { proxima = 14000 + Math.random() * 10000; return falar(F.ABISMO.solta(), null, 'solta'); }
     const ops = F.FALAS_DA_COBRA.filter((f) => !recentes.includes(f));
     const f = F.rnd(ops); recentes.push(f); if (recentes.length > 8) recentes.shift();
     proxima = 20000 + Math.random() * 10000;

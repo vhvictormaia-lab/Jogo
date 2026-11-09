@@ -122,6 +122,88 @@ const textoCompartilhou = (user) => { const n = nomeFalado(user); return rnd([`V
 const textoEntrou = (user) => { const n = nomeFalado(user); return rnd([`Bem-vindo, ${n}!`, `Chegou ${n}! Seja bem-vindo!`]); };
 const textoLido = (n, t) => `${n} disse: ${t}${/[.!?]$/.test(t) ? '' : '.'}`;
 
+// ======================= ABISMO: Palhaço do Abismo + Serpente das Trevas =======================
+// Cada fala é uma lista de partes { quem: 'palhaco' | 'serpente', texto, acao }.
+// acao: acenar, rir, dancar, voar, girar, cantar, susto, comemorar, pular, bote, sibilar
+const P = (texto, acao) => ({ quem: 'palhaco', texto, acao });
+const SE = (texto, acao) => ({ quem: 'serpente', texto, acao });
+const CANTORIAS = [
+  (n) => `${n} mandou presente, a serpente tá contente, o palhaço dá risada, e a live tá animada!`,
+  (n) => `Lá no fundo do abismo, tem palhaço e tem serpente. ${n} mandou presente, e alegrou a gente!`,
+  (n) => `Pula, pula, pipoca, o palhaço não para! ${n} é o campeão, e a serpente se prepara!`,
+  (n) => `Ô ${n}, ô ${n}, você é sensacional! No abismo da alegria, sua rosa é especial!`,
+  (n) => `Bate palma, bate o pé, quem mandou foi ${n}! O palhaço tá dançando, e o abismo tá contente!`,
+];
+const CANTORIAS_SOLTAS = [
+  'Lá no fundo do abismo, mora um palhaço feliz. Manda rosa, manda curtida, que ele dança e pede bis!',
+  'Sssserpente das Trevas, rainha do salão. Quem curtir a live ganha o meu coração!',
+  'Um, dois, três, quem chegou agora? Segue o perfil e não vai embora!',
+];
+const ABISMO = {
+  presente(user, giftName, count, diamonds, bomba) {
+    const n = nomeFalado(user), p = presente(giftName), total = Math.max(1, diamonds) * Math.max(1, count);
+    const pl = count > 1 ? plural(p) : p, g = count > 1 ? `${count} ${pl.nome}` : p.nome, pg = `${pelo(pl.art)} ${g}`;
+    if (bomba) return [SE(rnd([`Aaaai! Meu rabo! ${n} mandou ${p.nome}!`, `Ssssocorro! ${n} me explodiu!`]), 'susto'), P(rnd(['Rá rá rá rá rá! Essa foi boa!', 'Kkkkkk! Bem feito, serpente!']), 'rir')];
+    if (total >= 100) return [P(rnd([`Uau! ${n}, que presentão! Segura que eu vou voar!`, `Meu Deus do céu! Valeu ${pg}, ${n}! Lá vou eu!`]), 'voar'), P(F_rnd(CANTORIAS)(n), 'cantar')];
+    if (total >= 30) return [P(rnd([`Que presentão, ${n}! Olha o giro!`, `Valeu ${pg}, ${n}! Gira, gira, gira!`]), 'girar'), SE(rnd([`Ssssensacional, ${n}!`, `Ssssó gente chique nesse abismo!`]), 'bote')];
+    if (total >= 5) return [rnd([P(`Valeu ${pg}, ${n}! Bora dançar!`, 'dancar'), SE(`Ssssobe o som! Valeu, ${n}!`, 'dancar')])];
+    return [rnd([P(`Valeu ${pg}, ${n}!`, 'acenar'), P(`Rá rá! Obrigado ${pg}, ${n}!`, 'rir'), SE(`Ssss, obrigada ${pg}, ${n}!`, 'sibilar'), P(`Olha só, ${n} mandou ${g}! Valeu!`, 'pular')])];
+  },
+  seguiu(user) { const n = nomeFalado(user); return [rnd([P(`Uhuul! ${n} seguiu! Bem-vindo ao abismo!`, 'comemorar'), P(`${n} agora faz parte da família do abismo!`, 'comemorar'), SE(`Ssssseja bem-vindo, ${n}! Agora você é da família!`, 'bote')])]; },
+  compartilhou(user) { const n = nomeFalado(user); return [P(rnd([`Valeu por compartilhar, ${n}! Chama a galera pro abismo!`, `${n} compartilhou! Mais gente no circo!`]), 'pular')]; },
+  entrou(user) { const n = nomeFalado(user); return [rnd([P(`Olha quem chegou! Oi, ${n}!`, 'acenar'), SE(`Ssss... ${n} entrou no abismo!`, 'sibilar'), P(`Seja bem-vindo, ${n}! Senta que o show vai começar!`, 'acenar'), P(`Opa, ${n}! Chegou na hora certa!`, 'pular')])]; },
+  marco(total) { return [P(`Chegamos a ${total} curtidas! Uhuul! Continua curtindo!`, 'comemorar')]; },
+  comentario(user, t, respostaIA) {
+    const n = nomeFalado(user);
+    // quem foi chamado responde; senão, sorteia
+    const quem = /serpente|cobra|snake|ssss/i.test(t) ? 'serpente' : /palha[cç]o|clown/i.test(t) ? 'palhaco' : (Math.random() < 0.6 ? 'palhaco' : 'serpente');
+    const leitor = Math.random() < 0.7 ? quem : (quem === 'palhaco' ? 'serpente' : 'palhaco');
+    const r = respostaIA || responderAbismo(t, n, quem);
+    const riso = /(kk+|haha+|rsrs+|hehe+)/i.test(t);
+    return [{ quem: leitor, texto: textoLido(n, t), acao: null }, { quem, texto: r, acao: riso ? 'rir' : null }];
+  },
+  solta() {
+    const r = Math.random();
+    if (r < 0.2) return [P(F_rnd(CANTORIAS_SOLTAS), 'cantar')];
+    if (r < 0.55) return F_rnd(DIALOGOS)();
+    return [F_rnd(PEDIDOS)()];
+  },
+};
+const PEDIDOS = [
+  () => P('Ô galera! Manda uma rosa que eu danço!', 'dancar'), () => P('Quem curtir agora ganha um sorriso do palhaço!', 'acenar'),
+  () => SE('Sssegue o perfil que eu falo o ssseu nome!', 'sibilar'), () => P('Toca na tela! Curtida é o combustível do abismo!', 'pular'),
+  () => SE('Um presentinho e eu dou o bote mais lindo da live!', 'bote'), () => P('Escreve no chat que a gente lê tudo!', 'acenar'),
+  () => P('Olha o ranking aí em cima! Quem vai ser o número um?', 'girar'), () => SE('Compartilha a live com os amigos... ssse tiver coragem!', 'sibilar'),
+];
+const DIALOGOS = [
+  () => [P('Ô Serpente, tá com fome?', 'acenar'), SE('Ssssempre! Manda rosa aí, galera!', 'sibilar')],
+  () => [SE('Palhaço, por que você é tão engraçado?', null), P('Porque eu moro no abismo da alegria! Rá rá rá!', 'rir')],
+  () => [P('Serpente, bora dançar?', 'dancar'), SE('Sssó se a galera curtir a live!', 'dancar')],
+  () => [SE('Tá muito quieto aqui...', 'sibilar'), P('Calma, Serpente! Daqui a pouco chega presente!', 'pular')],
+  () => [P('Serpente, você tem medo de quê?', null), SE('De GG! Explode o meu rabo!', 'susto'), P('Rá rá rá rá!', 'rir')],
+  () => [SE('Palhaço, você sabe voar?', null), P('Só quando chega presentão! Rá rá!', 'rir')],
+];
+const RESPOSTAS_ABISMO = [
+  [/\b(oi+|ol[aá]|e a[ií]|eae|salve|opa|fala|hey)\b/i, { palhaco: ['Oi, {n}! Bem-vindo ao abismo!', 'Salve, {n}! Chega mais no circo!'], serpente: ['Sssalve, {n}!', 'Olá, {n}... ssss!'] }],
+  [/\bbo(m|a) (dia|tarde|noite)\b/i, { palhaco: ['Boa pra você também, {n}!'], serpente: ['Ssss, pra você também, {n}!'] }],
+  [/\b(palha[cç]o)\b/i, { palhaco: ['Me chamou, {n}? Rá rá!', 'Tô aqui, {n}! Pronto pro show!'], serpente: ['O palhaço tá aqui do lado, {n}! Ssss!'] }],
+  [/\b(cobra|cobrinha|serpente|snake)\b/i, { palhaco: ['A Serpente tá de olho em você, {n}! Rá rá!'], serpente: ['Me chamou, {n}? Ssss!', 'Ssssou eu, {n}! A Serpente das Trevas!'] }],
+  [/\b(medo|assust|terror|sinistro)\b/i, { palhaco: ['Medo de quê, {n}? Eu sou um amor! Rá rá rá!'], serpente: ['Ssss... medo é pouco, {n}!'] }],
+  [/\b(te amo|amo voc[eê]|lind[ao]|fofa|fofo)\b/i, { palhaco: ['Ownt, também te amo, {n}!'], serpente: ['Ssss, que fofo, {n}!'] }],
+  [/\b(dan[cç]a|dan[cç]ar)\b/i, { palhaco: ['Manda uma rosa que eu danço, {n}!'], serpente: ['Eu danço ssse você curtir, {n}!'] }],
+  [/\b(canta|cantar|m[uú]sica)\b/i, { palhaco: ['Presentão eu canto, {n}! Rá rá!'], serpente: ['Ssssó canto com presente, {n}!'] }],
+  [/(kk+|haha+|rsrs+|hehe+)/i, { palhaco: ['Rá rá rá! Riu junto, {n}!', 'Kkkk, você é dos meus, {n}!'], serpente: ['Ssss ssss ssss! Rindo junto, {n}!'] }],
+  [/\b(como|qual|quando|onde|por ?que|pq|quem)\b|\?/, { palhaco: ['Boa pergunta, {n}! Fica no abismo que você descobre!'], serpente: ['Ssss... isso é ssssegredo, {n}!'] }],
+  [/\b(tchau|fui|vou dormir|flw|falou)\b/i, { palhaco: ['Tchau, {n}! Volta pro abismo!'], serpente: ['Ssss, até mais, {n}!'] }],
+];
+const RESPOSTAS_ABISMO_W = RESPOSTAS_ABISMO.map(([re, o]) => [W(re), o]);
+const GENERICAS_ABISMO = { palhaco: ['Valeu pelo comentário, {n}!', 'Rá rá! Boa, {n}!', 'É isso aí, {n}!', 'Tô lendo tudo, {n}!'], serpente: ['Ssss, interessante, {n}!', 'Ssssei, {n}!', 'Boa, {n}! Ssss!'] };
+function responderAbismo(texto, n, quem) {
+  for (const [re, o] of RESPOSTAS_ABISMO_W) if (re.test(texto)) return rnd(o[quem]).replace('{n}', n);
+  return rnd(GENERICAS_ABISMO[quem]).replace('{n}', n);
+}
+const F_rnd = (a) => a[Math.floor(Math.random() * a.length)];
+
 return { W, PALAVROES, semAcento, setExtraProibido, proibido, limparFala, nomeFalado, podeLer, rnd, presente, plural, slug, slugsPresente, pelo,
-  responder, FALAS_DA_COBRA, textoPresente, textoSeguiu, textoCompartilhou, textoEntrou, textoLido };
+  responder, FALAS_DA_COBRA, textoPresente, textoSeguiu, textoCompartilhou, textoEntrou, textoLido, ABISMO, responderAbismo };
 });

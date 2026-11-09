@@ -9,6 +9,22 @@ COMO FUNCIONA
 - Os presentes GG, Fireworks, Boxing Gloves e Rocket são "bombas": explodem o rabo da cobra.
 - No fim da rodada (5 minutos) aparece o ranking: Top Apoiadores e Top Curtidas.
 
+ABISMO LIVE (novo jogo)
+Um cenário 3D de desenho com o PALHAÇO DO ABISMO e a SERPENTE DAS TREVAS andando, conversando e reagindo à live.
+- Cada presente tem animação e fala: até 4 diamantes acena/ri, de 5 a 29 dança, de 30 a 99 gira e a serpente dá o bote,
+  100 ou mais o palhaço VOA com balões e canta uma musiquinha com o nome de quem mandou (com fogos de artifício).
+- GG, Fireworks, Boxing Gloves e Rocket explodem o rabo da serpente e o palhaço morre de rir.
+- Cumprimentam pelo nome quem entra, leem e respondem comentários (quem foi chamado responde), pedem presente,
+  conversam entre si e cantam quando a live está parada.
+- Palhaço e serpente têm vozes diferentes. A boca mexe junto com a voz e a foto de quem foi agradecido aparece em cima deles.
+- Trupe de palhaços doidos dançando no ritmo da marchinha de circo, que acelera conforme a live esquenta.
+- Câmera tipo drone passeando pelo cenário e chegando perto de quem está falando.
+- TOP 6 DO ABISMO no alto da tela.
+Como usar: abra o atalho "Abismo Live" (ou iniciar-abismo.bat) e no LIVE Studio use a fonte Link:
+  http://localtest.me:3000/abismo.html
+Testar sem live: http://localhost:3000/abismo.html?demo=1  (teclas: G presente, B bomba, F seguir, S compartilhar, L curtir, C comentário, J entrar)
+Trocar vozes (no iniciar-abismo.bat, antes de "node server.js"): set VOZ_PALHACO=..., set TOM_PALHACO=+30Hz, set VOZ_SERPENTE=..., set TOM_SERPENTE=-22Hz
+
 NOVIDADES (versão 2)
 - TOP 6 DA LIVE fixo no alto da tela, com foto, nome e pontos de cada pessoa.
   Pontos: 1 diamante = 100 · seguir = 500 · compartilhar = 200 (1 vez por minuto) · cada curtida = 10 · comentário = 20 (no máximo 1 a cada 10 s).

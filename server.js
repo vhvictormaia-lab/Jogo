@@ -76,7 +76,9 @@ function broadcast(msg) {
   const s = JSON.stringify(msg);
   for (const c of wss.clients) if (c.readyState === 1) c.send(s);
 }
-voz = criarVoz(broadcast);
+// MODO=abismo (iniciar-abismo.bat): Palhaço do Abismo + Serpente das Trevas em /abismo.html
+const MODO = (process.env.MODO || 'cobrinha').toLowerCase();
+voz = criarVoz(broadcast, MODO);
 
 // Ranking da live (TOP 6 na tela): pontos por tudo que a pessoa faz
 const PTS = { diamante: 100, seguir: 500, curtida: 10, comentario: 20, compartilhar: 200 };
