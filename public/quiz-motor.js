@@ -49,6 +49,44 @@
   const diaDe = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const semanaDe = (d = new Date()) => { const m = new Date(d); m.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return diaDe(m); };
 
+  // ---------- falas (vários jeitos de dizer, pra não ficar repetitivo) ----------
+  // {n} = nome de quem fez, {p} = presente, {a} = nome antigo (trono)
+  const FALAS = {
+    entrou: [['palhaco', 'acenar', 'Bem-vindo ao abismo, {n}! Responde no chat!'], ['palhaco', 'rir', '{n} chegou! Senta aí que o palhaço não morde... muito! Rá rá rá!'],
+      ['serpente', 'sibilar', 'Ssss... {n} caiu no abismo. Escreve a resposta no chat.'], ['palhaco', 'acenar', 'Olha quem apareceu: {n}! Chegou bem na hora!'],
+      ['serpente', 'sibilar', 'Ssss... mais uma vítima. Oi, {n}!'], ['palhaco', 'rir', 'Abre a porta que {n} chegou! Valendo ponto, hein!']],
+    seguiu: [['palhaco', 'comemorar', 'Valeu por seguir, {n}! Agora você é da família do abismo!'], ['serpente', 'comemorar', 'Ssss... {n} seguiu! Ganhou cinco pontos!'],
+      ['palhaco', 'pular', '{n} seguiu! Rá rá rá! Agora não tem mais volta!'], ['serpente', 'sibilar', 'Ssss... {n} agora é nosso pra sempre.']],
+    compartilhou: [['serpente', 'comemorar', 'Ssss... valeu por compartilhar, {n}! Traz mais gente pro abismo!'], ['palhaco', 'rir', '{n} compartilhou! Chama todo mundo, quanto mais gente melhor! Rá rá rá!'],
+      ['palhaco', 'acenar', 'Isso, {n}! Espalha o abismo pelo mundo!']],
+    curtidor: [['palhaco', 'rir', '{n} tá curtindo sem parar! Vai quebrar a tela! Rá rá rá!'], ['serpente', 'sibilar', 'Ssss... {n}, seu dedo não cansa não?'],
+      ['palhaco', 'pular', 'Olha o {n} metralhando curtida! Valeu demais!']],
+    dica: [['palhaco', 'rir', '{n} mandou {ap}! Lá vai uma dica!'], ['palhaco', 'rir', 'Valeu, {n}! Abri uma letra pra galera!'],
+      ['serpente', 'sibilar', 'Ssss... {n} comprou uma dica pra todo mundo. Agradece no chat!'], ['palhaco', 'acenar', 'Ganhou uma letra por causa do {n}! Rá rá rá!']],
+    obrigado: [['palhaco', 'acenar', 'Valeu {pelo} {p}, {n}!'], ['serpente', 'sibilar', 'Ssss... obrigada {pelo} {p}, {n}.'], ['palhaco', 'rir', '{p} do {n}! Rá rá rá! Adoro!']],
+    canta: [['palhaco', 'cantar', 'Lá lá lá, {n} mandou presente, o palhaço tá contente! Rá rá rá!'], ['palhaco', 'cantar', 'Ô {n}, ô {n}, o abismo é todo seu! Lá lá lá!'],
+      ['palhaco', 'cantar', 'Pa ra ra rá, {n} é o maior, ninguém faz melhor! Rá rá rá!'], ['serpente', 'cantar', 'Ssss... {n}, {n}, o seu presente me deixou contente, ssss!']],
+    combo: [['palhaco', 'pular', 'Combo do {n}! Não para, não para! Rá rá rá!'], ['serpente', 'comemorar', 'Ssss... {n} tá chovendo presente!']],
+    trono: [['palhaco', 'rir', '{n} roubou o trono de {a}! Rá rá rá!'], ['serpente', 'sibilar', 'Ssss... {a} perdeu a coroa pro {n}!'], ['palhaco', 'comemorar', 'Temos um novo rei do abismo: {n}! Chora, {a}!']],
+    zoa: [['serpente', 'sibilar', '{n} chutou {t}... Ssss, nem perto!'], ['palhaco', 'rir', '{t}? Rá rá rá! Essa foi boa, {n}!'], ['serpente', 'sibilar', 'Ssss... {t}, {n}? Sério?'],
+      ['palhaco', 'rir', '{n} disse {t}! Rá rá rá rá! Tenta de novo!']],
+    silencio: [['palhaco', 'acenar', 'Tem alguém aí? Escreve qualquer coisa no chat! Rá rá rá!'], ['serpente', 'sibilar', 'Ssss... tá muito quieto aqui. Curte a live pra eu saber que você tá vivo.'],
+      ['palhaco', 'rir', 'Ninguém fala nada? Vou contar até três... um, dois... rá rá rá, brincadeira! Escreve no chat!'], ['serpente', 'sibilar', 'Ssss... quem tá aí em silêncio, deixa um oi no chat.']],
+  };
+  // conversas entre os dois (piadas)
+  const PIADAS = [
+    [['palhaco', 'rir', 'Sabe por que o palhaço não briga? Pra não perder a graça! Rá rá rá!'], ['serpente', 'sibilar', 'Ssss... que piada sem graça.']],
+    [['palhaco', 'rir', 'O que a serpente foi fazer no banco? Ssssacar dinheiro! Rá rá rá!'], ['serpente', 'bote', 'Ssss... vou te morder.']],
+    [['serpente', 'sibilar', 'Ssss... eu não tenho pernas e mesmo assim chego antes de você.'], ['palhaco', 'rir', 'Rá rá rá! Mentira! Eu tenho sapato grande!']],
+    [['palhaco', 'acenar', 'Serpente, você tá com cara de quem não acertou nenhuma!'], ['serpente', 'sibilar', 'Ssss... pelo menos eu não uso esse nariz vermelho.']],
+    [['serpente', 'sibilar', 'Ssss... quem errar a próxima vai pro fundo do abismo.'], ['palhaco', 'rir', 'Rá rá rá! Lá embaixo tem lugar pra todo mundo!']],
+    [['palhaco', 'acenar', 'Galera, a serpente disse que ninguém acerta a próxima!'], ['serpente', 'sibilar', 'Ssss... duvido.']],
+    [['palhaco', 'rir', 'Por que o esqueleto não foi na festa? Porque não tinha corpo pra isso! Rá rá rá!'], ['serpente', 'sibilar', 'Ssss... eu ri por dentro.']],
+    [['serpente', 'sibilar', 'Ssss... palhaço, seu sapato tá cheirando a chulé.'], ['palhaco', 'susto', 'Ei! É perfume de circo! Rá rá rá!']],
+  ];
+  const preencher = (t, v) => t.replace(/\{(\w+)\}/g, (_, k) => (v[k] !== undefined ? v[k] : ''));
+  const linha = (lista, v = {}) => { const [quem, acao, t] = rnd(lista); return { quem, acao, texto: preencher(t, v) }; };
+
   function criar(opc) {
     const F = opc.falas;                         // falas.js (nomes falados, presentes em português)
     const emitir = (m) => { try { opc.emitir({ type: 'quiz', ...m }); } catch (e) {} };
@@ -60,7 +98,9 @@
     const jog = new Map();                      // id -> { seq, ult, dobro }
     const st = { fase: 'parado', n: 0, q: null, ini: 0, fim: 0, fecharEm: 0, acertos: [], abertos: new Set(), bonus: 1, bonusDe: null, proxBonus: null, deck: [], ultSeg: -1, dicaTempo: 0 };
     let curtidasTotal = 0, proxMarco = cfg.curtidasDica, ultQuase = 0, ultResposta = 0, ultCompart = 0, falouCinco = 0;
-    let top1 = null, ultTop1Fala = 0, timer = null, ultFalaPresente = 0, ultBoasVindas = 0, ctaIdx = 0;
+    let ultChat = agora(), ultSilencio = agora(), ultZoa = 0, ultCurtidor = 0, ultCanta = 0, piadaIdx = Math.floor(Math.random() * 8);
+    const curtidasDe = new Map(), presentesDe = new Map(), agradecidoCurtir = new Map();
+    let top1 = null, top1Nome = '', ultTop1Fala = 0, timer = null, ultFalaPresente = 0, ultBoasVindas = 0, ctaIdx = 0;
     const nome = (u) => (F ? F.nomeFalado(u) : String(u.name || 'amigo'));
     const pres = (g, n) => { if (!F) return { art: 'o', nome: g }; const p = F.presente(g); return n > 1 ? F.plural(p) : p; };
     const jogador = (u) => { let j = jog.get(u.id); if (!j) { j = { seq: 0, ult: -9, dobro: 0 }; jog.set(u.id, j); } return j; };
@@ -89,8 +129,8 @@
       const t = top();
       emitir({ ev: 'placar', modo: cfg.placar, top: t, bump: u.id, n: st.n });
       if (t[0] && t[0].id !== top1) {
-        const antes = top1; top1 = t[0].id;
-        if (antes && t[0].pts >= 20 && agora() - ultTop1Fala > 30000) { ultTop1Fala = agora(); emitir({ ev: 'top1', user: t[0] }); if (falarTop) falar([{ quem: 'palhaco', acao: 'comemorar', texto: rnd([`Rá rá rá! ${nome(t[0])} agora é o número um do abismo!`, `Temos um novo rei do abismo: ${nome(t[0])}!`]) }], { pri: 2, kind: 'quiz-top' }); }
+        const antes = top1, antigo = top1Nome; top1 = t[0].id; top1Nome = t[0].name;
+        if (antes && t[0].pts >= 20 && agora() - ultTop1Fala > 30000) { ultTop1Fala = agora(); emitir({ ev: 'top1', user: t[0], antes: antigo }); if (falarTop) falar([linha(FALAS.trono, { n: nome(t[0]), a: nome({ name: antigo }) })], { pri: 2, kind: 'quiz-top' }); }
       }
     }
 
@@ -143,6 +183,7 @@
       emitir({ ev: 'revelar', ...publico(), resposta: st.q.a });
       if (!st.acertos.length) falar([{ quem: 'serpente', acao: 'bote', texto: rnd([`Ssss... ninguém acertou! Era ${st.q.a}.`, `Ninguém? Ssss... a resposta era ${st.q.a}.`, `Que vergonha, ssss... era ${st.q.a}!`]) }], { pri: 3, kind: 'quiz-revelar', limpar: true });
       else if (st.n % 3 === 0) cta();
+      else if (st.n % 3 === 1 && Math.random() < 0.7) falar(PIADAS[piadaIdx++ % PIADAS.length].map(([quem, acao, texto]) => ({ quem, acao, texto })), { pri: 1, kind: 'quiz-piada' });
     }
     // chamada pra presente/seguir (a cada 3 perguntas)
     const CTAS = [
@@ -167,6 +208,8 @@
           if (restante === 6 && !st.acertos.length && falouCinco !== st.n && Math.random() < 0.6) { falouCinco = st.n; falar([{ quem: 'serpente', acao: 'sibilar', texto: rnd(['Ssss... cinco segundos!', 'Acaba o tempo, ssss... corre!', 'Ninguém? Ssss... cinco segundos!']) }], { pri: 2, kind: 'quiz-tempo' }); } }
         if (t >= st.fim) revelar();
       } else if (st.fase === 'revelar' && t >= st.fim) proxima();
+      // live quieta: chamam a galera (no máximo a cada 45 s)
+      if (t - ultChat > 45000 && t - ultSilencio > 45000 && st.fase === 'pergunta') { ultSilencio = t; falar([linha(FALAS.silencio)], { pri: 1, kind: 'quiz-silencio' }); }
     }
 
     function publico() {
@@ -177,6 +220,7 @@
 
     // ---------- eventos da live ----------
     function chat(u, texto) {
+      ultChat = agora();
       const limpo = F && F.proibido(String(texto)) ? '***' : String(texto).slice(0, 80);
       if (st.fase !== 'pergunta' || !st.q) { emitir({ ev: 'chat', user: u, texto: limpo, ok: false }); reagir(u, texto); return false; }
       if (st.acertos.some((a) => a.id === u.id)) return true;
@@ -186,7 +230,7 @@
           if (agora() - ultQuase > 12000) { ultQuase = agora(); falar([{ quem: 'serpente', acao: 'sibilar', texto: rnd([`Quase, ${nome(u)}! Ssss... tá quente!`, `Ssss... ${nome(u)} chegou pertinho!`, `Tá quente, ${nome(u)}! Tenta de novo!`]) }], { pri: 2, kind: 'quiz-quase', user: u }); }
           return false;
         }
-        emitir({ ev: 'chat', user: u, texto: limpo, ok: false }); reagir(u, texto); return false;
+        emitir({ ev: 'chat', user: u, texto: limpo, ok: false }); if (!reagir(u, texto)) zoar(u, texto); return false;
       }
       const pos = st.acertos.length; if (pos >= cfg.maxAcertos) return true;
       const j = jogador(u);
@@ -212,18 +256,33 @@
     function reagir(u, texto) {
       if (agora() - ultResposta < 20000 || (F && F.proibido(String(texto)))) return;
       const t = semAc(texto), n = nome(u);
-      let linha = null;
-      if (/\b(dica|ajuda|dificil|socorro|nao sei|impossivel)\b/.test(t)) linha = { quem: 'palhaco', acao: 'rir', texto: rnd([`Quer dica, ${n}? Manda uma rosa que eu abro uma letra! Rá rá rá!`, `Tá difícil, ${n}? Uma rosinha e eu te ajudo!`]) };
-      else if (/\b(palhaco|palhacinho)\b/.test(t)) linha = { quem: 'palhaco', acao: 'acenar', texto: rnd([`Me chamou, ${n}? Rá rá rá! Responde a pergunta!`, `Tô de olho em você, ${n}!`]) };
-      else if (/\b(serpente|cobra|cobrinha)\b/.test(t)) linha = { quem: 'serpente', acao: 'sibilar', texto: rnd([`Ssss... me chamou, ${n}?`, `Ssss... cuidado comigo, ${n}.`]) };
-      else if (/\b(medo|assustador|credo|socorro|feio)\b/.test(t)) linha = { quem: 'palhaco', acao: 'rir', texto: rnd([`Medo de mim, ${n}? Rá rá rá rá!`, `Bu! Rá rá rá! Calma, ${n}, eu só mordo quem erra!`]) };
-      else if (/\b(oi|ola|salve|boa noite|boa tarde|bom dia|eae)\b/.test(t)) linha = { quem: rnd(['palhaco', 'serpente']), acao: 'acenar', texto: rnd([`Oi, ${n}! Bem-vindo ao abismo! Responde no chat!`, `Salve, ${n}! Vale ponto, hein!`]) };
-      if (!linha) return;
-      ultResposta = agora(); falar([linha], { pri: 1, kind: 'quiz-resposta', user: u });
+      let fala = null;
+      if (/\b(dica|ajuda|dificil|socorro|nao sei|impossivel)\b/.test(t)) fala = { quem: 'palhaco', acao: 'rir', texto: rnd([`Quer dica, ${n}? Manda uma rosa que eu abro uma letra! Rá rá rá!`, `Tá difícil, ${n}? Uma rosinha e eu te ajudo!`]) };
+      else if (/\b(palhaco|palhacinho)\b/.test(t)) fala = { quem: 'palhaco', acao: 'acenar', texto: rnd([`Me chamou, ${n}? Rá rá rá! Responde a pergunta!`, `Tô de olho em você, ${n}!`]) };
+      else if (/\b(serpente|cobra|cobrinha)\b/.test(t)) fala = { quem: 'serpente', acao: 'sibilar', texto: rnd([`Ssss... me chamou, ${n}?`, `Ssss... cuidado comigo, ${n}.`]) };
+      else if (/\b(medo|assustador|credo|socorro|feio)\b/.test(t)) fala = { quem: 'palhaco', acao: 'rir', texto: rnd([`Medo de mim, ${n}? Rá rá rá rá!`, `Bu! Rá rá rá! Calma, ${n}, eu só mordo quem erra!`]) };
+      else if (/\b(oi|ola|salve|boa noite|boa tarde|bom dia|eae)\b/.test(t)) fala = { quem: rnd(['palhaco', 'serpente']), acao: 'acenar', texto: rnd([`Oi, ${n}! Bem-vindo ao abismo! Responde no chat!`, `Salve, ${n}! Vale ponto, hein!`]) };
+      if (!fala) return false;
+      ultResposta = agora(); falar([fala], { pri: 1, kind: 'quiz-resposta', user: u }); return true;
+    }
+    // chute errado: de vez em quando eles zoam (só chutes curtos e limpos)
+    function zoar(u, texto) {
+      if (agora() - ultZoa < 25000 || Math.random() > 0.3) return;
+      const t = F ? F.podeLer(texto) : null; if (!t || t.length > 24 || !/\p{L}{2,}/u.test(t)) return;
+      ultZoa = agora(); falar([linha(FALAS.zoa, { n: nome(u), t })], { pri: 1, kind: 'quiz-zoa', user: u });
     }
     // curtidas: a cada 300, uma letra de dica pra todo mundo
     function curtidas(u, n) {
-      curtidasTotal += Math.max(0, Number(n) || 0);
+      n = Math.max(0, Number(n) || 0); curtidasTotal += n;
+      if (u && u.id) { // quem curte muito ganha um "valeu" (no máximo 1 a cada 3 min por pessoa)
+        const ag = agora(), arr = (curtidasDe.get(u.id) || []).filter((x) => ag - x[0] < 60000); arr.push([ag, n]); curtidasDe.set(u.id, arr);
+        const soma = arr.reduce((a, x) => a + x[1], 0);
+        if (soma >= 60 && ag - (agradecidoCurtir.get(u.id) || 0) > 180000 && ag - ultCurtidor > 20000) {
+          agradecidoCurtir.set(u.id, ag); ultCurtidor = ag; emitir({ ev: 'curtidor', user: u, total: soma });
+          falar([linha(FALAS.curtidor, { n: nome(u) })], { pri: 1, kind: 'quiz-curtidor', user: u });
+        }
+        if (curtidasDe.size > 500) curtidasDe.clear();
+      }
       if (curtidasTotal < proxMarco) return;
       const marco = proxMarco; proxMarco = (Math.floor(curtidasTotal / cfg.curtidasDica) + 1) * cfg.curtidasDica;
       const abriu = st.fase === 'pergunta' && !st.fecharEm ? abrir(1) : 0;
@@ -251,26 +310,31 @@
       }
       // presentes pequenos (Rosa etc.): abre letras da resposta
       const abriu = st.fase === 'pergunta' && !st.fecharEm ? abrir(Math.min(2, Math.max(1, Math.floor(count) || 1))) : 0;
-      emitir({ ev: 'presente', tipo: abriu ? 'dica' : 'pontos', user: u, giftName, coins, pts: coins * 2 });
+      const ag = agora(), seq = (presentesDe.get(u.id) || []).filter((x) => ag - x < 60000); seq.push(ag); presentesDe.set(u.id, seq);
+      const combo = seq.length >= 3;
+      emitir({ ev: 'presente', tipo: abriu ? 'dica' : 'pontos', user: u, giftName, coins, pts: coins * 2, combo: combo ? seq.length : 0 });
       if (abriu) emitir({ ev: 'dica', mascara: mascara(), motivo: { user: u, giftName } });
-      if (agora() - ultFalaPresente < 5000) return; ultFalaPresente = agora();
-      falar([{ quem: 'palhaco', acao: abriu ? 'rir' : 'acenar', texto: abriu ? rnd([`${n} mandou ${p.art} ${pn}! Lá vai uma dica!`, `Valeu, ${n}! Abri uma letra pra galera!`]) : `Valeu ${F ? F.pelo(p.art) : 'pelo'} ${pn}, ${n}!` }], { pri: 2, kind: 'quiz-presente', user: u });
+      const v = { n, p: pn, ap: `${p.art} ${pn}`, pelo: F ? F.pelo(p.art) : 'pelo' };
+      if (combo && seq.length % 3 === 0) return falar([linha(FALAS.combo, v)], { pri: 2, kind: 'quiz-presente', user: u });
+      if (coins >= 10 && ag - ultCanta > 15000) { ultCanta = ag; return falar([linha(FALAS.canta, v)], { pri: 2, kind: 'quiz-canta', user: u }); }
+      if (ag - ultFalaPresente < 5000) return; ultFalaPresente = ag;
+      falar([linha(abriu ? FALAS.dica : FALAS.obrigado, v)], { pri: 2, kind: 'quiz-presente', user: u });
     }
     const seguiram = new Set(); let ultSeguiu = 0;
     function seguiu(u) {
       if (seguiram.has(u.id)) return; // seguir e deixar de seguir várias vezes não dá ponto de novo
       seguiram.add(u.id); somar(u, 5); emitir({ ev: 'seguiu', user: u });
       if (agora() - ultSeguiu < 4000) return; ultSeguiu = agora();
-      falar([{ quem: rnd(['palhaco', 'serpente']), acao: 'comemorar', texto: rnd([`Valeu por seguir, ${nome(u)}! Mais cinco pontos!`, `${nome(u)} agora faz parte do abismo!`]) }], { pri: 2, kind: 'quiz-seguiu', user: u });
+      falar([linha(FALAS.seguiu, { n: nome(u) })], { pri: 2, kind: 'quiz-seguiu', user: u });
     }
     function compartilhou(u) {
       somar(u, 5); emitir({ ev: 'compartilhou', user: u });
-      if (agora() - ultCompart > 15000) { ultCompart = agora(); falar([{ quem: 'serpente', acao: 'comemorar', texto: `Ssss... valeu por compartilhar, ${nome(u)}! Traz mais gente pro abismo!` }], { pri: 2, kind: 'quiz-compart', user: u }); }
+      if (agora() - ultCompart > 15000) { ultCompart = agora(); falar([linha(FALAS.compartilhou, { n: nome(u) })], { pri: 2, kind: 'quiz-compart', user: u }); }
     }
     function entrou(u) {
       emitir({ ev: 'entrou', user: u });
-      if (agora() - ultBoasVindas < 25000) return; ultBoasVindas = agora();
-      falar([{ quem: rnd(['palhaco', 'serpente']), acao: 'acenar', texto: rnd([`Bem-vindo ao abismo, ${nome(u)}! Responde no chat!`, `${nome(u)} chegou! Escreve a resposta no chat pra pontuar!`]) }], { pri: 1, kind: 'quiz-entrou', user: u });
+      if (agora() - ultBoasVindas < 12000) return; ultBoasVindas = agora();
+      falar([linha(FALAS.entrou, { n: nome(u) })], { pri: 1, kind: 'quiz-entrou', user: u });
     }
 
     // ---------- controle ----------

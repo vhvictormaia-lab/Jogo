@@ -34,8 +34,8 @@ export function criarMusica({ volume = 0.22, falando = () => false } = {}) {
   ];
   let musica = 0, passo = 0, proxT = 0, energia = 0.2, cantando = false;
   const eventos = [];
-  let calorExtra = 0;
-  const bpm = () => 112 + energia * 38;
+  let calorExtra = 0, tensao = false;
+  const bpm = () => 112 + energia * 38 + (tensao ? 26 : 0);
   function agenda() {
     if (!ok || ac.state !== 'running') return;
     const agora = performance.now(); while (eventos.length && agora - eventos[0][0] > 25000) eventos.shift();
@@ -49,6 +49,7 @@ export function criarMusica({ volume = 0.22, falando = () => false } = {}) {
       if (p % 2 === 0) nota(BASE - 12 + M.baixo[(p / 2) % 8], t, col * 1.5, 'triangle', 0.55);           // oom
       if (p % 4 === 2) for (const n of M.acordes[comp]) nota(BASE + n, t, col * 0.9, 'square', 0.045); // pah
       if (p % 4 === 0) bumbo(t, nivel >= 1 ? 0.6 : 0.35);
+      if (tensao && p % 4 === 1) bumbo(t, 0.45); // coração batendo (tum-tum) nos últimos segundos
       if (nivel >= 1) perc(t, p % 2 ? 0.04 : 0.08, 7000, 1, 0.04);
       if (nivel >= 1 && p % 8 === 4) perc(t, 0.2, 1500, 0.8, 0.12, 'bandpass');
       if (M.mel[p] != null) nota(BASE + M.mel[p], t, col * 1.6, nivel >= 2 ? 'square' : 'triangle', nivel >= 2 ? 0.07 : 0.17);
@@ -73,6 +74,8 @@ export function criarMusica({ volume = 0.22, falando = () => false } = {}) {
     },
     esquentar(x) { calorExtra = Math.min(0.6, calorExtra + x); },
     cantoria(on) { cantando = !!on; },
+    // últimos segundos da pergunta: mais rápido e com batida de coração
+    tensao(on) { tensao = !!on; },
     // ritmo atual para a dança: batidas por segundo e posição dentro da batida (0..1)
     batida() { const b = bpm() / 60; return { porSeg: b, fase: ok ? ((ac.currentTime * b) % 1) : ((performance.now() / 1000 * b) % 1), energia }; },
   };

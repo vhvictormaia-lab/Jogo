@@ -140,6 +140,11 @@
   .brasa{position:absolute;width:8px;height:8px;border-radius:50%;background:#ff3b1f;box-shadow:0 0 12px #ff3b1f,0 0 24px #ff6a00;z-index:2;pointer-events:none}
   .coracao{position:absolute;bottom:180px;z-index:21;font-size:70px;animation:sobeC 3s ease-out forwards;pointer-events:none}
   @keyframes sobeC{to{transform:translateY(-1100px) scale(1.4);opacity:0}}
+  .bolha{position:absolute;z-index:6;display:flex;align-items:center;gap:10px;padding:6px 18px 6px 6px;border-radius:40px;background:rgba(26,2,8,.92);border:3px solid var(--sangue);
+    font:900 26px Nunito,sans-serif;color:#fff;white-space:nowrap;box-shadow:0 0 20px rgba(255,0,30,.5);pointer-events:none;max-width:520px;overflow:hidden;text-overflow:ellipsis}
+  .bolha img,.bolha .av{width:56px;height:56px;border-radius:50%;object-fit:cover;font-size:28px;flex:none}
+  .bolha.verde{border-color:var(--verde);box-shadow:0 0 20px rgba(108,255,106,.5)} .bolha.ouro{border-color:var(--ouro);box-shadow:0 0 20px rgba(255,204,77,.6)}
+  .voa{position:absolute;z-index:22;font-size:90px;pointer-events:none;filter:drop-shadow(0 0 16px rgba(255,60,60,.8))}
   /* campeão */
   #campeao{position:absolute;inset:0;z-index:25;display:none;place-items:center;background:radial-gradient(circle,rgba(60,0,10,.92),rgba(0,0,0,.97))}
   #campeao.on{display:grid}
@@ -272,6 +277,8 @@ const SFX={
   revela:()=>{ tom(220,0,.35,'sawtooth',.08); tom(277,.12,.45,'sawtooth',.08); tom(330,.24,.6,'sawtooth',.08); },
   fogo:()=>[600,800,1000,1300].forEach((f,i)=>tom(f,i*.05,.15,'square',.08)),
   fanfarra:()=>[[523,0],[659,.12],[784,.24],[1047,.36],[784,.5],[1047,.62]].forEach(([f,t],i)=>tom(f,t,i===5?.7:.14,'triangle',.22)),
+  triste:()=>[[392,0,.42],[370,.45,.42],[349,.9,.42],[330,1.35,1.1]].forEach(([f,t,d])=>tom(f,t,d,'sawtooth',.09)),
+  jingle:()=>[[523,0],[659,.15],[784,.3],[659,.45],[880,.6],[784,.8],[1047,1.0]].forEach(([f,t],i)=>{ tom(f,t,.18,'triangle',.14); if(i%2===0) tom(f/4,t,.2,'sine',.12); }),
   sino:()=>[[1568,0],[2093,.08],[2637,.16]].forEach(([f,t])=>tom(f,t,.5,'sine',.22)),
   grito:()=>{ try{ const a=audio(); if(a.state!=='running') return; const t=a.currentTime, o=a.createOscillator(), g=a.createGain(), o2=a.createOscillator();
     o.type='sawtooth'; o.frequency.setValueAtTime(300,t); o.frequency.exponentialRampToValueAtTime(1400,t+.25); o.frequency.exponentialRampToValueAtTime(500,t+1);
@@ -305,7 +312,7 @@ function proximaFala(){ const m=falaQ.shift(); if(!m) return; falaAtual=m; m._t=
   const parte=()=>{ if(falaAtual!==m) return; if(k>=partes.length) return fimFala(); const pa=partes[k++];
     const P=pa.quem==='espectador'?null:(PERS[pa.quem]||palhaco); m.quem=P;
     $('pPalhaco').classList.toggle('fala',P===palhaco); $('pSerpente').classList.toggle('fala',P===serpente);
-    if(P&&pa.acao) acao(P,pa.acao);
+    if(P&&pa.acao) acao(P,pa.acao); if(pa.acao==='cantar') SFX.jingle();
     const fim=()=>{ if(P) P.falar(0); parte(); };
     if(pa.url){ const a=new Audio(pa.url); a.crossOrigin='anonymous'; const sb=SOMBRIO[pa.quem]||SOMBRIO.palhaco; a.preservesPitch=false; a.mozPreservesPitch=false; a.webkitPreservesPitch=false; a.playbackRate=sb.vel;
       m.analisa=ligarAnalisador(a,pa.quem); m.simula=false; a.onended=fim; a.onerror=fim; a.play().catch(()=>setTimeout(fim,1500)); }
@@ -358,6 +365,18 @@ function proximoBanner(){ const b=banQ.shift(); if(!b){ banOcupado=false; return
   const el=document.createElement('div'); el.className='fx banner '+b.tipo; el.innerHTML=`<div class="txt terror">${b.html}</div>`; stage.appendChild(el); setTimeout(()=>el.remove(),1750); setTimeout(proximoBanner,1500); }
 function tremer(){ stage.classList.remove('treme'); void stage.offsetWidth; stage.classList.add('treme'); }
 function coracoes(n=10){ for(let i=0;i<n;i++){ const h=document.createElement('div'); h.className='coracao'; h.textContent=['❤️','🖤','💀','❤️‍🔥'][i%4]; h.style.left=(80+Math.random()*900)+'px'; h.style.animationDelay=(Math.random()*.8)+'s'; stage.appendChild(h); setTimeout(()=>h.remove(),4000); } }
+// bolha com foto subindo em cima dos apresentadores (entrou, seguiu, curtiu, compartilhou)
+let bolhaLado=0;
+function bolha(u,texto,cor=''){ const el=document.createElement('div'); el.className='bolha '+cor; el.innerHTML=`${avatar(u)}<span>${esc(texto)}</span>`;
+  const x=(bolhaLado++%2)?560:40; el.style.left=x+'px'; el.style.top='600px'; stage.appendChild(el);
+  el.animate([{transform:'translateY(40px) scale(.6)',opacity:0},{transform:'translateY(0) scale(1)',opacity:1,offset:.12},{transform:'translateY(-120px)',opacity:1,offset:.8},{transform:'translateY(-170px)',opacity:0}],{duration:3600,easing:'ease-out'}).onfinish=()=>el.remove(); }
+// presente voa até a boca do palhaço, que "come" e ri
+const EMOJI_PRES={rose:'🌹',rosa:'🌹','finger heart':'🫰',heart:'❤️','heart me':'💖',donut:'🍩',doughnut:'🍩',lion:'🦁',galaxy:'🌌',universe:'🪐',perfume:'🧴','ice cream cone':'🍦',
+  'hand hearts':'🫶',rocket:'🚀',fireworks:'🎆',gg:'🎮','tiktok':'🎵',corgi:'🐶','money gun':'💸',sunglasses:'🕶️',cap:'🧢',confetti:'🎊',cake:'🎂',swan:'🦢',train:'🚂',motorcycle:'🏍️','sports car':'🏎️','private jet':'🛩️','little crown':'👑',coffee:'☕',mic:'🎤'};
+function voarPresente(nomeP,n=1){ const e=EMOJI_PRES[String(nomeP||'').toLowerCase()]||'🎁'; const q=Math.min(6,Math.max(1,n));
+  for(let i=0;i<q;i++) setTimeout(()=>{ const el=document.createElement('div'); el.className='voa'; el.textContent=e; const x0=120+Math.random()*840;
+    el.style.left='0px'; el.style.top='0px'; stage.appendChild(el);
+    el.animate([{transform:`translate(${x0}px,1850px) scale(.6) rotate(0deg)`,opacity:0},{opacity:1,offset:.15},{transform:`translate(${(x0+260)/2}px,900px) scale(1.2) rotate(180deg)`,offset:.55},{transform:'translate(262px,430px) scale(.2) rotate(360deg)',opacity:.9}],{duration:1300,easing:'cubic-bezier(.3,.1,.4,1)'}).onfinish=()=>{ el.remove(); palhaco.acao('rir',1); tom(260+Math.random()*80,0,.12,'square',.08); }; },i*160); }
 function piscarPr(id){ const e=$(id); e.classList.remove('pisca'); void e.offsetWidth; e.classList.add('pisca'); }
 function susto(){ SFX.grito(); tremer(); const s=$('susto'); s.classList.remove('on'); void s.offsetWidth; s.classList.add('on'); const p=$('pPalhaco'); p.classList.remove('susto'); void p.offsetWidth; p.classList.add('susto');
   palhaco.acao('susto',1.4); setTimeout(()=>{ s.classList.remove('on'); p.classList.remove('susto'); },1700); }
@@ -383,26 +402,28 @@ function feed(u,txt,ok,quase){ const el=document.createElement('div'); el.classN
 // ---------- eventos ----------
 function onQuiz(m){
   switch(m.ev){
-    case 'pergunta': mostrarPergunta(m); break;
-    case 'tick': if(Q.fase==='pergunta'){ relogio(m.restante,m.tempo); if(m.restante<=5&&m.restante>0) SFX.tic(m.restante); } break;
+    case 'pergunta': musica.tensao(false); if(m.n%3===1&&m.n>1) musica.proximaMusica(); if(m.bonus>1) musica.esquentar(.4); mostrarPergunta(m); break;
+    case 'tick': if(Q.fase==='pergunta'){ relogio(m.restante,m.tempo); if(m.restante<=5&&m.restante>0) SFX.tic(m.restante); musica.tensao(m.restante<=6&&m.restante>0); } break;
     case 'dica': desenharDica(m.mascara,true); if(m.motivo&&m.motivo.user){ piscarPr('prDica'); led(`🌹 <b>${esc(m.motivo.user.name)}</b> ABRIU UMA LETRA!`); } break;
     case 'curtidas': coracoes(16); banner(`❤️ ${m.total} CURTIDAS${m.abriu?'<small>uma letra de presente!</small>':''}`,'verde'); led(`❤️ <b>${m.total} CURTIDAS!</b> CONTINUA CURTINDO!`); break;
-    case 'revelar': revelar(m); break;
+    case 'revelar': musica.tensao(false); revelar(m); if(!(m.acertos||[]).length) setTimeout(SFX.triste,500); break;
     case 'acerto': SFX.certo(); musica.evento('presente',5);
       if(m.pos===0) vence(m); if(m.rapido) banner('⚡ RELÂMPAGO!');
       { const tier={3:'🔥 PEGANDO FOGO',5:'💀 IMPARÁVEL',10:'👑 LENDA DO ABISMO'}[m.seq]||(m.seq>10&&m.seq%5===0?`👑 LENDA x${m.seq}`:null); if(tier){ banner(`${tier}<small>${esc(m.name)}</small>`,m.seq>=10?'ouro':''); if(m.seq>=5) tremer(); } }
       break;
     case 'chat': feed(m.user,m.texto,m.ok,m.quase); if(m.quase){ musica.evento('comentario'); } break;
     case 'placar': placarModo=m.modo||placarModo; ranking=m.top||[]; if(m.n) Q.n=m.n; desenharPlacar(m.bump); break;
-    case 'top1': banner(`👑 NOVO TOP 1<small>${esc(m.user.name)}</small>`,'ouro'); SFX.fanfarra(); break;
-    case 'presente': musica.evento('presente',m.coins,m.giftName);
+    case 'top1': banner(m.antes?`👑 ROUBOU O TRONO<small>${esc(m.user.name)}</small>`:`👑 NOVO TOP 1<small>${esc(m.user.name)}</small>`,'ouro'); SFX.fanfarra(); break;
+    case 'curtidor': bolha(m.user,`❤️ curtindo sem parar!`,'verde'); coracoes(10); break;
+    case 'presente': musica.evento('presente',m.coins,m.giftName); voarPresente(m.giftName,m.coins>=30?4:Math.ceil(Math.sqrt(m.coins)));
+      if(m.combo&&m.combo%3===0) banner(`💥 COMBO x${m.combo}<small>${esc(m.user.name)}</small>`,'ouro');
       if(m.tipo==='bonus'){ susto(); setTimeout(()=>banner(`PRÓXIMA VALE x3<small>presente de ${esc(m.user.name)}</small>`,'ouro'),900); piscarPr('prBonus'); led(`🦁 <b>${esc(m.user.name)}</b> LIBEROU A PERGUNTA BÔNUS x3!`); }
       else if(m.tipo==='dobro'){ banner(`🍩 PONTOS x2<small>${esc(m.user.name)}</small>`,'verde'); piscarPr('prDobro'); led(`🍩 <b>${esc(m.user.name)}</b> GANHOU PONTOS EM DOBRO!`); }
       else { piscarPr('prDica'); if(m.tipo!=='dica'){ const pg=window.Falas?window.Falas.presente(m.giftName).nome:m.giftName; led(`🎁 <b>${esc(m.user.name)}</b> MANDOU ${esc(String(pg).toUpperCase())}!`); } }
       break;
-    case 'seguiu': coracoes(12); led(`➕ <b>${esc(m.user.name)}</b> SEGUIU O ABISMO!`); feed(m.user,'➕ seguiu!',false); break;
-    case 'compartilhou': led(`🔁 <b>${esc(m.user.name)}</b> COMPARTILHOU A LIVE!`); break;
-    case 'entrou': led(`👋 <b>${esc(m.user.name)}</b> ENTROU NO ABISMO`,'entrou'); break;
+    case 'seguiu': coracoes(12); bolha(m.user,'➕ seguiu o abismo!','ouro'); led(`➕ <b>${esc(m.user.name)}</b> SEGUIU O ABISMO!`); feed(m.user,'➕ seguiu!',false); musica.evento('seguiu'); break;
+    case 'compartilhou': bolha(m.user,'🔁 compartilhou!','verde'); led(`🔁 <b>${esc(m.user.name)}</b> COMPARTILHOU A LIVE!`); musica.evento('seguiu'); break;
+    case 'entrou': if(Date.now()-(window.__ultBolhaEntrou||0)>1800){ window.__ultBolhaEntrou=Date.now(); bolha(m.user,'👋 entrou'); } led(`👋 <b>${esc(m.user.name)}</b> ENTROU NO ABISMO`,'entrou'); break;
     case 'campeao': campeao(m); break;
     case 'esconderCampeao': $('campeao').classList.remove('on'); break;
   }
@@ -447,7 +468,8 @@ function iniciarDemo(){ if(demoRodando) return; demoRodando=true;
   (function tick(){ const r=Math.random(), u=fakeUser();
     if(r<.30) sim({type:'chat',user:u,text:rnd(CHUTES)});
     else if(r<.50){ const a=resposta(); if(a&&Math.random()<.75) sim({type:'chat',user:u,text:Math.random()<.5?a:a.toLowerCase()}); }
-    else if(r<.62) sim({type:'gift',user:u,giftName:'Rose',diamonds:1,count:1+Math.floor(Math.random()*3)});
+    else if(r<.58) sim({type:'gift',user:u,giftName:'Rose',diamonds:1,count:1+Math.floor(Math.random()*3)});
+    else if(r<.62) sim({type:'gift',user:u,giftName:rnd(['Finger Heart','Ice Cream Cone','Perfume']),diamonds:rnd([5,1,20]),count:rnd([1,2])});
     else if(r<.66) sim({type:'gift',user:u,giftName:'Donut',diamonds:30,count:1});
     else if(r<.675) sim({type:'gift',user:u,giftName:'Lion',diamonds:29999,count:1});
     else if(r<.72) sim({type:'follow',user:u}); else if(r<.8) sim({type:'join',user:u});
