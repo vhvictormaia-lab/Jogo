@@ -866,7 +866,10 @@ const sfx=(()=>{
       const pop=()=>{ const a=new Audio('sounds/gift-pop.mp3'); a.volume=.8; a.play().catch(()=>{}); };
       try{ const ss=window.speechSynthesis; const vs=ss?ss.getVoices().filter(v=>/^pt/i.test(v.lang)):[];
         if(!ss||!vs.length) return pop();
-        const u=new SpeechSynthesisUtterance(`Valeu pelo follow${n?', '+n:''}!`); u.lang='pt-BR'; u.voice=vs.find(v=>/BR/i.test(v.lang))||vs[0]; u.rate=1.05; ss.cancel(); ss.speak(u);
+        const u=new SpeechSynthesisUtterance(`Valeu pelo follow${n?', '+n:''}!`); u.lang='pt-BR'; u.voice=vs.find(v=>/BR/i.test(v.lang))||vs[0]; u.rate=1.05;
+        let started=false; u.onstart=()=>{ started=true; }; u.onerror=()=>{ if(!started){ started=true; pop(); } };
+        setTimeout(()=>{ if(!started){ started=true; try{ ss.cancel(); }catch(e){} pop(); } },1500); // voz bloqueada ou travada: toca o 'pop'
+        ss.cancel(); ss.speak(u);
       }catch(e){ pop(); } }),
     explode: safe(()=>playDonation()),
     tick: mute,
@@ -874,6 +877,7 @@ const sfx=(()=>{
     end: mute,
   };
 })();
+try{ const ss=window.speechSynthesis; if(ss){ ss.getVoices(); ss.addEventListener('voiceschanged',()=>ss.getVoices()); } }catch(e){} // carrega as vozes logo no início
 addEventListener('pointerdown',sfx.unlock,{once:true}); addEventListener('keydown',sfx.unlock,{once:true}); sfx.unlock();
 
 const bannerQ=[];
