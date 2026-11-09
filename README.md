@@ -9,6 +9,12 @@ COMO FUNCIONA
 - Os presentes GG, Fireworks, Boxing Gloves e Rocket são "bombas": explodem o rabo da cobra.
 - No fim da rodada (5 minutos) aparece o ranking: Top Apoiadores e Top Curtidas.
 
+COBRINHA NO ABISMO
+O jogo da Cobrinha tem o mapa "Abismo": céu roxo com lua verde, tenda de circo, lanternas, árvores tortas e caveiras.
+Nesse mapa a cobra vira a SERPENTE DAS TREVAS e o PALHAÇO DO ABISMO fica na frente do tabuleiro dançando e reagindo aos presentes.
+O mapa Abismo entra no sorteio das rodadas. Para deixar SEMPRE no Abismo, use no LIVE Studio a fonte Link:
+  http://localtest.me:3000/?tema=abismo
+
 ABISMO LIVE (novo jogo)
 Um cenário 3D de desenho com o PALHAÇO DO ABISMO e a SERPENTE DAS TREVAS andando, conversando e reagindo à live.
 - Cada presente tem animação e fala: até 4 diamantes acena/ri, de 5 a 29 dança, de 30 a 99 gira e a serpente dá o bote,
