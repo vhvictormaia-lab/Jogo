@@ -22,8 +22,8 @@ echo  Deixe esta janela aberta durante a live.
 echo.
 echo  Painel de controle:  http://localhost:3000/painel.html
 echo.
-rem abre o painel no navegador uns segundos depois de o jogo ligar
-start "" /b cmd /c "timeout /t 4 /nobreak >nul & start "" http://localhost:3000/painel.html"
+rem abre a tela do quiz no navegador uns segundos depois de o jogo ligar
+start "" /b cmd /c "timeout /t 4 /nobreak >nul & start "" http://localhost:3000/quiz.html"
 :inicio
 node server.js %U%
 rem codigo 42 = o painel atualizou o sistema: liga de novo
