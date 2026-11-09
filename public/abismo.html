@@ -235,8 +235,26 @@ function rodarFaixa(){ if(performance.now()<faixaAte||!faixaQ.length) return; co
 
 // ---------- falas (voz do servidor; boca mexe conforme o volume) ----------
 let acFala=null, analisador=null; const buf=new Uint8Array(256);
-function ligarAnalisador(audio){ try{ if(!acFala){ acFala=new (window.AudioContext||window.webkitAudioContext)(); analisador=acFala.createAnalyser(); analisador.fftSize=512; analisador.connect(acFala.destination); }
-  if(acFala.state==='suspended') acFala.resume().catch(()=>{}); const src=acFala.createMediaElementSource(audio); src.connect(analisador); return true; }catch(e){ return false; } }
+// vozes sombrias: tom mais grave (toca mais devagar sem corrigir o tom) + eco de circo abandonado
+const SOMBRIO={palhaco:{vel:.88,eco:.32,rev:.45},serpente:{vel:.8,eco:.4,rev:.6}};
+let efeitoEntrada=null;
+function montarEfeitos(){
+  const ac=acFala; analisador=ac.createAnalyser(); analisador.fftSize=512; analisador.connect(ac.destination);
+  efeitoEntrada=ac.createGain();
+  const seco=ac.createGain(); seco.gain.value=1; efeitoEntrada.connect(seco); seco.connect(analisador);
+  // eco
+  const atraso=ac.createDelay(1); atraso.delayTime.value=.19; const volta=ac.createGain(); volta.gain.value=.32; const ecoG=ac.createGain(); ecoG.gain.value=.35;
+  efeitoEntrada.connect(atraso); atraso.connect(volta); volta.connect(atraso); atraso.connect(ecoG); ecoG.connect(analisador);
+  // reverberação (sala grande e escura)
+  const conv=ac.createConvolver(); const n=Math.floor(ac.sampleRate*2.4); const ir=ac.createBuffer(2,n,ac.sampleRate);
+  for(let c=0;c<2;c++){ const d=ir.getChannelData(c); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3); }
+  conv.buffer=ir; const revG=ac.createGain(); revG.gain.value=.45; efeitoEntrada.connect(conv); conv.connect(revG); revG.connect(analisador);
+  efeitoEntrada.ecoG=ecoG; efeitoEntrada.revG=revG;
+}
+function ligarAnalisador(audio,quem){ try{ if(!acFala){ acFala=new (window.AudioContext||window.webkitAudioContext)(); montarEfeitos(); }
+  if(acFala.state==='suspended') acFala.resume().catch(()=>{});
+  const f=SOMBRIO[quem]||SOMBRIO.palhaco; efeitoEntrada.ecoG.gain.value=f.eco; efeitoEntrada.revG.gain.value=f.rev;
+  const src=acFala.createMediaElementSource(audio); src.connect(efeitoEntrada); return true; }catch(e){ return false; } }
 function nivelVoz(){ if(!analisador) return 0; analisador.getByteTimeDomainData(buf); let s=0; for(let i=0;i<buf.length;i++){ const v=(buf[i]-128)/128; s+=v*v; } return Math.min(1,Math.sqrt(s/buf.length)*5); }
 const falaQ=[];
 function falar(m){ falaQ.push(m); if(falaQ.length>8) falaQ.shift(); if(!falaAtual) proximaFala(); }
@@ -252,7 +270,7 @@ function proximaFala(){
     m.quem=P; if(pa.acao) P.acao(pa.acao); if(pa.acao==='cantar'){ musica.cantoria(true); trupe.forEach(d=>d.acao('dancar',8)); }
     focar(P,9000); if(m.user) $('placa').classList.add('on');
     const fim=()=>{ musica.cantoria(false); P.falar(0); tocarParte(); };
-    if(pa.url){ const a=new Audio(pa.url); a.crossOrigin='anonymous'; m.audio=a; m.analisa=ligarAnalisador(a); a.onended=fim; a.onerror=fim; a.play().catch(()=>setTimeout(fim,1500)); }
+    if(pa.url){ const a=new Audio(pa.url); a.crossOrigin='anonymous'; const sb=SOMBRIO[pa.quem]||SOMBRIO.palhaco; a.preservesPitch=false; a.mozPreservesPitch=false; a.webkitPreservesPitch=false; a.playbackRate=sb.vel; m.audio=a; m.analisa=ligarAnalisador(a,pa.quem); a.onended=fim; a.onerror=fim; a.play().catch(()=>setTimeout(fim,1500)); }
     else falarNavegador(pa.texto,pa.quem,fim,m);
   };
   tocarParte();
@@ -260,7 +278,7 @@ function proximaFala(){
 function falarNavegador(texto,quem,fim,m){ m.analisa=false; m.simula=true;
   try{ const ss=window.speechSynthesis; const vs=ss?ss.getVoices().filter(v=>/^pt/i.test(v.lang)):[]; if(!ss||!vs.length) return setTimeout(fim,900+texto.length*60);
     const u=new SpeechSynthesisUtterance(texto.replace(/s{3,}/gi,'ss')); u.lang='pt-BR'; u.voice=vs.find(v=>/BR/i.test(v.lang))||vs[0];
-    u.pitch=quem==='serpente'?.65:1.55; u.rate=quem==='serpente'?.95:1.12; let ok=false; u.onend=()=>{ ok=true; fim(); }; u.onerror=()=>{ if(!ok) setTimeout(fim,600); };
+    u.pitch=quem==='serpente'?.1:.35; u.rate=quem==='serpente'?.78:.86; // vozes sombrias (graves e lentas) let ok=false; u.onend=()=>{ ok=true; fim(); }; u.onerror=()=>{ if(!ok) setTimeout(fim,600); };
     ss.speak(u); setTimeout(()=>{ if(!ok&&!ss.speaking) fim(); },900+texto.length*90); }catch(e){ setTimeout(fim,1500); } }
 
 // ---------- eventos da live ----------

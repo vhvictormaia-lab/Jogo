@@ -23,7 +23,7 @@ Um cenário 3D de desenho com o PALHAÇO DO ABISMO e a SERPENTE DAS TREVAS andan
 Como usar: abra o atalho "Abismo Live" (ou iniciar-abismo.bat) e no LIVE Studio use a fonte Link:
   http://localtest.me:3000/abismo.html
 Testar sem live: http://localhost:3000/abismo.html?demo=1  (teclas: G presente, B bomba, F seguir, S compartilhar, L curtir, C comentário, J entrar)
-Trocar vozes (no iniciar-abismo.bat, antes de "node server.js"): set VOZ_PALHACO=..., set TOM_PALHACO=+30Hz, set VOZ_SERPENTE=..., set TOM_SERPENTE=-22Hz
+Trocar vozes (no iniciar-abismo.bat, antes de "node server.js"): set VOZ_PALHACO=..., set TOM_PALHACO=-14Hz, set VOZ_SERPENTE=..., set TOM_SERPENTE=-28Hz
 
 NOVIDADES (versão 2)
 - TOP 6 DA LIVE fixo no alto da tela, com foto, nome e pontos de cada pessoa.

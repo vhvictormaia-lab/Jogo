@@ -50,8 +50,8 @@ const VOZ_NATURAL = (process.env.VOZ || 'pt-BR-FranciscaNeural').trim();        
 const VOZ_NARRADOR = (process.env.VOZ_NARRADOR || 'pt-BR-AntonioNeural').trim();  // voz que lê os comentários
 // Abismo: cada personagem com a sua voz (tom e velocidade ajustáveis)
 const VOZES_ABISMO = {
-  palhaco: { voz: (process.env.VOZ_PALHACO || 'pt-BR-AntonioNeural').trim(), pitch: process.env.TOM_PALHACO || '+30Hz', rate: '+14%' },
-  serpente: { voz: (process.env.VOZ_SERPENTE || 'pt-BR-FranciscaNeural').trim(), pitch: process.env.TOM_SERPENTE || '-22Hz', rate: '-4%' },
+  palhaco: { voz: (process.env.VOZ_PALHACO || 'pt-BR-AntonioNeural').trim(), pitch: process.env.TOM_PALHACO || '-14Hz', rate: '-6%' },     // sombrio, arrastado
+  serpente: { voz: (process.env.VOZ_SERPENTE || 'pt-BR-FranciscaNeural').trim(), pitch: process.env.TOM_SERPENTE || '-28Hz', rate: '-14%' },  // grave e lenta
 };
 const EDGE_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
 const EDGE_VER = '130.0.2849.68';
