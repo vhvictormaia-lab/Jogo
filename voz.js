@@ -145,6 +145,11 @@ const FALAS_DA_COBRA = [
   'Quem vai ser o campeão de curtidas dessa rodada?', 'Segue o perfil que eu agradeço pelo nome!', 'Cada diamante é uma fruta! Bora!',
   'Escreve no chat que eu leio tudo!', 'GG explode o meu rabo! Não faz isso comigo!', 'Olha o ranking aí em cima! Quem vai ser o primeiro?',
   'Ssssss... tô de olho em vocês!', 'Toca na tela e manda curtida pra eu crescer!',
+  'Alguém aí? Escreve oi no chat!', 'Quem mandar a primeira rosa vai pro topo do ranking!', 'Tô ficando com fome de novo...',
+  'Compartilha a live com um amigo!', 'Hoje eu quero ficar gigante!', 'Cadê a galera? Chama todo mundo!',
+  'Cada curtida conta ponto no ranking!', 'Será que alguém consegue me fazer crescer até o fim da rodada?',
+  'Eu leio todos os comentários, pode mandar!', 'Segue aí que eu falo o seu nome!', 'Que silêncio... alguém me dá uma fruta?',
+  'Essa fruta tá com uma cara ótima!', 'Rosa vira fruta, fruta vira cobra grande!', 'Vem pro top 6! Tá fácil hoje!',
 ];
 
 // ---------------- fila de falas ----------------
@@ -180,10 +185,16 @@ function criarVoz(broadcast) {
   let terminou = null, seguranca = null;
   function fim(id) { if (id && id !== atual) return; clearTimeout(seguranca); const f = terminou; terminou = null; if (f) f(); }
 
-  // fala solta da cobra quando está tudo quieto
+  // fala solta da cobra quando está tudo quieto (a cada 20 a 30 segundos, sem repetir as últimas)
+  const recentes = [];
+  let proximaSolta = 20000 + Math.random() * 10000;
   setInterval(() => {
-    if (!falando && !fila.length && Date.now() - ultimaFala > 50000 + Math.random() * 40000) por(0, rnd(FALAS_DA_COBRA), { kind: 'cobra' });
-  }, 5000);
+    if (falando || fila.length || Date.now() - ultimaFala < proximaSolta) return;
+    const opcoes = FALAS_DA_COBRA.filter((f) => !recentes.includes(f));
+    const f = rnd(opcoes); recentes.push(f); if (recentes.length > 8) recentes.shift();
+    proximaSolta = 20000 + Math.random() * 10000;
+    por(0, f, { kind: 'cobra' });
+  }, 2000);
 
   return {
     fim,

@@ -15,7 +15,7 @@ NOVIDADES (versão 2)
   O ranking vale pela live inteira (zera quando você fecha o jogo).
 - A cobra FALA, com balão na tela e a foto da pessoa:
   agradece cada presente pelo nome ("Valeu pelas 5 Rosas, Lisa!"), agradece quem segue,
-  lê comentários em voz alta e responde, dá boas-vindas e solta frases sozinha quando a live está parada.
+  lê comentários em voz alta e responde, dá boas-vindas e solta uma frase sozinha a cada 20 a 30 segundos quando ninguém interage.
   Comentários com palavrão, link ou número de telefone não são lidos.
   Em live agitada ela prioriza presentes e seguidores, e não responde a mesma pessoa toda hora.
 - A foto de quem mandou o presente aparece flutuando em cima da fruta dela.
