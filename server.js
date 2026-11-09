@@ -46,9 +46,24 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Voz da cobrinha (agradecimentos, respostas aos comentários, falas) — ver voz.js
-const { criarVoz, DIR: VOZ_DIR } = require('./voz');
+const { criarVoz, slugsPresente, DIR: VOZ_DIR } = require('./voz');
 let voz = null; // criada logo depois do broadcast()
 app.use('/voz', express.static(VOZ_DIR));
+
+// Cantorias: MP3 próprio por presente, na pasta "cantorias" (ex.: rose.mp3, rosa-2.mp3)
+const fs = require('fs');
+const CANT_DIR = path.join(__dirname, 'cantorias');
+app.use('/cantorias', express.static(CANT_DIR));
+let cantArquivos = [], cantLidoEm = 0;
+function cantoriaDe(giftName) {
+  if (Date.now() - cantLidoEm > 10000) {
+    cantLidoEm = Date.now();
+    try { cantArquivos = fs.readdirSync(CANT_DIR).filter((f) => /\.(mp3|ogg|wav|m4a)$/i.test(f)); } catch { cantArquivos = []; }
+  }
+  const nomes = slugsPresente(giftName);
+  const achados = cantArquivos.filter((f) => { const b = f.replace(/\.[^.]+$/, '').toLowerCase(); return nomes.some((n) => b === n || new RegExp('^' + n + '-\\d+$').test(b)); });
+  return achados.length ? '/cantorias/' + encodeURIComponent(achados[Math.floor(Math.random() * achados.length)]) : null;
+}
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -64,7 +79,7 @@ function broadcast(msg) {
 voz = criarVoz(broadcast);
 
 // Ranking da live (TOP 6 na tela): pontos por tudo que a pessoa faz
-const PTS = { diamante: 100, seguir: 500, curtida: 10, comentario: 20 };
+const PTS = { diamante: 100, seguir: 500, curtida: 10, comentario: 20, compartilhar: 200 };
 const pontos = new Map(); // id -> {id, name, avatar, pts}
 const chatPtsAt = new Map();
 let likesTotal = 0;
@@ -113,6 +128,7 @@ function handleGift(user, giftName, diamonds, count) {
   }
   broadcast({
     type: 'gift',
+    cantoria: cantoriaDe(giftName),
     user,
     giftName,
     diamonds,
@@ -136,6 +152,12 @@ function handleChat(user, text) {
   broadcast({ type: 'chat', user, text });
   if (Date.now() - (chatPtsAt.get(user.id) || 0) > 10000) { chatPtsAt.set(user.id, Date.now()); somar(user, PTS.comentario); }
   voz.comentario(user, text);
+}
+const sharePtsAt = new Map();
+function handleShare(user) {
+  broadcast({ type: 'share', user });
+  if (Date.now() - (sharePtsAt.get(user.id) || 0) > 60000) { sharePtsAt.set(user.id, Date.now()); somar(user, PTS.compartilhar); }
+  voz.compartilhou(user);
 }
 function handleJoin(user) {
   broadcast({ type: 'join', user });
@@ -167,6 +189,7 @@ app.post('/api/sim', (req, res) => {
   else if (b.type === 'like') handleLike(user, Number(b.likes || 1));
   else if (b.type === 'chat') handleChat(user, String(b.text || 'wow'));
   else if (b.type === 'join') handleJoin(user);
+  else if (b.type === 'share') handleShare(user);
   else return res.status(400).json({ ok: false, error: 'unknown type' });
   res.json({ ok: true });
 });
@@ -205,6 +228,7 @@ async function connectTikTok() {
   conn.on(WebcastEvent.LIKE, (d) => handleLike(userInfo(d.user), Number(d.count ?? d.likeCount ?? 1)));
   conn.on(WebcastEvent.CHAT, (d) => handleChat(userInfo(d.user), d.comment || ''));
   conn.on(WebcastEvent.MEMBER, (d) => handleJoin(userInfo(d.user)));
+  conn.on(WebcastEvent.SHARE, (d) => handleShare(userInfo(d.user)));
   conn.on(WebcastEvent.STREAM_END, () => {
     tiktokStatus = { ...tiktokStatus, connected: false, error: 'stream ended' };
     broadcast({ type: 'tiktok', ...tiktokStatus });

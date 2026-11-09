@@ -1,0 +1,9 @@
+# PALAVRAS PROIBIDAS - a cobra nao le comentarios nem nomes que tenham estas palavras.
+# Escreva uma palavra (ou frase) por linha. Acentos e maiusculas nao importam.
+# Linhas que comecam com # sao ignoradas. Salve o arquivo: o jogo recarrega sozinho em ate 10 segundos.
+# O jogo ja bloqueia os palavroes mais comuns, links e numeros de telefone; aqui e para o que voce quiser a mais.
+#
+# Exemplos (apague o # da frente para ativar):
+# feio
+# chato
+

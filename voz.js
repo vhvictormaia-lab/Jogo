@@ -46,7 +46,8 @@ function startPs() {
 startPs();
 
 // ---------------- voz natural (Edge / Microsoft neural) ----------------
-const VOZ_NATURAL = (process.env.VOZ || 'pt-BR-FranciscaNeural').trim();
+const VOZ_NATURAL = (process.env.VOZ || 'pt-BR-FranciscaNeural').trim();          // voz da cobra
+const VOZ_NARRADOR = (process.env.VOZ_NARRADOR || 'pt-BR-AntonioNeural').trim();  // voz que lê os comentários
 const EDGE_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
 const EDGE_VER = '130.0.2849.68';
 let edgeSkew = 0;            // diferença de relógio com o servidor da Microsoft (segundos)
@@ -58,7 +59,7 @@ function secMsGec() {
 }
 const xml = (t) => String(t).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 function carimbo() { return new Date().toUTCString().replace(/^(\w+), (\d+) (\w+) (\d+) ([\d:]+) GMT$/, '$1 $3 $2 $4 $5 GMT+0000 (Coordinated Universal Time)'); }
-function synthNatural(text, tentativa = 0) {
+function synthNatural(text, voz = VOZ_NATURAL, tentativa = 0) {
   return new Promise((resolve) => {
     let WebSocket; try { WebSocket = require('ws'); } catch { return resolve(null); }
     const id = crypto.randomUUID().replace(/-/g, '');
@@ -79,7 +80,7 @@ function synthNatural(text, tentativa = 0) {
     ws.on('unexpected-response', (req, res) => {
       // 403 costuma ser relógio do PC fora da hora: ajusta pela hora do servidor e tenta mais uma vez
       const d = Date.parse(res.headers.date || ''); fim = true; clearTimeout(t); try { ws.terminate(); } catch {}
-      if (res.statusCode === 403 && d && tentativa === 0) { edgeSkew += (d - Date.now()) / 1000; return synthNatural(text, 1).then(resolve); }
+      if (res.statusCode === 403 && d && tentativa === 0) { edgeSkew += (d - Date.now()) / 1000; return synthNatural(text, voz, 1).then(resolve); }
       resolve(null);
     });
     ws.on('error', () => acabar(false));
@@ -88,7 +89,7 @@ function synthNatural(text, tentativa = 0) {
       ws.send(`X-Timestamp:${carimbo()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n`
         + '{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}\r\n');
       ws.send(`X-RequestId:${id}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${carimbo()}Z\r\nPath:ssml\r\n\r\n`
-        + `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='pt-BR'><voice name='${xml(VOZ_NATURAL)}'>`
+        + `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='pt-BR'><voice name='${xml(voz)}'>`
         + `<prosody pitch='+0Hz' rate='+8%' volume='+0%'>${xml(text)}</prosody></voice></speak>`);
     });
     ws.on('message', (data, isBinary) => {
@@ -101,10 +102,10 @@ function synthNatural(text, tentativa = 0) {
   });
 }
 
-async function synth(text) {
+async function synth(text, voz = VOZ_NATURAL) {
   // tenta a voz natural; se falhar 3 vezes seguidas, descansa 5 minutos e usa a do Windows
   if (Date.now() >= edgePausaAte) {
-    const url = await synthNatural(text);
+    const url = await synthNatural(text, voz);
     if (url) {
       if (!edgeAvisou) { edgeAvisou = true; console.log('🗣️  Voz natural ativada: ' + VOZ_NATURAL); }
       edgeFalhas = 0; return url;
@@ -135,6 +136,24 @@ setInterval(() => {
 // \b do JavaScript não entende acentos ("maçã", "você"): troca por limite de palavra Unicode
 const W = (re) => new RegExp(re.source.replace(/\\b/g, '(?:(?<![\\p{L}\\p{N}])(?=[\\p{L}\\p{N}])|(?<=[\\p{L}\\p{N}])(?![\\p{L}\\p{N}]))'), re.flags.includes('u') ? re.flags : re.flags + 'u');
 const PALAVROES = W(/\b(porra|caralho|merda|puta|puto|fdp|vsf|vtnc|pqp|buceta|cu|cuzao|cuzão|arrombad\w*|viad\w*|bicha|corno|piroca|pau|rola|foder|fode|fodase|foda|desgraça\w*|desgraca\w*|otario\w*|otário\w*|idiota|imbecil|retardad\w*|macac\w*|nazi\w*|estupr\w*|matar|morre|suicid\w*|sexo|nude\w*|nudes|pelad\w*|gostos\w*|safad\w*|tes[aã]o|pinto|xota|xoxota|bct|krl|crl|prr)\b/i);
+// palavras-proibidas.txt (na pasta do jogo): uma palavra ou frase por linha; recarrega sozinho quando muda
+const ARQ_PROIBIDAS = path.join(__dirname, 'palavras-proibidas.txt');
+const semAcento = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+let proibidasExtra = [], proibidasMtime = 0;
+function carregarProibidas() {
+  try {
+    const st = fs.statSync(ARQ_PROIBIDAS); if (st.mtimeMs === proibidasMtime) return; proibidasMtime = st.mtimeMs;
+    proibidasExtra = fs.readFileSync(ARQ_PROIBIDAS, 'utf8').split(/\r?\n/).map((l) => semAcento(l.replace(/#.*/, '').trim())).filter((l) => l.length >= 2);
+    console.log(`🚫 Palavras proibidas extras: ${proibidasExtra.length}`);
+  } catch { proibidasExtra = []; proibidasMtime = 0; }
+}
+carregarProibidas(); setInterval(carregarProibidas, 10000).unref?.();
+function proibido(t) {
+  if (PALAVROES.test(t)) return true;
+  if (!proibidasExtra.length) return false;
+  const n = ' ' + semAcento(t).replace(/[^\p{L}\p{N}]+/gu, ' ') + ' ';
+  return proibidasExtra.some((w) => n.includes(' ' + w.replace(/[^\p{L}\p{N}]+/gu, ' ').trim() + ' '));
+}
 function limparFala(s) {
   return String(s || '')
     .replace(/https?:\/\/\S+|www\.\S+/gi, '')
@@ -147,14 +166,14 @@ function limparFala(s) {
 }
 function nomeFalado(u) {
   let n = limparFala(u && u.name).replace(/[0-9]{3,}/g, '').replace(/[^\p{L}\p{N} .'-]/gu, '').trim();
-  if (!n || n.length < 2 || PALAVROES.test(n)) n = 'amigo';
+  if (!n || n.length < 2 || proibido(n)) n = 'amigo';
   return n.slice(0, 22);
 }
 function podeLer(texto) {
   if (/https?:\/\/|www\.|\.com\b/i.test(String(texto || ''))) return null; // links: não lê
   const t = limparFala(texto);
   if (t.length < 2 || t.length > 90) return null;
-  if (PALAVROES.test(t)) return null;
+  if (proibido(t)) return null;
   if (/\d{6,}/.test(t)) return null; // telefones, códigos
   return t;
 }
@@ -191,6 +210,9 @@ function plural(p) {
   else pw = w + 's';
   return { art: p.art === 'a' ? 'as' : 'os', nome: [pw, ...resto].join(' ') };
 }
+// nomes de arquivo possíveis para a cantoria de um presente: em inglês (como o TikTok manda) e em português
+const slug = (t) => semAcento(t).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+function slugsPresente(nome) { const p = presente(nome); return [...new Set([slug(nome), p.conhecido ? slug(p.nome) : ''].filter(Boolean))]; }
 const pelo = (art) => ({ a: 'pela', o: 'pelo', as: 'pelas', os: 'pelos' }[art] || 'pelo');
 
 // ---------------- respostas prontas aos comentários ----------------
@@ -213,6 +235,42 @@ const RESPOSTAS_W = RESPOSTAS.map(([re, o]) => [W(re), o]);
 function responder(texto, n) {
   for (const [re, opts] of RESPOSTAS_W) if (re.test(texto)) return rnd(opts).replace('{n}', n);
   return rnd(GENERICAS).replace('{n}', n);
+}
+
+// ---------------- IA opcional (OpenAI) ----------------
+// Com a chave (set OPENAI_API_KEY=... no iniciar.bat) a cobra responde com IA de verdade.
+// Sem a chave, ou se a IA falhar/demorar, usa as frases prontas acima.
+const OPENAI_KEY = (process.env.OPENAI_API_KEY || '').trim();
+const OPENAI_MODEL = (process.env.OPENAI_MODEL || 'gpt-4.1-mini').trim();
+let iaAvisou = false, iaFalhas = 0, iaPausaAte = 0;
+async function respostaIA(texto, n) {
+  if (!OPENAI_KEY || Date.now() < iaPausaAte || typeof fetch !== 'function') return null;
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
+  try {
+    const r = await fetch((process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1') + '/chat/completions', {
+      method: 'POST', signal: ctl.signal,
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + OPENAI_KEY },
+      body: JSON.stringify({
+        model: OPENAI_MODEL, max_tokens: 70, temperature: 0.9,
+        messages: [
+          { role: 'system', content: 'Você é a Cobrinha, uma cobra divertida e carinhosa de um jogo ao vivo no TikTok. '
+            + 'Responda o comentário do espectador em português do Brasil, em UMA frase curta (no máximo 20 palavras), '
+            + 'chamando a pessoa pelo nome. Seja engraçada e simpática, sem palavrões, sem política, sem assuntos adultos, '
+            + 'sem pedir dados pessoais e sem prometer prêmios. Pode incentivar curtidas e presentes de leve. Não use emojis.' },
+          { role: 'user', content: `${n} comentou: ${texto}` },
+        ],
+      }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    let out = limparFala(j.choices?.[0]?.message?.content || '').replace(/^["']|["']$/g, '').slice(0, 170);
+    if (!out || proibido(out)) return null;
+    if (!iaAvisou) { iaAvisou = true; console.log('🤖 IA ligada (' + OPENAI_MODEL + '): a cobra responde os comentários com IA'); }
+    iaFalhas = 0; return out;
+  } catch (e) {
+    if (++iaFalhas >= 3) { iaFalhas = 0; iaPausaAte = Date.now() + 5 * 60000; console.log('ℹ️  IA indisponível (' + (e.message || e) + '). Usando frases prontas por 5 minutos.'); }
+    return null;
+  } finally { clearTimeout(t); }
 }
 
 const FALAS_DA_COBRA = [
@@ -242,17 +300,20 @@ function criarVoz(broadcast) {
       fila.splice(low, 1);
     }
     let i = fila.length; while (i > 0 && fila[i - 1].pri < pri) i--; // mais importante passa na frente
-    fila.splice(i, 0, { pri, texto, ...extra });
+    fila.splice(i, 0, { pri, texto: Array.isArray(texto) ? texto.map((p) => p.texto).join(' ') : texto,
+      partes: Array.isArray(texto) ? texto : [{ texto, voz: VOZ_NATURAL }], ...extra });
     proxima();
   }
   async function proxima() {
     if (falando || !fila.length) return;
     falando = true;
     const it = fila.shift();
-    const url = await synth(it.texto);
-    const dur = Math.min(9000, 900 + it.texto.length * 70); // estimativa (o jogo avisa quando termina)
+    const urls = [];
+    for (const p of it.partes) urls.push(await synth(p.texto, p.voz));
+    const ok = urls.every(Boolean);
+    const dur = Math.min(14000, 900 + it.texto.length * 70); // estimativa (o jogo avisa quando termina)
     atual = ++seq;
-    broadcast({ type: 'say', id: atual, text: it.texto, url, user: it.user || null, kind: it.kind || 'fala', ms: dur });
+    broadcast({ type: 'say', id: atual, text: it.texto, urls: ok ? urls : null, url: ok ? urls[0] : null, user: it.user || null, kind: it.kind || 'fala', ms: dur });
     ultimaFala = Date.now();
     terminou = () => { falando = false; ultimaFala = Date.now(); setTimeout(proxima, 250); };
     seguranca = setTimeout(() => terminou && terminou(), dur + 4000);
@@ -293,7 +354,17 @@ function criarVoz(broadcast) {
       const t = podeLer(texto); if (!t) return;
       cooldownChat.set(user.id, agora);
       const n = nomeFalado(user);
-      por(1, `${n} disse: ${t}${/[.!?]$/.test(t) ? '' : '.'} ${responder(t, n)}`, { user, kind: 'comentario' });
+      const lido = `${n} disse: ${t}${/[.!?]$/.test(t) ? '' : '.'}`;
+      respostaIA(t, n).then((ia) => {
+        por(1, [{ texto: lido, voz: VOZ_NARRADOR }, { texto: ia || responder(t, n), voz: VOZ_NATURAL }], { user, kind: 'comentario' });
+      });
+    },
+    compartilhou(user) {
+      const agora = Date.now();
+      if (agora - (cooldownChat.get('share:' + user.id) || 0) < 60000) return;
+      cooldownChat.set('share:' + user.id, agora);
+      const n = nomeFalado(user);
+      por(2, rnd([`Valeu por compartilhar a live, ${n}!`, `${n} compartilhou! Chama todo mundo, obrigada!`, `Obrigada por divulgar, ${n}!`]), { user, kind: 'seguiu' });
     },
     entrou(user) {
       const agora = Date.now();
@@ -309,4 +380,4 @@ function criarVoz(broadcast) {
   };
 }
 
-module.exports = { criarVoz, nomeFalado, DIR };
+module.exports = { criarVoz, nomeFalado, slugsPresente, DIR };

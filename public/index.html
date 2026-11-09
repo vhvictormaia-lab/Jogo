@@ -950,11 +950,11 @@ function addEvent(cls,avatar,html,plus){
 }
 
 // ---------- events ----------
-function onGift(e){ musica.evento('presente',e.coins||1);
+function onGift(e){
   const u=e.user; const s=S.supporters.get(u.id)||{...u,coins:0}; s.coins+=e.coins; s.name=u.name; if(u.avatar) s.avatar=u.avatar; S.supporters.set(u.id,s);
   const apples=Math.max(1,Math.round(e.coins*cfg.applesPerDiamond));
   dropApples(apples,u);
-  sfx.gift(apples>=100);
+  if(e.cantoria&&musica.cantoria(e.cantoria)) musica.somar(e.coins||1); else musica.vinhetaPresente(e.giftName,e.coins||1);
   addEvent('gift',u.avatar,`<span class="n">${esc(u.name)}</span> 🎁 ${esc(e.giftName)}${e.count>1?' ×'+e.count:''}`,`+${apples} ${FRUIT.emoji}`);
 }
 function onBomb(e){ musica.evento('bomba');
@@ -966,6 +966,7 @@ function onBomb(e){ musica.evento('bomba');
   sfx.explode();
 }
 function onFollow(e){ musica.evento('seguiu'); sfx.follow(e.user&&e.user.name); burstConfetti(); showBanner(`➕ NOVO SEGUIDOR · ${e.user.name}`,'#7ff3ff',e.user.avatar); dropApples(cfg.applesPerFollow,e.user); addEvent('follow',e.user.avatar,`<span class="n">${esc(e.user.name)}</span> seguiu ➕`,`+${cfg.applesPerFollow} ${FRUIT.emoji}`); }
+function onShare(e){ musica.evento('seguiu'); burstConfetti(); showBanner(`🔁 COMPARTILHOU · ${e.user.name}`,'#ffd166',e.user.avatar); addEvent('follow',e.user.avatar,`<span class="n">${esc(e.user.name)}</span> compartilhou a live 🔁`); }
 const likeFeedAt=new Map();
 function onLike(e){ musica.evento('curtida'); const u=e.user; const l=S.roundLikes.get(u.id)||{...u,likes:0}; l.likes+=e.likes; S.roundLikes.set(u.id,l); S.likesTotal=(S.likesTotal||0)+e.likes; S.likeLog.push([performance.now(),e.likes]);
   S.likeBank+=e.likes; while(S.likeBank>=LIKES_PER_APPLE){ S.likeBank-=LIKES_PER_APPLE; dropApples(1,u); floatText(`❤ ${LIKES_PER_APPLE} curtidas = ${FRUIT.emoji}`); }
@@ -989,6 +990,7 @@ function handle(msg){
     case 'like': onLike(msg); break;
     case 'chat': onChat(msg); break;
     case 'join': onJoin(msg); break;
+    case 'share': onShare(msg); break;
   }
 }
 function setConn(t){ const c=$('conn'); if(!t) return; c.classList.toggle('on',!!t.connected);
@@ -1034,7 +1036,7 @@ const musica=(()=>{
     const soma=eventos.reduce((a,e)=>a+e[1],0); alvo=Math.min(1,soma/12+(S.heat||0)*.6);
     energia+=(alvo-energia)*.01;
     // abaixa a música quando a cobra fala
-    duck.gain.setTargetAtTime(typeof falaAtual!=='undefined'&&falaAtual?.32:1,ac.currentTime,.15);
+    duck.gain.setTargetAtTime(window.__cantando?.12:(typeof falaAtual!=='undefined'&&falaAtual?.32:1),ac.currentTime,.15);
     const M=MUSICAS[musicaAtual], colcheia=60/bpm()/2;
     if(proxT<ac.currentTime) proxT=ac.currentTime+.05;
     while(proxT<ac.currentTime+.2){
@@ -1052,7 +1054,24 @@ const musica=(()=>{
   function ligar(){ if(!init()) return; if(ac.state==='suspended') ac.resume().catch(()=>{}); if(rodando) return; rodando=true; setInterval(agenda,30); }
   // vinhetas
   function vinheta(notas,tipo,vol,passoS){ if(!ok) return; const t0=ac.currentTime+.02; notas.forEach((m,i)=>{ if(m!=null) nota(m,t0+i*passoS,passoS*2.2,tipo,vol,out); }); }
+  // cada presente tem a sua vinheta (sempre a mesma pro mesmo presente)
+  const VINHETAS=[
+    {n:[72,76,79,84],tipo:'triangle',p:.08}, {n:[79,77,76,74,72,76,79],tipo:'square',p:.07}, {n:[67,72,67,76,67,79],tipo:'triangle',p:.08},
+    {n:[84,83,81,79,81,83,84,88],tipo:'sine',p:.06}, {n:[60,64,67,72,76,79,84],tipo:'triangle',p:.05}, {n:[76,null,76,79,null,84],tipo:'square',p:.08},
+    {n:[72,74,76,77,79,81,83,84],tipo:'sine',p:.05}, {n:[79,84,79,84,88],tipo:'triangle',p:.07},
+  ];
+  const hash=t=>{ let h=0; for(const c of String(t||'').toLowerCase()) h=(h*31+c.charCodeAt(0))>>>0; return h; };
+  let cantAudio=null;
   return {
+    vinhetaPresente(nome,valor){ eventos.push([performance.now(),Math.min(6,1+Math.log2(1+valor))]); if(!ok) return;
+      if(valor>=100){ vinheta([72,76,79,84,null,79,84,88],'square',.12,.09); return; }
+      const v=VINHETAS[hash(nome)%VINHETAS.length]; vinheta(v.n,v.tipo,v.tipo==='square'?.1:.22,v.p); },
+    somar(valor){ eventos.push([performance.now(),Math.min(6,1+Math.log2(1+valor))]); },
+    cantoria(url){ // MP3 do usuário pra esse presente; um de cada vez, no máximo 20 s
+      if(cantAudio&&!cantAudio.paused&&!cantAudio.ended) return true;
+      try{ const a=new Audio(url); a.volume=.95; cantAudio=a; window.__cantando=true;
+        const fim=()=>{ window.__cantando=false; try{ a.pause(); }catch(e){} };
+        a.onended=fim; a.onerror=fim; setTimeout(fim,20000); a.play().catch(fim); return true; }catch(e){ return false; } },
     ligar, proximaMusica(){ musicaAtual=(musicaAtual+1)%MUSICAS.length; passo=0; },
     evento(tipo,valor=1){
       eventos.push([performance.now(), tipo==='presente'?Math.min(6,1+Math.log2(1+valor)):tipo==='seguiu'?2:tipo==='bomba'?3:tipo==='comentario'?.6:.15]);
@@ -1101,8 +1120,13 @@ function proximaFala(){
       const u=new SpeechSynthesisUtterance(m.text); u.lang='pt-BR'; u.voice=vs.find(v=>/BR/i.test(v.lang))||vs[0]; u.rate=1.05;
       u.onend=fimFala; u.onerror=()=>setTimeout(fimFala,m.ms||3000); ss.cancel(); ss.speak(u);
     }catch(e){ setTimeout(fimFala,m.ms||3000); } };
-  if(m.url){ const a=new Audio(m.url); a.volume=1; a.onended=fimFala; a.onerror=()=>{ if(!tocou) viaNavegador(); };
-    a.play().then(()=>{ tocou=true; }).catch(()=>{ setTimeout(fimFala,m.ms||3000); }); }
+  const lista=m.urls&&m.urls.length?m.urls:(m.url?[m.url]:[]);
+  if(lista.length){ let k=0;
+    const tocar=()=>{ if(falaAtual!==m) return; const a=new Audio(lista[k]); a.volume=1;
+      a.onended=()=>{ k++; if(k<lista.length) tocar(); else fimFala(); };
+      a.onerror=()=>{ if(!tocou) viaNavegador(); else { k++; if(k<lista.length) tocar(); else fimFala(); } };
+      a.play().then(()=>{ tocou=true; }).catch(()=>{ setTimeout(fimFala,m.ms||3000); }); };
+    tocar(); }
   else viaNavegador();
 }
 // o balão acompanha a cabeça da cobra
@@ -1189,9 +1213,9 @@ const fakeChat=()=>sim({type:'chat',user:fakeUser(),text:rnd(FALAS_TESTE)});
 addEventListener('keydown',e=>{ const k=e.key.toLowerCase();
   if(k==='g') fakeGift(); else if(k==='f') sim({type:'follow',user:fakeUser()}); else if(k==='l') sim({type:'like',user:fakeUser(),likes:1+Math.floor(Math.random()*20)});
   else if(k==='c') fakeChat(); else if(k==='k'){ for(let i=0;i<10;i++) sim({type:'like',user:fakeUser(),likes:15+Math.floor(Math.random()*15)}); }
-  else if(k==='b') fakeBomb(); else if(k==='e') endRound(); });
+  else if(k==='b') fakeBomb(); else if(k==='s') sim({type:'share',user:fakeUser()}); else if(k==='e') endRound(); });
 if(new URLSearchParams(location.search).get('demo')==='1'){
-  (function tick(){ const r=Math.random(); if(r<.25) fakeGift(); else if(r<.3) fakeBomb(); else if(r<.42) sim({type:'follow',user:fakeUser()});
+  (function tick(){ const r=Math.random(); if(r<.25) fakeGift(); else if(r<.3) fakeBomb(); else if(r<.42) sim({type:'follow',user:fakeUser()}); else if(r<.46) sim({type:'share',user:fakeUser()});
     else if(r<.8) sim({type:'like',user:fakeUser(),likes:1+Math.floor(Math.random()*20)}); else fakeChat();
     setTimeout(tick,900+Math.random()*2600); })();
 }

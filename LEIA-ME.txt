@@ -11,11 +11,12 @@ COMO FUNCIONA
 
 NOVIDADES (versão 2)
 - TOP 6 DA LIVE fixo no alto da tela, com foto, nome e pontos de cada pessoa.
-  Pontos: 1 diamante = 100 · seguir = 500 · cada curtida = 10 · comentário = 20 (no máximo 1 a cada 10 s).
+  Pontos: 1 diamante = 100 · seguir = 500 · compartilhar = 200 (1 vez por minuto) · cada curtida = 10 · comentário = 20 (no máximo 1 a cada 10 s).
   O ranking vale pela live inteira (zera quando você fecha o jogo).
 - A cobra FALA com voz natural (voz neural da Microsoft, "Francisca"):
   agradece cada presente pelo nome ("Valeu pelas 5 Rosas, Lisa!"), agradece quem segue,
-  lê comentários em voz alta e responde, dá boas-vindas e solta uma frase sozinha a cada 20 a 30 segundos quando ninguém interage.
+  lê comentários em voz alta e responde (um narrador, voz Antonio, lê o comentário e a cobra responde),
+  agradece quem compartilha a live, dá boas-vindas e solta uma frase sozinha a cada 20 a 30 segundos quando ninguém interage.
   Comentários com palavrão, link ou número de telefone não são lidos.
   Em live agitada ela prioriza presentes e seguidores, e não responde a mesma pessoa toda hora.
 - MÚSICA de fundo estilo festa de fazenda, criada pelo próprio jogo (sem direitos autorais):
@@ -38,7 +39,7 @@ USAR NA LIVE
 
 TESTAR SEM ESTAR AO VIVO
 Com o jogo aberto, acesse no navegador: http://localhost:3000/?demo=1
-Ou use as teclas: G presente, B bomba, F seguir, L curtir, C comentário, K chuva de curtidas, E encerrar rodada.
+Ou use as teclas: G presente, B bomba, F seguir, S compartilhar, L curtir, C comentário, K chuva de curtidas, E encerrar rodada.
 (No navegador, clique uma vez na tela para liberar o som.)
 
 TROCAR O USUÁRIO DO TIKTOK
@@ -51,11 +52,29 @@ Na pasta do jogo, edite o iniciar.bat e coloque antes da linha "node server.js":
   set BOMB_GIFTS=GG,Rocket      nomes dos presentes que viram bomba
 A duração da rodada (ROUND_MS) e a velocidade ficam no começo do public\index.html.
 
+NOVIDADES (versão 3)
+- Narrador + cobra: o Antonio lê o comentário e a Francisca (a cobra) responde. Parece uma conversa.
+- Compartilhar a live dá 200 pontos no TOP 6 e a cobra agradece.
+- Cada presente tem a sua vinheta. E você pode pôr MÚSICA PRÓPRIA por presente: veja cantorias\LEIA-ME.txt
+  (ex.: coloque rosa.mp3 na pasta "cantorias" e toda Rosa toca essa música).
+- Lista de palavras proibidas que você mesmo edita: palavras-proibidas.txt (recarrega sozinha).
+- IA opcional (paga, da OpenAI): com a chave, a cobra entende e responde os comentários de verdade.
+  Sem a chave, continua tudo funcionando com as frases prontas.
+
+IA DA OPENAI (OPCIONAL)
+1. Crie uma chave em platform.openai.com (precisa colocar crédito, normalmente a partir de 5 dólares).
+2. Abra o iniciar.bat no Bloco de Notas e, ANTES da linha "node server.js", coloque:
+     set OPENAI_API_KEY=sk-...sua-chave...
+3. Salve e abra o jogo. Na primeira resposta a janela preta mostra "IA ligada".
+Nunca mostre essa chave na live nem mande pra ninguém. Se a IA falhar, o jogo volta pras frases prontas sozinho.
+
 SOBRE A VOZ
 A voz natural (Francisca) precisa de internet. Ao abrir o jogo, a janela preta mostra
 "Voz natural ativada" na primeira fala. Para trocar a voz, edite o iniciar.bat e coloque antes de "node server.js":
   set VOZ=pt-BR-ThalitaNeural     (outra voz feminina)
   set VOZ=pt-BR-AntonioNeural     (voz masculina)
+Para trocar a voz do narrador (que lê os comentários):
+  set VOZ_NARRADOR=pt-BR-FranciscaNeural
 Se a voz natural falhar (sem internet, por exemplo), o jogo usa sozinho a voz do Windows ("Microsoft Maria").
 No LIVE Studio, deixe o som ligado (ícone do alto-falante sem o X).
 
