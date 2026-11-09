@@ -13,7 +13,7 @@ PAINEL DE CONTROLE (novo)
 Ao abrir o atalho, o painel abre sozinho no navegador: http://localhost:3000/painel.html
 - Resumo da live: espectadores, curtidas, presentes, diamantes, seguidores, comentários e tempo.
 - Conectar e desconectar da live, trocar o usuário do TikTok.
-- Escolher o modo (Cobrinha ou Abismo) e copiar os links para o LIVE Studio.
+- Escolher o modo (Cobrinha, Abismo ou Quiz) e copiar os links para o LIVE Studio.
 - Fala manual: você digita e o palhaço, a serpente, a cobrinha ou o narrador falam na hora.
 - Eventos de teste (rosa, galáxia, GG, seguir, compartilhar, curtidas, comentário, entrou).
 - TOP 6 com botão de zerar, e a lista do que está acontecendo na live.
@@ -49,6 +49,26 @@ Como usar: abra o atalho "Abismo Live" (ou iniciar-abismo.bat) e no LIVE Studio 
   http://localtest.me:3000/abismo.html
 Testar sem live: http://localhost:3000/abismo.html?demo=1  (teclas: G presente, B bomba, F seguir, S compartilhar, L curtir, C comentário, J entrar)
 Trocar vozes (no iniciar-abismo.bat, antes de "node server.js"): set VOZ_PALHACO=..., set TOM_PALHACO=-14Hz, set VOZ_SERPENTE=..., set TOM_SERPENTE=-28Hz
+
+QUIZ DO ABISMO (adivinhe pelo emoji)
+Jogo de perguntas: aparecem emojis na tela e a galera escreve a resposta no CHAT. Ex.: 👑🦁 = O Rei Leão.
+- Quem acerta primeiro ganha 10 pontos, o segundo 6 e o terceiro 4. Acertou 3 seguidas: pontos em dobro (🔥).
+- As letras da resposta vão aparecendo aos poucos como dica. Ninguém acertou? A Serpente dá o bote e fala a resposta.
+- PRESENTES (incentivo):
+    🌹 Rosa e presentes pequenos = abre uma letra da resposta na hora (dica pra todo mundo)
+    🍩 Rosquinha (30 moedas ou mais) = pontos em DOBRO para quem mandou nas próximas 3 respostas certas
+    🦁 Presente de 100 moedas ou mais = o palhaço pula na tela (susto!) e a PRÓXIMA PERGUNTA VALE O TRIPLO
+    Todo presente também dá pontos no ranking (2 pontos por moeda). Seguir dá 5 pontos.
+- O Palhaço do Abismo e a Serpente das Trevas apresentam, na versão sombria: olhos vermelhos, dentes pontudos e língua de cobra.
+  Eles falam o nome de quem acerta e de quem manda presente, chamam a galera pra mandar presente e dão boas-vindas.
+- Ranking de hoje, da semana e geral, salvo no computador (pasta privado). No painel dá para mostrar a tela de CAMPEÕES.
+- 168 perguntas brasileiras: filmes, séries e novelas, músicas, ditados, expressões, comidas, lugares e futebol.
+  Para mudar ou criar perguntas, edite public\perguntas-quiz.js (uma por linha; os emojis na mesma ordem das palavras).
+Como usar: abra o atalho "Quiz do Abismo" (ou iniciar-quiz.bat) e no LIVE Studio use a fonte Link:
+  http://localtest.me:3000/quiz.html
+No painel (http://localhost:3000/painel.html), cartão "Quiz do Abismo": tempo por pergunta, categorias, pular pergunta,
+mostrar campeões, zerar ranking e botões de teste. Também dá para trocar para o modo 🧠 Quiz no cartão "Jogo".
+Teclas para testar na tela do quiz: A alguém acerta, C chute errado, G rosa, D rosquinha, B presentão, F seguir, J entrar.
 
 NOVIDADES (versão 2)
 - TOP 6 DA LIVE fixo no alto da tela, com foto, nome e pontos de cada pessoa.

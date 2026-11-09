@@ -211,13 +211,15 @@ async function respostaIA(texto, n, persona) {
 // ---------------- fila de falas ----------------
 // prioridade: 3 presente/bomba, 2 seguidor, 1 comentário/entrada, 0 fala solta
 function criarVoz(broadcast, modoInicial = 'cobrinha') {
-  let modo = modoInicial; let ABISMO = modo === 'abismo';
+  let modo = modoInicial; let ABISMO = modo === 'abismo' || modo === 'quiz'; let QUIZ = modo === 'quiz';
+  // no modo quiz quem decide as falas é o motor do quiz (quiz-motor.js); as automáticas ficam desligadas
   const fila = []; let falando = false, ultimaFala = Date.now(), seq = 0, atual = 0;
   const cooldownChat = new Map();
   const pode = (k, ms) => { const a = Date.now(); if (a - (cooldownChat.get(k) || 0) < ms) return false; cooldownChat.set(k, a); return true; }; let ultimoBemVindo = 0, ultimoMarco = 0;
 
   function por(pri, texto, extra = {}) {
     if (!texto) return;
+    if (extra.limpar) for (let k = fila.length - 1; k >= 0; k--) if (/^quiz-(pergunta|revelar|acerto|cta|entrou)/.test(fila[k].kind || '')) fila.splice(k, 1);
     if (fila.length >= 6) {
       // fila cheia: tira o item de menor prioridade, se o novo for mais importante
       let low = -1; for (let i = 0; i < fila.length; i++) if (low < 0 || fila[i].pri < fila[low].pri) low = i;
@@ -253,7 +255,7 @@ function criarVoz(broadcast, modoInicial = 'cobrinha') {
   const recentes = [];
   let proximaSolta = 20000 + Math.random() * 10000;
   setInterval(() => {
-    if (falando || fila.length || Date.now() - ultimaFala < proximaSolta) return;
+    if (QUIZ || falando || fila.length || Date.now() - ultimaFala < proximaSolta) return;
     const fs_ = CFG.get().falaSolta; const intervalo = () => (fs_.min + Math.random() * Math.max(0, fs_.max - fs_.min)) * 1000;
     if (ABISMO) { proximaSolta = intervalo(); return por(0, F.ABISMO.solta(), { kind: 'solta' }); }
     const opcoes = FALAS_DA_COBRA.filter((f) => !recentes.includes(f));
@@ -264,7 +266,12 @@ function criarVoz(broadcast, modoInicial = 'cobrinha') {
 
   return {
     fim,
-    setModo(m) { modo = m === 'abismo' ? 'abismo' : 'cobrinha'; ABISMO = modo === 'abismo'; },
+    setModo(m) { modo = ['abismo', 'quiz'].includes(m) ? m : 'cobrinha'; ABISMO = modo !== 'cobrinha'; QUIZ = modo === 'quiz'; },
+    // falas do Quiz do Abismo: partes [{ quem: 'palhaco'|'serpente', texto, acao }]
+    quiz(partes, o = {}) {
+      const ok = (partes || []).map((p) => ({ ...p, texto: limparFala(p.texto).slice(0, 220) })).filter((p) => p.texto && !proibido(p.texto));
+      if (ok.length) por(o.pri ?? 2, ok, { kind: o.kind || 'quiz', user: o.user || null, limpar: !!o.limpar });
+    },
     // fala digitada no painel: passa na frente de tudo
     manual(quem, texto) {
       const t = limparFala(texto).slice(0, 400); if (!t) return false;
@@ -278,12 +285,15 @@ function criarVoz(broadcast, modoInicial = 'cobrinha') {
       return this.manual(quem, FR[quem] || FR.cobra);
     },
     presente(user, giftName, count, diamonds, bomba) {
+      if (QUIZ) return;
       por(3, ABISMO ? F.ABISMO.presente(user, giftName, count, diamonds, bomba) : F.textoPresente(user, giftName, count, diamonds, bomba), { user, kind: bomba ? 'bomba' : 'presente' });
     },
     seguiu(user) {
+      if (QUIZ) return;
       por(2, ABISMO ? F.ABISMO.seguiu(user) : F.textoSeguiu(user), { user, kind: 'seguiu' });
     },
     comentario(user, texto) {
+      if (QUIZ) return;
       const agora = Date.now();
       if (agora - (cooldownChat.get(user.id) || 0) < 25000) return; // não responde a mesma pessoa toda hora
       if (fila.length >= 3) return;                                   // live agitada: prioriza presentes
@@ -306,12 +316,14 @@ function criarVoz(broadcast, modoInicial = 'cobrinha') {
       });
     },
     compartilhou(user) {
+      if (QUIZ) return;
       const agora = Date.now();
       if (agora - (cooldownChat.get('share:' + user.id) || 0) < 60000) return;
       cooldownChat.set('share:' + user.id, agora);
       por(2, ABISMO ? F.ABISMO.compartilhou(user) : F.textoCompartilhou(user), { user, kind: 'seguiu' });
     },
     entrou(user) {
+      if (QUIZ) return;
       const agora = Date.now();
       if (ABISMO) { // no Abismo eles cumprimentam quase todo mundo que entra
         if (agora - ultimoBemVindo < 7000 || fila.length > 1 || !pode('join:' + user.id, 10 * 60000)) return;
@@ -322,6 +334,7 @@ function criarVoz(broadcast, modoInicial = 'cobrinha') {
       por(1, F.textoEntrou(user), { user, kind: 'entrou' });
     },
     curtidas(total) {
+      if (QUIZ) return;
       const marco = Math.floor(total / 500) * 500;
       if (marco >= 500 && marco > ultimoMarco) { ultimoMarco = marco; por(1, ABISMO ? F.ABISMO.marco(marco) : `Chegamos a ${marco} curtidas! Continua curtindo!`, { kind: 'cobra' }); }
     },

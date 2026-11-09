@@ -10,7 +10,7 @@ const ARQ_USUARIO = path.join(os.homedir(), '.tiktok-snake-user'); // o mesmo ar
 
 const PADRAO = {
   usuario: '',
-  modo: 'cobrinha',              // cobrinha | abismo (muda as falas e as vozes)
+  modo: 'cobrinha',              // cobrinha | abismo | quiz (muda as falas e as vozes)
   openai: { chave: '', modelo: 'gpt-4.1-mini' },
   vozes: {
     cobra: 'pt-BR-FranciscaNeural', narrador: 'pt-BR-AntonioNeural',
@@ -20,6 +20,7 @@ const PADRAO = {
   vozEspectador: true,                    // cada espectador lê o próprio comentário com uma voz só dele
   musica: { ligada: true, volume: 22 },   // 0 a 100
   falaSolta: { min: 20, max: 30 },        // segundos entre as falas sozinhas
+  quiz: { tempo: 30, cats: null, placar: 'dia' }, // Quiz do Abismo: segundos por pergunta, categorias (null = todas), ranking mostrado
   atualizacao: { repo: 'vhvictormaia-lab/Jogo', token: '', instalado: '' },
 };
 

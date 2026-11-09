@@ -45,6 +45,7 @@
   .cresce{flex:1}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .chips button{padding:7px 11px;font-size:13px;border-radius:30px}
+  .chk{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--linha);border-radius:30px;font-size:13px;background:var(--cartao2);cursor:pointer}
   .seg{display:inline-flex;background:var(--cartao2);border:1px solid var(--linha);border-radius:14px;padding:3px;gap:3px}
   .seg button{border:0;background:transparent;padding:8px 14px;border-radius:11px}
   .seg button[aria-pressed=true]{background:var(--rosa);color:#fff}
@@ -102,11 +103,24 @@
   <section>
     <h2>🎮 Jogo</h2>
     <p class="dica">O modo muda as falas e as vozes. Copie o link do jogo para a fonte <b>Link</b> do LIVE Studio (1080×1920).</p>
-    <div class="seg" role="group" aria-label="Modo"><button id="m-cobrinha" aria-pressed="false">🐍 Cobrinha</button><button id="m-abismo" aria-pressed="false">🤡 Abismo</button></div>
+    <div class="seg" role="group" aria-label="Modo"><button id="m-cobrinha" aria-pressed="false">🐍 Cobrinha</button><button id="m-abismo" aria-pressed="false">🤡 Abismo</button><button id="m-quiz" aria-pressed="false">🧠 Quiz</button></div>
     <div class="link"><small>Cobrinha</small><code id="l-cobrinha"></code><button data-copiar="l-cobrinha">Copiar</button></div>
     <div class="link"><small>Cobrinha no Abismo</small><code id="l-cobrinhaAbismo"></code><button data-copiar="l-cobrinhaAbismo">Copiar</button></div>
     <div class="link"><small>Abismo Live</small><code id="l-abismo"></code><button data-copiar="l-abismo">Copiar</button></div>
-    <div class="linha"><a href="/?demo=1" target="_blank" rel="noopener"><button>Testar Cobrinha</button></a><a href="/abismo.html?demo=1" target="_blank" rel="noopener"><button>Testar Abismo</button></a></div>
+    <div class="link"><small>Quiz do Abismo</small><code id="l-quiz"></code><button data-copiar="l-quiz">Copiar</button></div>
+    <div class="linha"><a href="/?demo=1" target="_blank" rel="noopener"><button>Testar Cobrinha</button></a><a href="/abismo.html?demo=1" target="_blank" rel="noopener"><button>Testar Abismo</button></a><a href="/quiz.html" target="_blank" rel="noopener"><button>Abrir Quiz</button></a></div>
+  </section>
+
+  <section id="sec-quiz">
+    <h2>🧠 Quiz do Abismo</h2>
+    <p class="dica">Funciona com o modo <b>Quiz</b> ligado. A galera escreve a resposta no chat. Rosa abre uma letra, Rosquinha (30+ moedas) dá pontos x2, presente de 100+ moedas libera a pergunta bônus x3.</p>
+    <div class="aviso" id="aviso-quiz"></div>
+    <div class="faixa"><label for="q-tempo">Tempo</label><input type="range" id="q-tempo" min="10" max="90" step="5" value="30"><output id="o-q-tempo">30s</output></div>
+    <div class="linha"><select id="q-placar" aria-label="Ranking"><option value="dia">Ranking de hoje</option><option value="semana">Ranking da semana</option><option value="geral">Ranking geral</option></select></div>
+    <div class="chips" id="q-cats"></div>
+    <div class="linha"><button class="pri" id="q-pular">⏭ Pular pergunta</button><button class="rosa" id="q-campeao">👑 Mostrar campeões</button><button id="q-esconder">Esconder</button></div>
+    <div class="linha"><button id="q-zerar">♻ Zerar ranking</button></div>
+    <div class="linha" id="q-testes"><button data-qteste="certo">✅ Alguém acerta</button><button data-qteste="chute">💬 Chute errado</button></div>
   </section>
 
   <section>
@@ -221,7 +235,7 @@ const NOMES=['Lisa','Marco','Juliana','Pedrinho','Carol','Rafa'];
 let cfgCarregada=false;
 function preencherConfig(c){
   $('usuario').value=c.usuario||'';
-  $('m-cobrinha').setAttribute('aria-pressed',c.modo!=='abismo'); $('m-abismo').setAttribute('aria-pressed',c.modo==='abismo');
+  marcarModo(c.modo);
   for(const k of ['palhaco','serpente']){ $('v-'+k).value=c.vozes[k].voz; for(const q of ['tom','vel']){ $(`v-${k}-${q}`).value=c.vozes[k][q]; $(`o-${k}-${q}`).textContent=c.vozes[k][q]; } }
   $('v-cobra').value=c.vozes.cobra; $('v-narrador').value=c.vozes.narrador; $('v-espectador').checked=c.vozEspectador!==false;
   $('ia-modelo').value=c.openai.modelo; $('ia-chave').placeholder=c.openai.temChave?`chave salva (${c.openai.chave})`:'sk-...';
@@ -238,7 +252,8 @@ function mostrar(e){
   $('aviso-tiktok').textContent=t.connected?'Conectado: presentes, curtidas e comentários estão chegando no jogo.':(t.error&&t.error!=='stream ended'?'A live ainda não foi encontrada. Ela está no ar? O jogo tenta de novo sozinho.':'');
   const s=e.stats; $('n-esp').textContent=fmt(s.espectadores); $('n-cur').textContent=fmt(s.curtidas); $('n-pre').textContent=fmt(s.presentes); $('n-dia').textContent=fmt(s.diamantes);
   $('n-seg').textContent=fmt(s.seguidores); $('n-com').textContent=fmt(s.comentarios); $('n-min').textContent=fmt(s.minutos);
-  for(const k of ['cobrinha','cobrinhaAbismo','abismo']) $('l-'+k).textContent=e.links[k];
+  for(const k of ['cobrinha','cobrinhaAbismo','abismo','quiz']) $('l-'+k).textContent=e.links[k];
+  mostrarQuiz(e.quiz,e.config.modo);
   $('top').innerHTML=e.top.length?e.top.map((u,i)=>`<li><span class="pos">${i+1}</span><span class="ft" style="${u.avatar?`background-image:url('${esc(u.avatar)}')`:''}"></span><span class="tx"><b>${esc(u.name)}</b></span><span class="pts">${fmt(Math.round(u.pts))}</span></li>`).join(''):'<li class="vazio">Ninguém pontuou ainda.</li>';
   $('registro').innerHTML=e.registro.length?e.registro.map(r=>`<li><span class="ft" style="${r.foto?`background-image:url('${esc(r.foto)}')`:''}"></span><span class="tx"><b>${esc(r.nome)}</b><span>${esc(r.texto)}</span></span><span class="tag ${r.tipo}">${esc(r.tipo)}</span></li>`).join(''):'<li class="vazio">Os presentes, seguidores e comentários aparecem aqui.</li>';
   if(!cfgCarregada){ cfgCarregada=true; preencherConfig(e.config); }
@@ -250,7 +265,29 @@ setInterval(atualizarEstado,2000); atualizarEstado();
 $('b-salvar-usuario').onclick=async()=>{ const e=await api('config',{usuario:$('usuario').value}); mostrar(e); toast('Usuário salvo. Conectando…'); };
 $('b-conectar').onclick=async()=>{ mostrar(await api('tiktok',{acao:'conectar'})); toast('Conectando à live…'); };
 $('b-desconectar').onclick=async()=>{ mostrar(await api('tiktok',{acao:'desconectar'})); toast('Desconectado.'); };
-for(const m of ['cobrinha','abismo']) $('m-'+m).onclick=async()=>{ const e=await api('config',{modo:m}); $('m-cobrinha').setAttribute('aria-pressed',m!=='abismo'); $('m-abismo').setAttribute('aria-pressed',m==='abismo'); mostrar(e); toast(m==='abismo'?'Modo Abismo: palhaço e serpente falando.':'Modo Cobrinha.'); };
+function marcarModo(m){ for(const k of ['cobrinha','abismo','quiz']) $('m-'+k).setAttribute('aria-pressed',String(k===(m||'cobrinha'))); }
+for(const m of ['cobrinha','abismo','quiz']) $('m-'+m).onclick=async()=>{ const e=await api('config',{modo:m}); marcarModo(m); mostrar(e); toast(m==='abismo'?'Modo Abismo: palhaço e serpente falando.':m==='quiz'?'Modo Quiz ligado: abra o link do Quiz no LIVE Studio.':'Modo Cobrinha.'); };
+// ----- quiz -----
+let quizPronto=false;
+function mostrarQuiz(q,modo){ if(!q) return; const on=modo==='quiz';
+  $('aviso-quiz').textContent=on?(q.rodando?'Quiz rodando. Coloque o link do Quiz no LIVE Studio.':'Ligando o quiz…'):'O quiz está parado. Clique em 🧠 Quiz lá em cima para ligar.'; $('aviso-quiz').className='aviso'+(on?' ok':'');
+  if(quizPronto) return; quizPronto=true;
+  $('q-tempo').value=q.tempo; $('o-q-tempo').textContent=q.tempo+'s'; $('q-placar').value=q.placar||'dia';
+  const ativas=q.cats&&q.cats.length?q.cats:q.categorias;
+  $('q-cats').innerHTML=q.categorias.map(c=>`<label class="chk"><input type="checkbox" data-qcat="${esc(c)}" ${ativas.includes(c)?'checked':''}> ${esc(c)}</label>`).join(''); }
+const quizCfg=()=>({acao:'config',tempo:+$('q-tempo').value,placar:$('q-placar').value,cats:[...document.querySelectorAll('[data-qcat]')].filter(i=>i.checked).map(i=>i.dataset.qcat)});
+$('q-tempo').oninput=e=>$('o-q-tempo').textContent=e.target.value+'s';
+$('q-tempo').onchange=async()=>{ mostrar(await api('quiz',quizCfg())); toast('Tempo salvo (vale a partir da próxima pergunta).'); };
+$('q-placar').onchange=async()=>{ mostrar(await api('quiz',quizCfg())); toast('Ranking trocado.'); };
+document.addEventListener('change',async ev=>{ if(ev.target.dataset&&ev.target.dataset.qcat!==undefined){ mostrar(await api('quiz',quizCfg())); toast('Categorias salvas.'); } });
+$('q-pular').onclick=async()=>{ mostrar(await api('quiz',{acao:'pular'})); };
+$('q-campeao').onclick=async()=>{ mostrar(await api('quiz',{acao:'campeao',placar:$('q-placar').value})); toast('Campeões na tela por 15 segundos.'); };
+$('q-esconder').onclick=async()=>{ mostrar(await api('quiz',{acao:'esconderCampeao'})); };
+let zerarArmado=0;
+$('q-zerar').onclick=async()=>{ if(Date.now()-zerarArmado>4000){ zerarArmado=Date.now(); $('q-zerar').textContent='Clique de novo para confirmar'; setTimeout(()=>$('q-zerar').textContent='♻ Zerar ranking',4000); return; }
+  zerarArmado=0; $('q-zerar').textContent='♻ Zerar ranking'; mostrar(await api('quiz',{acao:'zerar',placar:$('q-placar').value})); toast('Ranking zerado.'); };
+document.addEventListener('click',async ev=>{ const b=ev.target.closest('[data-qteste]'); if(!b) return; const n=NOMES[Math.floor(Math.random()*NOMES.length)];
+  const r=await api('quiz-teste',{tipo:b.dataset.qteste,id:n.toLowerCase(),name:n}); toast(r.ok?'Enviado.':'Ligue o modo Quiz primeiro.'); });
 document.addEventListener('click',async ev=>{ const b=ev.target.closest('button'); if(!b) return;
   if(b.dataset.copiar){ const t=$(b.dataset.copiar).textContent; try{ await navigator.clipboard.writeText(t); toast('Link copiado.'); }catch(e){ const r=document.createRange(); r.selectNodeContents($(b.dataset.copiar)); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Selecionado: copie com Ctrl+C.'); } }
   if(b.dataset.pronta) $('f-texto').value=b.dataset.pronta;

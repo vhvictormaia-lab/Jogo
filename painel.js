@@ -24,7 +24,8 @@ module.exports = function painel(ctx) {
     return {
       ok: true, config: CFG.publico(), tiktok: ctx.tiktok(), stats: { ...stats, minutos: Math.floor((Date.now() - stats.inicio) / 60000) },
       top: top6(), registro: registro.slice(-40).reverse(),
-      links: { cobrinha: `http://localtest.me:${PORT}/`, cobrinhaAbismo: `http://localtest.me:${PORT}/?tema=abismo`, abismo: `http://localtest.me:${PORT}/abismo.html` },
+      links: { cobrinha: `http://localtest.me:${PORT}/`, cobrinhaAbismo: `http://localtest.me:${PORT}/?tema=abismo`, abismo: `http://localtest.me:${PORT}/abismo.html`, quiz: `http://localtest.me:${PORT}/quiz.html` },
+      quiz: ctx.quiz ? { rodando: ctx.quiz.rodando, ...ctx.quiz.estado().cfg, categorias: ctx.quiz.estado().categorias } : null,
     };
   }
   app.get('/api/painel/estado', (_req, res) => res.json(estado()));
@@ -36,7 +37,7 @@ module.exports = function painel(ctx) {
       const u = b.usuario.trim().replace(/^@/, '').replace(/[^A-Za-z0-9._]/g, '').slice(0, 40);
       if (u !== atual.usuario) { novo.usuario = u; }
     }
-    if (b.modo === 'abismo' || b.modo === 'cobrinha') novo.modo = b.modo;
+    if (['abismo', 'cobrinha', 'quiz'].includes(b.modo)) novo.modo = b.modo;
     if (b.openai) {
       novo.openai = {};
       if (b.openai.remover) novo.openai.chave = '';
@@ -64,10 +65,36 @@ module.exports = function painel(ctx) {
       else if (typeof b.atualizacao.token === 'string' && b.atualizacao.token.trim().length > 10) novo.atualizacao.token = b.atualizacao.token.trim();
     }
     CFG.atualizar(novo);
-    if (novo.modo) voz.setModo(novo.modo);
+    if (novo.modo) { voz.setModo(novo.modo); ctx.ligarQuiz && ctx.ligarQuiz(); }
     if (novo.musica) broadcast({ type: 'config', musica: CFG.get().musica });
     if (novo.usuario !== undefined) { ctx.trocarUsuario(novo.usuario); ctx.conectar(); }
     res.json(estado());
+  });
+
+  // ----- Quiz do Abismo -----
+  app.post('/api/painel/quiz', (req, res) => {
+    const b = req.body || {}, q = ctx.quiz; if (!q) return res.status(400).json({ ok: false });
+    const modo = ['dia', 'semana', 'geral'].includes(b.placar) ? b.placar : undefined;
+    if (b.acao === 'pular') q.pular();
+    else if (b.acao === 'campeao') q.campeao(modo);
+    else if (b.acao === 'esconderCampeao') broadcast({ type: 'quiz', ev: 'esconderCampeao' });
+    else if (b.acao === 'zerar') q.zerar(modo);
+    else if (b.acao === 'config') {
+      const c = {};
+      if (b.tempo !== undefined) c.tempo = num(b.tempo, 10, 90, 30);
+      if (Array.isArray(b.cats)) c.cats = b.cats.filter((x) => typeof x === 'string').slice(0, 30);
+      if (modo) c.placar = modo;
+      const novo = q.config(c); CFG.atualizar({ quiz: { tempo: novo.tempo, cats: novo.cats, placar: novo.placar } });
+    }
+    res.json(estado());
+  });
+
+  // botões de teste do quiz: alguém acerta / chute errado
+  app.post('/api/painel/quiz-teste', (req, res) => {
+    const b = req.body || {}, q = ctx.quiz; if (!q || !q.rodando) return res.json({ ok: false });
+    const resp = q.respostaAtual(); const texto = b.tipo === 'certo' && resp ? resp : 'acho que é batata';
+    ctx.sim({ type: 'chat', id: String(b.id || 'tester').slice(0, 30), name: String(b.name || 'Tester').slice(0, 30), text: texto });
+    res.json({ ok: true });
   });
 
   // ----- TikTok -----

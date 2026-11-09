@@ -84,8 +84,23 @@ function broadcast(msg) {
   for (const c of wss.clients) if (c.readyState === 1) c.send(s);
 }
 // MODO=abismo (iniciar-abismo.bat) ou o modo escolhido no painel: Palhaço do Abismo + Serpente das Trevas em /abismo.html
-if (process.env.MODO) CFG.atualizar({ modo: process.env.MODO.toLowerCase() === 'abismo' ? 'abismo' : 'cobrinha' });
+if (process.env.MODO) { const m = process.env.MODO.toLowerCase(); CFG.atualizar({ modo: ['abismo', 'quiz'].includes(m) ? m : 'cobrinha' }); }
 voz = criarVoz(broadcast, CFG.get().modo);
+
+// ---------- Quiz do Abismo (quiz.html): o motor roda aqui, a tela só mostra ----------
+const QuizMotor = require('./public/quiz-motor.js');
+const ARQ_PLACAR = path.join(CFG.DIR, 'quiz-placar.json');
+let placarSalvo = null; try { placarSalvo = JSON.parse(fs.readFileSync(ARQ_PLACAR, 'utf8')); } catch {}
+let salvarTimer = null;
+const quiz = QuizMotor.criar({
+  perguntas: require('./public/perguntas-quiz.js'), falas: require('./public/falas.js'), placar: placarSalvo, cfg: CFG.get().quiz,
+  emitir: (m) => broadcast(m),
+  falar: (partes, o) => voz.quiz(partes, o),
+  salvar: (db) => { clearTimeout(salvarTimer); salvarTimer = setTimeout(() => { try { fs.mkdirSync(CFG.DIR, { recursive: true }); fs.writeFileSync(ARQ_PLACAR, JSON.stringify(db)); } catch (e) { console.error('Não salvei o placar do quiz:', e.message); } }, 1500); },
+});
+function ligarQuiz() { if (CFG.get().modo === 'quiz') { if (!quiz.rodando) { quiz.iniciar(); console.log('🧠 Quiz do Abismo ligado: http://localhost:' + PORT + '/quiz.html'); } } else if (quiz.rodando) quiz.parar(); }
+setTimeout(ligarQuiz, 500);
+const noQuiz = () => quiz.rodando;
 
 // ---------- estatísticas e registro para o painel ----------
 const stats = { espectadores: 0, curtidas: 0, presentes: 0, diamantes: 0, seguidores: 0, compartilhamentos: 0, comentarios: 0, entradas: 0, inicio: Date.now() };
@@ -139,6 +154,7 @@ function handleGift(user, giftName, diamonds, count) {
   stats.presentes += count; stats.diamantes += coins; registrar('presente', user, `${count}x ${giftName} (${coins} 💎)`);
   addCoins(user, coins);
   somar(user, coins * PTS.diamante);
+  if (noQuiz()) quiz.presente(user, giftName, Math.max(1, diamonds), count);
   const bomba = BOMB_GIFTS.includes(String(giftName).toLowerCase());
   voz.presente(user, giftName, count, Math.max(1, diamonds), bomba);
   if (bomba) {
@@ -159,7 +175,7 @@ function handleFollow(user) {
   stats.seguidores++; registrar('seguiu', user, 'seguiu');
   broadcast({ type: 'follow', user, apples: APPLES_PER_FOLLOW });
   somar(user, PTS.seguir);
-  voz.seguiu(user);
+  voz.seguiu(user); if (noQuiz()) quiz.seguiu(user);
   chatSay(CHAT.followMsg.replace('{name}', user.id).replace('{nickname}', user.name));
 }
 function handleLike(user, likes) {
@@ -172,6 +188,7 @@ function handleChat(user, text) {
   stats.comentarios++; registrar('comentario', user, text);
   broadcast({ type: 'chat', user, text });
   if (Date.now() - (chatPtsAt.get(user.id) || 0) > 10000) { chatPtsAt.set(user.id, Date.now()); somar(user, PTS.comentario); }
+  if (noQuiz()) quiz.chat(user, text);
   voz.comentario(user, text);
 }
 const sharePtsAt = new Map();
@@ -179,12 +196,12 @@ function handleShare(user) {
   stats.compartilhamentos++; registrar('compartilhou', user, 'compartilhou a live');
   broadcast({ type: 'share', user });
   if (Date.now() - (sharePtsAt.get(user.id) || 0) > 60000) { sharePtsAt.set(user.id, Date.now()); somar(user, PTS.compartilhar); }
-  voz.compartilhou(user);
+  voz.compartilhou(user); if (noQuiz()) quiz.compartilhou(user);
 }
 function handleJoin(user) {
   stats.entradas++;
   broadcast({ type: 'join', user });
-  voz.entrou(user);
+  voz.entrou(user); if (noQuiz()) quiz.entrou(user);
 }
 
 const perf = new Map(); // latest frame stats reported by each game page
@@ -200,6 +217,7 @@ wss.on('connection', (ws, req) => {
       tiktok: tiktokStatus,
       config: { applesPerDiamond: APPLES_PER_DIAMOND, applesPerFollow: APPLES_PER_FOLLOW, bombGifts: BOMB_GIFTS },
       musica: CFG.get().musica,
+      quiz: quiz.estado(),
     })
   );
 });
@@ -323,7 +341,7 @@ require('./painel')({ app, express, CFG, stats, registro, top6, voz, broadcast, 
   tiktok: () => tiktokStatus, conectar: () => connectTikTok(), desconectar: () => pararTikTok(),
   trocarUsuario: (u) => { USERNAME = u; tiktokStatus = { connected: false, username: u, error: null }; },
   zerarRanking: () => { pontos.clear(); supporters.clear(); broadcast({ type: 'rank', top: [] }); },
-  sim: (b) => simular(b) });
+  sim: (b) => simular(b), quiz, ligarQuiz });
 
 server.listen(PORT, () => {
   console.log(`🐍 Jogo: http://localhost:${PORT}  (no LIVE Studio use http://localtest.me:${PORT}, 1080x1920)`);

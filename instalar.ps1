@@ -19,7 +19,9 @@ $lnk = $ws.CreateShortcut((Join-Path $desktop 'Cobrinha da Live.lnk'))
 $lnk.TargetPath = Join-Path $dir 'iniciar.bat'; $lnk.WorkingDirectory = $dir; $lnk.Save()
 $lnk2 = $ws.CreateShortcut((Join-Path $desktop 'Abismo Live.lnk'))
 $lnk2.TargetPath = Join-Path $dir 'iniciar-abismo.bat'; $lnk2.WorkingDirectory = $dir; $lnk2.Save()
+$lnk3 = $ws.CreateShortcut((Join-Path $desktop 'Quiz do Abismo.lnk'))
+$lnk3.TargetPath = Join-Path $dir 'iniciar-quiz.bat'; $lnk3.WorkingDirectory = $dir; $lnk3.Save()
 Write-Host ""
-Write-Host "Pronto! Os atalhos Cobrinha da Live e Abismo Live estao na sua Area de Trabalho." -ForegroundColor Green
+Write-Host "Pronto! Os atalhos Cobrinha da Live, Abismo Live e Quiz do Abismo estao na sua Area de Trabalho." -ForegroundColor Green
 Write-Host "Abrindo o jogo agora..."
 Start-Process -FilePath (Join-Path $dir 'iniciar.bat') -WorkingDirectory $dir

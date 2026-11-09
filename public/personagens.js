@@ -32,6 +32,13 @@ function texturaListras(THREE, c1, c2, n = 6, vertical = true) {
   for (let i = 0; i < n; i++) { g.fillStyle = i % 2 ? c2 : c1; if (vertical) g.fillRect(i * 128 / n, 0, 128 / n + 1, 128); else g.fillRect(0, i * 128 / n, 128, 128 / n + 1); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
 }
+let texBrilho = null;
+function brilhoVermelho(THREE) {
+  if (texBrilho) return texBrilho;
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); texBrilho = new THREE.CanvasTexture(c); return texBrilho;
+}
 const suave = (a, b, k) => a + (b - a) * Math.min(1, k);
 const ease = (x) => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
 
@@ -39,6 +46,7 @@ const ease = (x) => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
 // cores: { roupa:[cor1,cor2], cabelo, chapeu, nariz } (para a trupe de palhaços dançarinos)
 export function criarPalhaco(THREE, cores = {}) {
   const C = { roupa: ['#6d2fa3', '#1c0d2b'], cabelo: 0x55e07a, chapeu: 0x5b2a86, pele: 0xf4ece6, ...cores };
+  const TERROR = !!C.terror; if (TERROR && !cores.pele) C.pele = 0xe3e8d6; // versão sombria: olhos vermelhos, presas e língua de cobra
   const SFERA = new THREE.SphereGeometry(1, 28, 20);
   const CAPS = new THREE.CapsuleGeometry(0.5, 1, 8, 16);
   const CIL = new THREE.CylinderGeometry(1, 1, 1, 24);
@@ -80,16 +88,31 @@ export function criarPalhaco(THREE, cores = {}) {
   const cabeca = new THREE.Group(); cabeca.position.y = 1.75; tronco.add(cabeca); P.cabeca = cabeca;
   cabeca.add(peca(THREE, SFERA, pele, { y: 0.75, sx: 0.82, sy: 0.85, sz: 0.78 }));
   // bochechas rosadas
-  for (const lado of [-1, 1]) cabeca.add(peca(THREE, SFERA, toon(THREE, 0xff7a9a), { x: 0.48 * lado, y: 0.55, z: 0.55, sx: 0.17, sy: 0.12, sz: 0.06, linha: 0 }));
+  if (!TERROR) for (const lado of [-1, 1]) cabeca.add(peca(THREE, SFERA, toon(THREE, 0xff7a9a), { x: 0.48 * lado, y: 0.55, z: 0.55, sx: 0.17, sy: 0.12, sz: 0.06, linha: 0 }));
+  else for (const lado of [-1, 1]) { // olheiras escorrendo e bochechas esverdeadas
+    cabeca.add(peca(THREE, SFERA, toon(THREE, 0x9fb88f), { x: 0.47 * lado, y: 0.5, z: 0.52, sx: 0.2, sy: 0.16, sz: 0.08, linha: 0 }));
+    for (let i = 0; i < 2; i++) cabeca.add(peca(THREE, CAPS, toon(THREE, 0x1a0a1f), { x: (0.2 + i * 0.14) * lado, y: 0.66 - i * 0.05, z: 0.66, sx: 0.035, sy: 0.16 + i * 0.05, sz: 0.03, linha: 0 }));
+  }
   // olhos: maquiagem escura em losango + branco + pupila
   P.olhos = [];
   for (const lado of [-1, 1]) {
-    const olho = new THREE.Group(); olho.position.set(0.28 * lado, 0.95, 0.62); cabeca.add(olho);
+    const olho = new THREE.Group(); olho.position.set(0.28 * lado, 0.95, 0.62); if (TERROR) olho.scale.setScalar(1.25); cabeca.add(olho);
     const maq = peca(THREE, SFERA, roxoEsc, { sx: 0.24, sy: 0.32, sz: 0.08, linha: 0 }); maq.rotation.z = 0.5 * lado; olho.add(maq);
-    olho.add(peca(THREE, SFERA, branco, { z: 0.06, sx: 0.17, sy: 0.2, sz: 0.1, linha: 0.02 }));
-    const pup = peca(THREE, SFERA, preto, { z: 0.15, sx: 0.08, sy: 0.1, sz: 0.04, linha: 0 }); olho.add(pup);
-    pup.add(peca(THREE, SFERA, branco, { x: 0.35, y: 0.4, z: 0.6, sx: 0.35, sy: 0.35, sz: 0.3, linha: 0 })); // brilho
-    const sob = peca(THREE, CAPS, preto, { y: 0.32, z: 0.08, sx: 0.06, sy: 0.16, sz: 0.04, linha: 0 }); sob.rotation.z = Math.PI / 2 + 0.45 * lado; olho.add(sob); // sobrancelha marota
+    let pup;
+    if (!TERROR) {
+      olho.add(peca(THREE, SFERA, branco, { z: 0.06, sx: 0.17, sy: 0.2, sz: 0.1, linha: 0.02 }));
+      pup = peca(THREE, SFERA, preto, { z: 0.15, sx: 0.08, sy: 0.1, sz: 0.04, linha: 0 }); olho.add(pup);
+      pup.add(peca(THREE, SFERA, branco, { x: 0.35, y: 0.4, z: 0.6, sx: 0.35, sy: 0.35, sz: 0.3, linha: 0 })); // brilho
+    } else { // olho vermelho que brilha, com pupila de fenda
+      olho.add(peca(THREE, SFERA, toon(THREE, 0x2a0508), { z: 0.05, sx: 0.18, sy: 0.2, sz: 0.1, linha: 0.02 }));
+      const iris = peca(THREE, SFERA, new THREE.MeshBasicMaterial({ color: 0xff1a1a }), { z: 0.1, sx: 0.12, sy: 0.13, sz: 0.07, linha: 0 }); olho.add(iris);
+      iris.add(peca(THREE, SFERA, new THREE.MeshBasicMaterial({ color: 0xffb0a0 }), { z: 0.3, sx: 0.45, sy: 0.45, sz: 0.4, linha: 0 }));
+      pup = peca(THREE, SFERA, preto, { z: 0.17, sx: 0.025, sy: 0.1, sz: 0.03, linha: 0 }); olho.add(pup);
+      pup.add(peca(THREE, SFERA, new THREE.MeshBasicMaterial({ color: 0xffffff }), { x: 1.6, y: 0.4, z: 0.6, sx: 0.9, sy: 0.25, sz: 0.4, linha: 0 }));
+      const brilho = new THREE.Sprite(new THREE.SpriteMaterial({ map: brilhoVermelho(THREE), color: 0xff2020, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      brilho.scale.set(0.75, 0.75, 1); brilho.position.z = 0.15; olho.add(brilho); P.brilhos = (P.brilhos || []).concat(brilho);
+    }
+    const sob = peca(THREE, CAPS, preto, { y: 0.32, z: 0.08, sx: 0.06, sy: 0.16, sz: 0.04, linha: 0 }); sob.rotation.z = Math.PI / 2 + (TERROR ? 0.85 : 0.45) * lado; olho.add(sob); // sobrancelha (no terror: brava)
     P.olhos.push({ olho, pup, sob, lado });
   }
   // nariz vermelho brilhante
@@ -100,8 +123,20 @@ export function criarPalhaco(THREE, cores = {}) {
   // sorriso: meia-lua escura (abre quando fala) com dentes, e lábio vermelho em arco por fora
   const meiaLua = new THREE.CircleGeometry(1, 32, Math.PI, Math.PI);
   const dentro = new THREE.Mesh(meiaLua, boca); dentro.scale.set(0.42, 0.3, 1); dentro.position.z = 0.1; bocaG.add(dentro); P.bocaDentro = dentro;
-  const dentes = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), branco); dentes.scale.set(0.7, 0.07, 1); dentes.position.set(0, -0.035, 0.11); bocaG.add(dentes);
-  const labio = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.07, 10, 32, Math.PI), vermelho); labio.rotation.z = Math.PI; labio.position.z = 0.08; labio.scale.y = 0.75; bocaG.add(labio);
+  if (!TERROR) { const dentes = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), branco); dentes.scale.set(0.7, 0.07, 1); dentes.position.set(0, -0.035, 0.11); bocaG.add(dentes); }
+  else {
+    dentro.scale.set(0.5, 0.34, 1);
+    // fileira de dentes pontudos e duas presas grandes
+    const DENTE = new THREE.ConeGeometry(0.035, 0.1, 6), PRESA = new THREE.ConeGeometry(0.05, 0.2, 8), dMat = toon(THREE, 0xf2ecd8);
+    for (let i = 0; i < 11; i++) { const x = -0.4 + i * 0.08; const d = new THREE.Mesh(DENTE, dMat); d.position.set(x, -0.045, 0.12); d.rotation.z = Math.PI; bocaG.add(d); }
+    for (const lado of [-1, 1]) { const pr = new THREE.Mesh(PRESA, dMat); pr.position.set(0.22 * lado, -0.08, 0.13); pr.rotation.z = Math.PI; bocaG.add(pr); }
+    // língua bifurcada de cobra (sai quando ri ou fala)
+    const lin = new THREE.Group(); lin.position.set(0, -0.12, 0.1); bocaG.add(lin); P.lingua = lin;
+    const lMat = toon(THREE, 0xc2304a);
+    const haste = peca(THREE, CAPS, lMat, { y: -0.18, sx: 0.08, sy: 0.3, sz: 0.04, linha: 0.01 }); lin.add(haste);
+    for (const lado of [-1, 1]) { const pt = peca(THREE, CAPS, lMat, { x: 0.05 * lado, y: -0.42, sx: 0.04, sy: 0.16, sz: 0.03, linha: 0.01 }); pt.rotation.z = 0.45 * lado; lin.add(pt); }
+  }
+  const labio = new THREE.Mesh(new THREE.TorusGeometry(TERROR ? 0.5 : 0.44, 0.07, 10, 32, Math.PI), TERROR ? toon(THREE, 0x8a0d1c) : vermelho); labio.rotation.z = Math.PI; labio.position.z = 0.08; labio.scale.y = 0.75; bocaG.add(labio);
   for (const lado of [-1, 1]) bocaG.add(peca(THREE, SFERA, vermelho, { x: 0.44 * lado, y: 0.02, z: 0.08, sx: 0.08, sy: 0.08, sz: 0.06, linha: 0 })); // cantinhos
   // cabelo verde espetado dos lados e atrás
   const cabelo = new THREE.Group(); cabeca.add(cabelo); P.cabelo = cabelo;
@@ -128,7 +163,8 @@ export function criarPalhaco(THREE, cores = {}) {
 }
 
 // ======================= SERPENTE DAS TREVAS =======================
-export function criarSerpente(THREE) {
+export function criarSerpente(THREE, opc = {}) {
+  const TERROR = !!opc.terror;
   const N = 26;                              // gomos do corpo
   const SFERA = new THREE.SphereGeometry(1, 24, 16);
   const escamaTex = (() => {
@@ -139,7 +175,7 @@ export function criarSerpente(THREE) {
   })();
   const escama = toon(THREE, 0xffffff, { map: escamaTex }), barriga = toon(THREE, 0xb8f06a), verdeVeneno = toon(THREE, 0x6cff6a),
     branco = toon(THREE, 0xffffff), preto = toon(THREE, 0x0d0612), boca = toon(THREE, 0x3a0612), lingua = toon(THREE, 0xff2b55);
-  const olhoMat = new THREE.MeshStandardMaterial({ color: 0xc8ff3a, emissive: 0x88ff00, emissiveIntensity: 0.9, roughness: 0.3 });
+  const olhoMat = TERROR ? new THREE.MeshBasicMaterial({ color: 0xff2020 }) : new THREE.MeshStandardMaterial({ color: 0xc8ff3a, emissive: 0x88ff00, emissiveIntensity: 0.9, roughness: 0.3 });
 
   const raiz = new THREE.Group();
   const gomos = [];
@@ -172,6 +208,7 @@ export function criarSerpente(THREE) {
     const pup = peca(THREE, SFERA, preto, { z: 0.33, sx: 0.06, sy: 0.22, sz: 0.04, linha: 0 }); o.add(pup); // pupila de fenda
     pup.add(peca(THREE, SFERA, branco, { x: 0.5, y: 0.35, z: 0.8, sx: 0.6, sy: 0.18, sz: 0.5, linha: 0 })); // brilho
     const sob = peca(THREE, new THREE.BoxGeometry(1, 1, 1), preto, { x: 0.04 * lado, y: 0.44, z: 0.1, sx: 0.28, sy: 0.06, sz: 0.06, linha: 0 }); sob.rotation.z = -0.5 * lado; o.add(sob);
+    if (TERROR) { const b = new THREE.Sprite(new THREE.SpriteMaterial({ map: brilhoVermelho(THREE), color: 0xff2020, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); b.scale.set(1.3, 1.3, 1); b.position.z = 0.3; o.add(b); o.brilho = b; }
     olhos.push({ olho: o, pup, sob, lado });
   }
   // coroa de chifrinhos
@@ -184,6 +221,7 @@ export function criarSerpente(THREE) {
 // ======================= ANIMAÇÕES =======================
 // Ações: acenar, rir, dancar, voar, girar, cantar, susto, comemorar, pular, bote (serpente), sibilar (serpente)
 function montarAnimacao(THREE, raiz, corpo, P, tipo) {
+  const TERROR_ = !!P.brilhos;
   const st = {
     pos: new THREE.Vector3(), alvo: null, rumo: 0, vel: tipo === 'palhaco' ? 2.2 : 2.8,
     acao: null, tAcao: 0, durAcao: 0, fala: 0, falaAlvo: 0, piscar: 2 + Math.random() * 3, olhar: 0,
@@ -252,8 +290,14 @@ function montarAnimacao(THREE, raiz, corpo, P, tipo) {
     // olhos: piscar e arregalar
     st.piscar -= dt; let fecha = 1; if (st.piscar < 0) { fecha = Math.max(0.08, Math.abs(st.piscar * 8 - 1)); if (st.piscar < -0.25) st.piscar = 2 + Math.random() * 4; }
     const arreg = a === 'susto' ? 1.35 : a === 'rir' ? 0.35 : 1;
-    for (const o of P.olhos) { o.olho.scale.set(1, fecha * arreg, 1); o.pup.position.x = s(t * 0.7) * 0.04; o.sob.position.y = 0.32 + (a === 'susto' ? 0.12 : 0) + (a === 'rir' ? -0.05 : 0); }
+    for (const o of P.olhos) { const e0 = TERROR_ ? 1.25 : 1; o.olho.scale.set(e0, e0 * fecha * arreg, e0); o.pup.position.x = s(t * 0.7) * 0.04; o.sob.position.y = 0.32 + (a === 'susto' ? 0.12 : 0) + (a === 'rir' ? -0.05 : 0); }
     P.nariz.scale.setScalar(0.2 * (1 + (a === 'rir' || st.fala > 0.3 ? Math.abs(s(t * 18)) * 0.12 : 0)));
+    if (P.brilhos) for (const b of P.brilhos) { const k2 = 0.6 + Math.abs(s(t * 2.2)) * 0.25 + st.fala * 0.4 + (a === 'susto' || a === 'rir' ? 0.35 : 0); b.scale.set(k2, k2, 1); b.material.opacity = Math.min(1, 0.55 + k2 * 0.4) * fecha; }
+    if (P.lingua) { // língua de cobra: estica e treme quando ri, fala alto ou de vez em quando
+      const quer = a === 'rir' || a === 'susto' || st.fala > 0.55 || s(t * 0.9) > 0.97;
+      st.lin = suave(st.lin || 0, quer ? 1 : 0, dt * 10);
+      P.lingua.visible = st.lin > 0.05; P.lingua.scale.set(1, st.lin * (0.9 + Math.abs(s(t * 26)) * 0.25), 1); P.lingua.rotation.z = s(t * 31) * 0.12 * st.lin;
+    }
   }
 
   function atualizarSerpente(dt, t, mov) {
@@ -278,7 +322,8 @@ function montarAnimacao(THREE, raiz, corpo, P, tipo) {
     P.mandSup.rotation.x = -abre * 0.25;
     P.lingua.visible = abre > 0.2 || (s(t * 3) > 0.92);
     P.lingua.scale.z = 0.6 + Math.abs(s(t * 30)) * 0.6;
-    for (const o of P.olhos) { o.pup.scale.x = a === 'susto' ? 2.5 : 1; o.sob.rotation.z = (a === 'bote' || a === 'sibilar' ? -0.6 : -0.35) * o.lado; }
+    for (const o of P.olhos) { if (o.olho.brilho) { const k2 = 1.1 + Math.abs(s(t * 2)) * 0.35 + st.fala * 0.5; o.olho.brilho.scale.set(k2, k2, 1); }
+      o.pup.scale.x = (a === 'susto' ? 2.5 : 1) * 0.06; /* pupila de fenda: largura base 0.06 */ o.sob.rotation.z = (a === 'bote' || a === 'sibilar' ? -0.6 : -0.35) * o.lado; }
     // corpo: cada gomo pega um ponto mais antigo da trilha; sobe em direção à cabeça quando ela levanta
     const passo = 7;
     for (let i = 0; i < P.gomos.length; i++) {
