@@ -695,7 +695,7 @@ function applyLook(){
   stemMesh.visible=!!F.stem; if(F.stem) stemMesh.material.color.setHex(F.stem);
   leafMesh.visible=!!F.leaf; if(F.leaf==='leaf'){ leafMesh.geometry=leafGeo; leafMesh.material.map=leafTex; leafMesh.material.color.setHex(0xffffff); }
   else if(F.leaf==='calyx'){ leafMesh.geometry=F.calyxG; leafMesh.material.map=calyxTex; leafMesh.material.color.setHex(F.calyxCol||0xffffff); } leafMesh.material.needsUpdate=true; }
-function newRoundLook(){ SKIN=pickOther(SKINS,SKIN); FRUIT=pickOther(FRUITS,FRUIT); MAP=pickOther(MAPS,MAP); applyLook(); applyMap();
+function newRoundLook(){ musica.proximaMusica(); SKIN=pickOther(SKINS,SKIN); FRUIT=pickOther(FRUITS,FRUIT); MAP=pickOther(MAPS,MAP); applyLook(); applyMap();
   showBanner(`${PT(MAP.name)} · ${PT(SKIN.name)} · ${FRUIT.emoji} ${PT(FRUIT.name)}`,SKIN.light); }
 const PT_NOMES={"Mystic Forest":"Floresta Mística","Sunny Desert":"Deserto Ensolarado","Frozen Peaks":"Picos Gelados","Lava Lands":"Terras de Lava","Candy Land":"Terra dos Doces","Neon City":"Cidade Neon","Green Meadow":"Campo Verde","Ocean Python":"Píton do Oceano","Jungle Viper":"Víbora da Selva","Coral Snake":"Cobra-Coral","Golden Cobra":"Naja Dourada","Royal Serpent":"Serpente Real","Candy Snake":"Cobra de Doce","Shadow Mamba":"Mamba das Sombras","Desert Boa":"Jiboia do Deserto","Apples":"Maçãs","Oranges":"Laranjas","Lemons":"Limões","Plums":"Ameixas","Peaches":"Pêssegos","Strawberries":"Morangos","Blueberries":"Mirtilos","Watermelons":"Melancias","Limes":"Limas"};
 function PT(n){ return PT_NOMES[n]||n; }
@@ -950,14 +950,14 @@ function addEvent(cls,avatar,html,plus){
 }
 
 // ---------- events ----------
-function onGift(e){
+function onGift(e){ musica.evento('presente',e.coins||1);
   const u=e.user; const s=S.supporters.get(u.id)||{...u,coins:0}; s.coins+=e.coins; s.name=u.name; if(u.avatar) s.avatar=u.avatar; S.supporters.set(u.id,s);
   const apples=Math.max(1,Math.round(e.coins*cfg.applesPerDiamond));
   dropApples(apples,u);
   sfx.gift(apples>=100);
   addEvent('gift',u.avatar,`<span class="n">${esc(u.name)}</span> 🎁 ${esc(e.giftName)}${e.count>1?' ×'+e.count:''}`,`+${apples} ${FRUIT.emoji}`);
 }
-function onBomb(e){
+function onBomb(e){ musica.evento('bomba');
   const u=e.user; const s=S.supporters.get(u.id)||{...u,coins:0}; s.coins+=e.coins; s.name=u.name; if(u.avatar) s.avatar=u.avatar; S.supporters.set(u.id,s);
   const cut=Math.min(e.power, Math.max(0,S.len-START_LEN-(S.shrink||0)));
   const now=performance.now(); const tail=(S.head-S.len+1+N)%N;
@@ -965,14 +965,14 @@ function onBomb(e){
   addEvent('bomb',u.avatar,`<span class="n">${esc(u.name)}</span> 💣 ${esc(e.giftName)}${e.count>1?' ×'+e.count:''} explodiu o rabo!`,`−${cut} 🐍`);
   sfx.explode();
 }
-function onFollow(e){ sfx.follow(e.user&&e.user.name); burstConfetti(); showBanner(`➕ NOVO SEGUIDOR · ${e.user.name}`,'#7ff3ff',e.user.avatar); dropApples(cfg.applesPerFollow,e.user); addEvent('follow',e.user.avatar,`<span class="n">${esc(e.user.name)}</span> seguiu ➕`,`+${cfg.applesPerFollow} ${FRUIT.emoji}`); }
+function onFollow(e){ musica.evento('seguiu'); sfx.follow(e.user&&e.user.name); burstConfetti(); showBanner(`➕ NOVO SEGUIDOR · ${e.user.name}`,'#7ff3ff',e.user.avatar); dropApples(cfg.applesPerFollow,e.user); addEvent('follow',e.user.avatar,`<span class="n">${esc(e.user.name)}</span> seguiu ➕`,`+${cfg.applesPerFollow} ${FRUIT.emoji}`); }
 const likeFeedAt=new Map();
-function onLike(e){ const u=e.user; const l=S.roundLikes.get(u.id)||{...u,likes:0}; l.likes+=e.likes; S.roundLikes.set(u.id,l); S.likesTotal=(S.likesTotal||0)+e.likes; S.likeLog.push([performance.now(),e.likes]);
+function onLike(e){ musica.evento('curtida'); const u=e.user; const l=S.roundLikes.get(u.id)||{...u,likes:0}; l.likes+=e.likes; S.roundLikes.set(u.id,l); S.likesTotal=(S.likesTotal||0)+e.likes; S.likeLog.push([performance.now(),e.likes]);
   S.likeBank+=e.likes; while(S.likeBank>=LIKES_PER_APPLE){ S.likeBank-=LIKES_PER_APPLE; dropApples(1,u); floatText(`❤ ${LIKES_PER_APPLE} curtidas = ${FRUIT.emoji}`); }
   const now=performance.now(); for(let i=0;i<Math.min(12,e.likes);i++) S.hearts.push({t:now+i*90,x:900+Math.random()*120,d:.6+Math.random()*.6,s:26+Math.random()*22});
   if(now-(likeFeedAt.get(u.id)||0)>8000){ likeFeedAt.set(u.id,now); addEvent('like',u.avatar,`<span class="n">${esc(u.name)}</span> ❤ curtiu ×${l.likes}`); }
   sfx.like(); }
-function onChat(e){ addEvent('chat',e.user.avatar,`<span class="n">${esc(e.user.name)}</span> ${esc(e.text)}`); }
+function onChat(e){ musica.evento('comentario'); addEvent('chat',e.user.avatar,`<span class="n">${esc(e.user.name)}</span> ${esc(e.text)}`); }
 function onJoin(e){ addEvent('join',e.user.avatar,`<span class="n">${esc(e.user.name)}</span> entrou 👋`); }
 function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -994,6 +994,80 @@ function handle(msg){
 function setConn(t){ const c=$('conn'); if(!t) return; c.classList.toggle('on',!!t.connected);
   $('conn-t').textContent = t.connected?`AO VIVO @${t.username}`:(t.username?`@${t.username}: ${t.error==='stream ended'?'live encerrada':(t.error?'aguardando a live…':'conectando…')}`:'modo demo — G presente · B bomba · F seguir · L curtir · K chuva de curtidas'); }
 
+// ---------- música de fundo (gerada pelo jogo, estilo festa de fazenda) ----------
+// Esquenta com a live: quanto mais presentes/curtidas/comentários, mais rápida e mais instrumentos.
+// Abaixa sozinha quando a cobra está falando. Volume geral: MUSICA_VOLUME (0 desliga).
+const MUSICA_VOLUME=.22;
+const musica=(()=>{
+  let ac=null, out=null, duck=null, ok=false;
+  function init(){ if(ac) return ac; try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
+    duck=ac.createGain(); duck.gain.value=1; out=ac.createGain(); out.gain.value=MUSICA_VOLUME; duck.connect(out); out.connect(ac.destination); ok=true; return ac; }
+  const hz=m=>440*Math.pow(2,(m-69)/12);
+  function nota(m,t,dur,tipo,vol,dest){ const o=ac.createOscillator(), g=ac.createGain(); o.type=tipo; o.frequency.value=hz(m);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+.008); g.gain.exponentialRampToValueAtTime(.0008,t+dur);
+    o.connect(g); g.connect(dest||duck); o.start(t); o.stop(t+dur+.05); }
+  let ruido=null; function noiseBuf(){ if(ruido) return ruido; ruido=ac.createBuffer(1,ac.sampleRate*.3,ac.sampleRate); const d=ruido.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; return ruido; }
+  function bumbo(t,vol){ const o=ac.createOscillator(), g=ac.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+.12);
+    g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+.18); o.connect(g); g.connect(duck); o.start(t); o.stop(t+.2); }
+  function chimbal(t,vol,len=.04){ const s=ac.createBufferSource(); s.buffer=noiseBuf(); const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000;
+    const g=ac.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+len); s.connect(f); f.connect(g); g.connect(duck); s.start(t); s.stop(t+len+.02); }
+  function palma(t,vol){ const s=ac.createBufferSource(); s.buffer=noiseBuf(); const f=ac.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1500; f.Q.value=.8;
+    const g=ac.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+.12); s.connect(f); f.connect(g); g.connect(duck); s.start(t); s.stop(t+.15); }
+
+  // 3 músicas (progressão de acordes + melodia em colcheias; null = pausa). Troca a cada rodada.
+  const C=60;
+  const MUSICAS=[
+    { acordes:[[0,4,7],[5,9,12],[7,11,14],[0,4,7]], baixo:[0,5,7,0],
+      mel:[12,null,16,14,12,null,9,null, 9,null,12,9,7,null,null,null, 11,null,14,12,11,null,7,null, 12,null,16,null,12,null,null,null] },
+    { acordes:[[0,4,7],[9,12,16],[5,9,12],[7,11,14]], baixo:[0,-3,5,7],
+      mel:[16,null,16,14,12,null,14,null, 16,null,19,null,16,null,null,null, 12,null,12,14,16,null,12,null, 14,null,11,null,7,null,null,null] },
+    { acordes:[[0,4,7],[0,4,7],[5,9,12],[7,11,14]], baixo:[0,7,5,7],
+      mel:[7,null,12,null,12,14,16,null, 16,null,14,12,14,null,null,null, 17,null,16,14,12,null,9,null, 11,null,14,null,12,null,null,null] },
+  ];
+  let musicaAtual=0, passo=0, proxT=0, energia=0, alvo=0, rodando=false;
+  const eventos=[]; // [tempo, peso]
+  function bpm(){ return 104+energia*36; }
+  function agenda(){
+    if(!ok||ac.state!=='running') return;
+    // energia da live: eventos dos últimos 25 s + calor das curtidas
+    const agora=performance.now(); while(eventos.length&&agora-eventos[0][0]>25000) eventos.shift();
+    const soma=eventos.reduce((a,e)=>a+e[1],0); alvo=Math.min(1,soma/12+(S.heat||0)*.6);
+    energia+=(alvo-energia)*.01;
+    // abaixa a música quando a cobra fala
+    duck.gain.setTargetAtTime(typeof falaAtual!=='undefined'&&falaAtual?.32:1,ac.currentTime,.15);
+    const M=MUSICAS[musicaAtual], colcheia=60/bpm()/2;
+    if(proxT<ac.currentTime) proxT=ac.currentTime+.05;
+    while(proxT<ac.currentTime+.2){
+      const p=passo%32, comp=Math.floor(p/8), t=proxT, ac2=M.acordes[comp];
+      const nivel=energia<.15?0:energia<.4?1:energia<.7?2:3;
+      if(p%2===0) nota(C-24+M.baixo[comp]+(p%4===2?7:0),t,colcheia*1.6,'triangle',.5);            // baixo
+      if(p%4===2) for(const n of ac2) nota(C+n,t,colcheia*1.2,'square',.05);                         // acorde "caipira" no contratempo
+      if(nivel>=1){ if(p%4===0) bumbo(t,.55); chimbal(t,p%2?.05:.09); }
+      if(nivel>=1&&p%8===4) palma(t,.18);
+      if(nivel>=2&&M.mel[p]!=null) nota(C+M.mel[p],t,colcheia*1.8,'triangle',.22);                 // melodia
+      if(nivel>=3&&M.mel[p]!=null) nota(C+12+M.mel[p],t,colcheia*.9,'square',.05);                   // melodia oitava acima (festa!)
+      proxT+=colcheia; passo++;
+    }
+  }
+  function ligar(){ if(!init()) return; if(ac.state==='suspended') ac.resume().catch(()=>{}); if(rodando) return; rodando=true; setInterval(agenda,30); }
+  // vinhetas
+  function vinheta(notas,tipo,vol,passoS){ if(!ok) return; const t0=ac.currentTime+.02; notas.forEach((m,i)=>{ if(m!=null) nota(m,t0+i*passoS,passoS*2.2,tipo,vol,out); }); }
+  return {
+    ligar, proximaMusica(){ musicaAtual=(musicaAtual+1)%MUSICAS.length; passo=0; },
+    evento(tipo,valor=1){
+      eventos.push([performance.now(), tipo==='presente'?Math.min(6,1+Math.log2(1+valor)):tipo==='seguiu'?2:tipo==='bomba'?3:tipo==='comentario'?.6:.15]);
+      if(!ok) return;
+      if(tipo==='presente'&&valor>=100) vinheta([72,76,79,84,null,79,84,88],'square',.12,.09);   // presentão: fanfarra
+      else if(tipo==='presente') vinheta([79,84,88],'triangle',.25,.07);
+      else if(tipo==='seguiu') vinheta([84,null,91],'sine',.3,.08);
+      else if(tipo==='bomba') vinheta([72,68,65,60,55],'sawtooth',.08,.08);
+    },
+  };
+})();
+// o navegador só deixa tocar som depois de um clique; no LIVE Studio/OBS toca direto
+musica.ligar(); addEventListener('pointerdown',()=>musica.ligar());
+setTimeout(()=>musica.ligar(),1500);
+
 // ---------- TOP 6 DA LIVE ----------
 const fmtPts=n=>Math.round(n).toLocaleString('pt-BR');
 let t6prev=new Map();
@@ -1008,6 +1082,7 @@ function renderTop6(top){
 renderTop6([]);
 
 // ---------- voz da cobra (o servidor manda o texto e o áudio) ----------
+const MOSTRAR_BALAO=false; // balão de fala desligado (só a voz)
 const falaQ=[]; let falaAtual=null;
 function falar(m){ falaQ.push(m); if(falaQ.length>8) falaQ.shift(); if(!falaAtual) proximaFala(); }
 function fimFala(){ const m=falaAtual; if(!m) return; falaAtual=null; clearTimeout(m._t); $('fala').classList.remove('show');
@@ -1015,7 +1090,7 @@ function fimFala(){ const m=falaAtual; if(!m) return; falaAtual=null; clearTimeo
   setTimeout(()=>{ if(!falaAtual) proximaFala(); },200); }
 function proximaFala(){
   const m=falaQ.shift(); if(!m) return; falaAtual=m;
-  const b=$('fala'); b.className=''; void b.offsetWidth; b.className='show '+(m.kind||'');
+  const b=$('fala'); b.className=''; if(MOSTRAR_BALAO){ void b.offsetWidth; b.className='show '+(m.kind||''); }
   $('fala-t').textContent=m.text; const av=$('fala-av'); const pic=m.user&&m.user.avatar;
   av.style.display=pic?'':'none'; av.style.backgroundImage=pic?`url('${pic}')`:'';
   m.falando=performance.now();

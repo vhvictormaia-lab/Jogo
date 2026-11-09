@@ -1,10 +1,15 @@
 // Voz da cobrinha: decide o que falar (agradecimentos, respostas aos comentários, falas da cobra)
-// e transforma o texto em áudio com a voz do Windows (SAPI, ex.: "Microsoft Maria").
-// O áudio vai para o jogo como arquivo .wav, então ele entra na live pela própria fonte "Link".
-// Fora do Windows (ou sem voz em português) o jogo usa a voz do navegador, quando houver.
+// e transforma o texto em áudio.
+//  1) Voz natural (neural) da Microsoft, a mesma do "Ler em voz alta" do Edge — precisa de internet.
+//     Padrão: Francisca. Para trocar, antes de "node server.js" no iniciar.bat:  set VOZ=pt-BR-ThalitaNeural
+//     (outras: pt-BR-AntonioNeural, voz masculina).
+//  2) Reserva: voz do Windows (SAPI, ex.: "Microsoft Maria"), se a natural falhar.
+//  3) Última reserva: a voz do navegador, no próprio jogo.
+// O áudio vai para o jogo como arquivo, então ele entra na live pela própria fonte "Link".
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
 
 const DIR = path.join(os.tmpdir(), 'cobrinha-voz');
@@ -24,7 +29,7 @@ function startPs() {
     buf += d; let i;
     while ((i = buf.indexOf('\n')) >= 0) {
       const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
-      if (line.startsWith('VOZ ')) { psReady = true; console.log('🗣️  Voz da cobrinha: ' + line.slice(4)); }
+      if (line.startsWith('VOZ ')) { psReady = true; console.log('🗣️  Voz reserva do Windows: ' + line.slice(4)); }
       else if (line === 'SEMVOZ') {
         psFailed = true;
         console.log('ℹ️  Nenhuma voz em português no Windows. Instale em Configurações > Hora e idioma > Fala (Português Brasil).');
@@ -40,7 +45,77 @@ function startPs() {
 }
 startPs();
 
-function synth(text) {
+// ---------------- voz natural (Edge / Microsoft neural) ----------------
+const VOZ_NATURAL = (process.env.VOZ || 'pt-BR-FranciscaNeural').trim();
+const EDGE_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
+const EDGE_VER = '130.0.2849.68';
+let edgeSkew = 0;            // diferença de relógio com o servidor da Microsoft (segundos)
+let edgeFalhas = 0, edgePausaAte = 0, edgeAvisou = false;
+function secMsGec() {
+  let s = BigInt(Math.floor(Date.now() / 1000 + edgeSkew)) + 11644473600n;
+  s -= s % 300n;
+  return crypto.createHash('sha256').update((s * 10000000n).toString() + EDGE_TOKEN, 'ascii').digest('hex').toUpperCase();
+}
+const xml = (t) => String(t).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
+function carimbo() { return new Date().toUTCString().replace(/^(\w+), (\d+) (\w+) (\d+) ([\d:]+) GMT$/, '$1 $3 $2 $4 $5 GMT+0000 (Coordinated Universal Time)'); }
+function synthNatural(text, tentativa = 0) {
+  return new Promise((resolve) => {
+    let WebSocket; try { WebSocket = require('ws'); } catch { return resolve(null); }
+    const id = crypto.randomUUID().replace(/-/g, '');
+    const url = (process.env.VOZ_TESTE_URL || 'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1')
+      + `?TrustedClientToken=${EDGE_TOKEN}&ConnectionId=${id}&Sec-MS-GEC=${secMsGec()}&Sec-MS-GEC-Version=1-${EDGE_VER}`;
+    const ws = new WebSocket(url, { headers: {
+      'Pragma': 'no-cache', 'Cache-Control': 'no-cache', 'Origin': 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
+      'User-Agent': `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${EDGE_VER.split('.')[0]}.0.0.0 Safari/537.36 Edg/${EDGE_VER.split('.')[0]}.0.0.0`,
+      'Accept-Encoding': 'gzip, deflate, br', 'Accept-Language': 'en-US,en;q=0.9',
+      'Cookie': 'muid=' + crypto.randomBytes(16).toString('hex').toUpperCase() + ';',
+    } });
+    const partes = []; let fim = false;
+    const acabar = (ok) => { if (fim) return; fim = true; clearTimeout(t); try { ws.terminate(); } catch {}
+      if (!ok || !partes.length) return resolve(null);
+      const name = Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + '.mp3';
+      fs.writeFile(path.join(DIR, name), Buffer.concat(partes), (e) => resolve(e ? null : '/voz/' + name)); };
+    const t = setTimeout(() => acabar(false), 7000);
+    ws.on('unexpected-response', (req, res) => {
+      // 403 costuma ser relógio do PC fora da hora: ajusta pela hora do servidor e tenta mais uma vez
+      const d = Date.parse(res.headers.date || ''); fim = true; clearTimeout(t); try { ws.terminate(); } catch {}
+      if (res.statusCode === 403 && d && tentativa === 0) { edgeSkew += (d - Date.now()) / 1000; return synthNatural(text, 1).then(resolve); }
+      resolve(null);
+    });
+    ws.on('error', () => acabar(false));
+    ws.on('close', () => acabar(partes.length > 0));
+    ws.on('open', () => {
+      ws.send(`X-Timestamp:${carimbo()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n`
+        + '{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}\r\n');
+      ws.send(`X-RequestId:${id}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${carimbo()}Z\r\nPath:ssml\r\n\r\n`
+        + `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='pt-BR'><voice name='${xml(VOZ_NATURAL)}'>`
+        + `<prosody pitch='+0Hz' rate='+8%' volume='+0%'>${xml(text)}</prosody></voice></speak>`);
+    });
+    ws.on('message', (data, isBinary) => {
+      if (isBinary) {
+        const b = Buffer.from(data); if (b.length < 2) return;
+        const n = b.readUInt16BE(0); const cab = b.subarray(2, 2 + n).toString();
+        if (cab.includes('Path:audio')) partes.push(b.subarray(2 + n));
+      } else if (String(data).includes('Path:turn.end')) acabar(true);
+    });
+  });
+}
+
+async function synth(text) {
+  // tenta a voz natural; se falhar 3 vezes seguidas, descansa 5 minutos e usa a do Windows
+  if (Date.now() >= edgePausaAte) {
+    const url = await synthNatural(text);
+    if (url) {
+      if (!edgeAvisou) { edgeAvisou = true; console.log('🗣️  Voz natural ativada: ' + VOZ_NATURAL); }
+      edgeFalhas = 0; return url;
+    }
+    if (++edgeFalhas >= 3) { edgePausaAte = Date.now() + 5 * 60000; edgeFalhas = 0; edgeAvisou = false;
+      console.log('ℹ️  Voz natural indisponível agora (sem internet?). Usando a voz do Windows por 5 minutos.'); }
+  }
+  return synthWindows(text);
+}
+
+function synthWindows(text) {
   return new Promise((resolve) => {
     if (psFailed || !ps) return resolve(null);
     const name = Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + '.wav';

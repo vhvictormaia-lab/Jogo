@@ -13,11 +13,14 @@ NOVIDADES (versão 2)
 - TOP 6 DA LIVE fixo no alto da tela, com foto, nome e pontos de cada pessoa.
   Pontos: 1 diamante = 100 · seguir = 500 · cada curtida = 10 · comentário = 20 (no máximo 1 a cada 10 s).
   O ranking vale pela live inteira (zera quando você fecha o jogo).
-- A cobra FALA, com balão na tela e a foto da pessoa:
+- A cobra FALA com voz natural (voz neural da Microsoft, "Francisca"):
   agradece cada presente pelo nome ("Valeu pelas 5 Rosas, Lisa!"), agradece quem segue,
   lê comentários em voz alta e responde, dá boas-vindas e solta uma frase sozinha a cada 20 a 30 segundos quando ninguém interage.
   Comentários com palavrão, link ou número de telefone não são lidos.
   Em live agitada ela prioriza presentes e seguidores, e não responde a mesma pessoa toda hora.
+- MÚSICA de fundo estilo festa de fazenda, criada pelo próprio jogo (sem direitos autorais):
+  fica mais rápida e com mais instrumentos quando a live esquenta, muda a cada rodada,
+  toca vinhetas em presentes, seguidores e bombas, e abaixa sozinha quando a cobra fala.
 - A foto de quem mandou o presente aparece flutuando em cima da fruta dela.
 
 INSTALAR (uma vez só)
@@ -49,10 +52,16 @@ Na pasta do jogo, edite o iniciar.bat e coloque antes da linha "node server.js":
 A duração da rodada (ROUND_MS) e a velocidade ficam no começo do public\index.html.
 
 SOBRE A VOZ
-A voz é a do próprio Windows (normalmente "Microsoft Maria"), e o áudio sai pela fonte Link do LIVE Studio.
-Ao abrir o jogo, a janela preta mostra "Voz da cobrinha: Microsoft Maria ...". Se mostrar que não achou
-voz em português, instale em Configurações > Hora e idioma > Fala > Adicionar vozes > Português (Brasil).
+A voz natural (Francisca) precisa de internet. Ao abrir o jogo, a janela preta mostra
+"Voz natural ativada" na primeira fala. Para trocar a voz, edite o iniciar.bat e coloque antes de "node server.js":
+  set VOZ=pt-BR-ThalitaNeural     (outra voz feminina)
+  set VOZ=pt-BR-AntonioNeural     (voz masculina)
+Se a voz natural falhar (sem internet, por exemplo), o jogo usa sozinho a voz do Windows ("Microsoft Maria").
 No LIVE Studio, deixe o som ligado (ícone do alto-falante sem o X).
+
+SOBRE A MÚSICA
+Para deixar a música mais baixa ou desligar, abra public\index.html no Bloco de Notas,
+procure "MUSICA_VOLUME=.22" e troque o número (0 desliga, 0.4 mais alto).
 
 AVISOS
 - Usa a biblioteca não oficial tiktok-live-connector. A live precisa estar no ar para conectar;
