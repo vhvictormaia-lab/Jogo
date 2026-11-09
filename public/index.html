@@ -87,6 +87,37 @@
   #countdown small{display:block;font-size:34px;letter-spacing:8px;color:var(--muted)}
   #countdown b{font-family:Orbitron;font-size:220px;color:#fff;text-shadow:0 0 40px var(--neon);line-height:1}
 
+  /* TOP 6 DA LIVE (sempre na tela, em cima do cenário) */
+  #top6{position:absolute;left:28px;right:28px;top:34px;z-index:7;pointer-events:none}
+  #top6 .t6h{display:flex;align-items:center;justify-content:center;gap:14px;font-family:Orbitron;font-size:30px;letter-spacing:4px;color:var(--gold);
+    text-shadow:0 2px 10px rgba(0,0,0,.8),0 0 18px rgba(255,209,102,.5);margin-bottom:10px}
+  #top6 .t6g{display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:column;grid-template-rows:repeat(3,104px);gap:10px 14px}
+  .t6{position:relative;display:flex;align-items:center;gap:14px;padding:10px 18px 10px 12px;border-radius:56px;
+    background:linear-gradient(90deg,rgba(8,16,28,.82),rgba(8,16,28,.55));border:2px solid rgba(255,255,255,.14);box-shadow:0 6px 20px rgba(0,0,0,.35);
+    transition:transform .35s cubic-bezier(.2,.9,.3,1.3),border-color .3s}
+  .t6 .pos{position:absolute;left:-6px;top:-8px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:Orbitron;font-size:22px;
+    background:#25384a;color:#fff;border:2px solid rgba(255,255,255,.4);z-index:2}
+  .t6 .av{width:80px;height:80px;border-radius:50%;flex:none;background:#2a4a5a center/cover;border:4px solid #8fd8ff}
+  .t6 .tx{min-width:0;flex:1}
+  .t6 .n{font-size:32px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 6px rgba(0,0,0,.8)}
+  .t6 .p{font-family:Orbitron;font-size:24px;color:var(--gold)}
+  .t6.r1{border-color:#ffd166;box-shadow:0 0 26px rgba(255,209,102,.45)} .t6.r1 .av{border-color:#ffd166} .t6.r1 .pos{background:#ffd166;color:#3a2600}
+  .t6.r2 .av{border-color:#dfe7ef} .t6.r2 .pos{background:#cfd8e2;color:#1c2833}
+  .t6.r3 .av{border-color:#e39a5b} .t6.r3 .pos{background:#cd7f32;color:#fff}
+  .t6.up{animation:t6up .7s ease-out}
+  @keyframes t6up{0%{transform:scale(1)}30%{transform:scale(1.08);border-color:#7ff3ff}100%{transform:scale(1)}}
+  .t6.vazio{opacity:.45} .t6.vazio .av{border-style:dashed;border-color:rgba(255,255,255,.35)}
+
+  /* Balão de fala da cobra */
+  #fala{position:absolute;z-index:8;left:540px;top:900px;max-width:720px;min-width:260px;transform:translate(-50%,-100%);pointer-events:none;
+    display:none;align-items:center;gap:16px;padding:18px 26px;border-radius:34px;background:#fff;color:#14202b;
+    font-size:36px;font-weight:700;line-height:1.15;box-shadow:0 12px 40px rgba(0,0,0,.45);border:4px solid var(--gold)}
+  #fala.show{display:flex;animation:falain .3s cubic-bezier(.2,.9,.3,1.4)}
+  #fala::after{content:'';position:absolute;left:50%;bottom:-24px;transform:translateX(-50%);border:14px solid transparent;border-top:16px solid #fff}
+  #fala .av{width:70px;height:70px;border-radius:50%;flex:none;background:#ccc center/cover;border:3px solid var(--gold)}
+  #fala.presente,#fala.bomba{border-color:#ff5e8a} #fala.seguiu{border-color:#7ff3ff}
+  @keyframes falain{from{opacity:0;transform:translate(-50%,-80%) scale(.7)}to{opacity:1;transform:translate(-50%,-100%) scale(1)}}
+
   #conn{position:absolute;right:36px;bottom:16px;font-size:20px;color:var(--muted);z-index:5;opacity:.8}
   #conn i{display:inline-block;width:12px;height:12px;border-radius:50%;background:#e33;margin-right:8px}
   #conn.on i{background:#3e6}
@@ -102,6 +133,9 @@
   <canvas id="fx" width="1080" height="1920"></canvas>
 
   <div id="feed"></div>
+
+  <div id="top6"><div class="t6h">🏆 TOP 6 DA LIVE 🏆</div><div class="t6g" id="t6g"></div></div>
+  <div id="fala"><div class="av" id="fala-av"></div><div id="fala-t"></div></div>
 
   <div id="results">
     <h2>RODADA ENCERRADA — RECOMEÇA EM <span id="rs-t">10</span>s</h2>
@@ -634,6 +668,20 @@ function updateAvatar(ts){
   if(avatarSprite) scene.add(avatarSprite); scene.add(nameSprite);
 }
 
+// foto de quem mandou, flutuando em cima da fruta (no máximo 14 ao mesmo tempo)
+const fotoTex=new Map(), fotoSpr=new Map(); let fotoVistas=new Set();
+function texFoto(url){ let t=fotoTex.get(url); if(t) return t; const im=img(url); if(!im) return null;
+  const c=document.createElement('canvas'); c.width=c.height=128; const g=c.getContext('2d');
+  g.beginPath(); g.arc(64,64,60,0,7); g.fillStyle='#fff'; g.fill(); g.save(); g.beginPath(); g.arc(64,64,54,0,7); g.clip(); g.drawImage(im,10,10,108,108); g.restore();
+  t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; fotoTex.set(url,t); if(fotoTex.size>80){ const k=fotoTex.keys().next().value; fotoTex.get(k).dispose(); fotoTex.delete(k); } return t; }
+function fotoFruta(idx,url,x,y,z,now){
+  let sp=fotoSpr.get(idx);
+  if(!sp){ if(fotoSpr.size>=14) return; const t=texFoto(url); if(!t) return;
+    sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false})); sp.renderOrder=5; scene.add(sp); fotoSpr.set(idx,sp); }
+  const k=.62+Math.sin(now/300+idx)*.03; sp.scale.set(k,k,1); sp.position.set(x,y+.75,z); fotoVistas.add(idx);
+}
+function limparFotos(){ for(const [idx,sp] of fotoSpr) if(!fotoVistas.has(idx)){ scene.remove(sp); sp.material.dispose(); fotoSpr.delete(idx); } fotoVistas=new Set(); }
+
 // apples (instanced)
 const MAXA=N+64;
 const appleMesh=new THREE.InstancedMesh(FRUITS[0].g,new THREE.MeshPhysicalMaterial({map:FRUITS[0].map,roughness:.4,clearcoat:.5,clearcoatRoughness:.35}),MAXA); appleMesh.castShadow=true; appleMesh.receiveShadow=true; scene.add(appleMesh);
@@ -748,7 +796,9 @@ function drawBoard(now){
       const imp=Math.max(0,1-Math.abs(k-.36)/.06); sy=1-imp*.35; sx=1+imp*.2; }   // squash at first impact
     else { const t=now/1000+idx*.37; y=.3+Math.abs(Math.sin(t*2.4))*.12; const land=Math.max(0,.12-Math.abs(Math.sin(t*2.4)))/.12; sy=1-land*.12; sx=1+land*.07; }
     const spin=now/900+idx; const tilt=Math.sin(now/500+idx)*.12;
-    putApple(x,y,z,sx,sy,spin,tilt,Math.max(.4,1-(y-.3)*.15)); }
+    putApple(x,y,z,sx,sy,spin,tilt,Math.max(.4,1-(y-.3)*.15));
+    if(a.user&&a.user.avatar) fotoFruta(idx,a.user.avatar,x,y,z,now); }
+  limparFotos();
   appleMesh.count=leafMesh.count=stemMesh.count=shadowMesh.count=i; appleMesh.instanceMatrix.needsUpdate=leafMesh.instanceMatrix.needsUpdate=stemMesh.instanceMatrix.needsUpdate=shadowMesh.instanceMatrix.needsUpdate=true;
   // particles
   const live=[]; for(const p of S.particles){ const a=1-(now-p.t)/700; if(a<=0||a>1) continue; p.x+=p.vx*dt; p.y+=p.vy*dt; p.z+=p.vz*dt; p.vy-=9*dt; if(p.y<.05){ p.y=.05; p.vy*=-.4; }
@@ -820,7 +870,7 @@ function drawFx(now){
   fx.globalAlpha=1; S.confetti=S.confetti.filter(c=>now-c.t<1600);
   if(!S.banner&&bannerQ.length){ const b=bannerQ.shift(); S.banner={...b,t:now,dur:bannerQ.length>2?1700:2800}; }
   if(S.banner){ const B=S.banner, dur=B.dur||2800, a=(now-B.t)/dur; if(a<1){ const k=Math.min(1,a*6)*Math.min(1,(1-a)*6); fx.globalAlpha=k; fx.textAlign='center';
-      fx.font='bold 40px Rajdhani'; const im=B.avatar&&img(B.avatar), pad=im?76:0; const w=Math.min(1000,fx.measureText(B.txt).width+70+pad), x=540-w/2, y=300-(1-Math.min(1,a*6))*20;
+      fx.font='bold 40px Rajdhani'; const im=B.avatar&&img(B.avatar), pad=im?76:0; const w=Math.min(1000,fx.measureText(B.txt).width+70+pad), x=540-w/2, y=432-(1-Math.min(1,a*6))*20; // logo abaixo do TOP 6
       fx.fillStyle='rgba(0,0,0,.6)'; roundRectFx(x,y,w,88,44); fx.fill(); fx.strokeStyle=B.col; fx.lineWidth=4; fx.stroke();
       if(im){ fx.save(); fx.beginPath(); fx.arc(x+50,y+44,30,0,7); fx.clip(); fx.drawImage(im,x+20,y+14,60,60); fx.restore(); }
       fx.fillStyle=B.col; fx.fillText(B.txt,540+pad/2,y+58); fx.globalAlpha=1; } else S.banner=null; }
@@ -862,15 +912,7 @@ const sfx=(()=>{
     drop: mute,
     gift: safe(()=>playDonation()),
     like: mute,
-    follow: safe(n=>{ // agradece em português com a voz do sistema; se não houver voz, toca um 'pop'
-      const pop=()=>{ const a=new Audio('sounds/gift-pop.mp3'); a.volume=.8; a.play().catch(()=>{}); };
-      try{ const ss=window.speechSynthesis; const vs=ss?ss.getVoices().filter(v=>/^pt/i.test(v.lang)):[];
-        if(!ss||!vs.length) return pop();
-        const u=new SpeechSynthesisUtterance(`Valeu pelo follow${n?', '+n:''}!`); u.lang='pt-BR'; u.voice=vs.find(v=>/BR/i.test(v.lang))||vs[0]; u.rate=1.05;
-        let started=false; u.onstart=()=>{ started=true; }; u.onerror=()=>{ if(!started){ started=true; pop(); } };
-        setTimeout(()=>{ if(!started){ started=true; try{ ss.cancel(); }catch(e){} pop(); } },1500); // voz bloqueada ou travada: toca o 'pop'
-        ss.cancel(); ss.speak(u);
-      }catch(e){ pop(); } }),
+    follow: safe(n=>{ const a=new Audio('sounds/gift-pop.mp3'); a.volume=.8; a.play().catch(()=>{}); }),
     explode: safe(()=>playDonation()),
     tick: mute,
     go: mute,
@@ -937,7 +979,9 @@ function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&l
 window.handle=handle;
 function handle(msg){
   switch(msg.type){
-    case 'snapshot': for(const s of msg.supporters||[]) S.supporters.set(s.id,s); Object.assign(cfg,msg.config||{}); setConn(msg.tiktok); break;
+    case 'snapshot': for(const s of msg.supporters||[]) S.supporters.set(s.id,s); Object.assign(cfg,msg.config||{}); setConn(msg.tiktok); renderTop6(msg.rank||[]); break;
+    case 'rank': renderTop6(msg.top||[]); break;
+    case 'say': falar(msg); break;
     case 'tiktok': setConn(msg); break;
     case 'gift': onGift(msg); break;
     case 'bomb': onBomb(msg); break;
@@ -949,6 +993,47 @@ function handle(msg){
 }
 function setConn(t){ const c=$('conn'); if(!t) return; c.classList.toggle('on',!!t.connected);
   $('conn-t').textContent = t.connected?`AO VIVO @${t.username}`:(t.username?`@${t.username}: ${t.error==='stream ended'?'live encerrada':(t.error?'aguardando a live…':'conectando…')}`:'modo demo — G presente · B bomba · F seguir · L curtir · K chuva de curtidas'); }
+
+// ---------- TOP 6 DA LIVE ----------
+const fmtPts=n=>Math.round(n).toLocaleString('pt-BR');
+let t6prev=new Map();
+function renderTop6(top){
+  const g=$('t6g'); let html='';
+  for(let i=0;i<6;i++){ const u=top[i];
+    if(!u){ html+=`<div class="t6 vazio"><div class="pos">${i+1}</div><div class="av"></div><div class="tx"><div class="n">—</div><div class="p">interaja pra entrar</div></div></div>`; continue; }
+    const up=(t6prev.get(u.id)??999)>i; // subiu de posição (ou entrou agora)
+    html+=`<div class="t6 r${i+1}${up?' up':''}"><div class="pos">${i+1}</div><div class="av" style="${u.avatar?`background-image:url('${esc(u.avatar)}')`:''}"></div><div class="tx"><div class="n">${esc(u.name)}</div><div class="p">${fmtPts(u.pts)} pts</div></div></div>`; }
+  g.innerHTML=html; t6prev=new Map(top.map((u,i)=>[u.id,i]));
+}
+renderTop6([]);
+
+// ---------- voz da cobra (o servidor manda o texto e o áudio) ----------
+const falaQ=[]; let falaAtual=null;
+function falar(m){ falaQ.push(m); if(falaQ.length>8) falaQ.shift(); if(!falaAtual) proximaFala(); }
+function fimFala(){ const m=falaAtual; if(!m) return; falaAtual=null; clearTimeout(m._t); $('fala').classList.remove('show');
+  try{ if(window.__ws&&window.__ws.readyState===1) window.__ws.send(JSON.stringify({type:'falou',id:m.id})); }catch(e){}
+  setTimeout(()=>{ if(!falaAtual) proximaFala(); },200); }
+function proximaFala(){
+  const m=falaQ.shift(); if(!m) return; falaAtual=m;
+  const b=$('fala'); b.className=''; void b.offsetWidth; b.className='show '+(m.kind||'');
+  $('fala-t').textContent=m.text; const av=$('fala-av'); const pic=m.user&&m.user.avatar;
+  av.style.display=pic?'':'none'; av.style.backgroundImage=pic?`url('${pic}')`:'';
+  m.falando=performance.now();
+  m._t=setTimeout(fimFala,(m.ms||4000)+6000); // segurança: nunca trava a fila
+  let tocou=false;
+  const viaNavegador=()=>{ try{ const ss=window.speechSynthesis; const vs=ss?ss.getVoices().filter(v=>/^pt/i.test(v.lang)):[];
+      if(!ss||!vs.length) return setTimeout(fimFala,m.ms||3000);
+      const u=new SpeechSynthesisUtterance(m.text); u.lang='pt-BR'; u.voice=vs.find(v=>/BR/i.test(v.lang))||vs[0]; u.rate=1.05;
+      u.onend=fimFala; u.onerror=()=>setTimeout(fimFala,m.ms||3000); ss.cancel(); ss.speak(u);
+    }catch(e){ setTimeout(fimFala,m.ms||3000); } };
+  if(m.url){ const a=new Audio(m.url); a.volume=1; a.onended=fimFala; a.onerror=()=>{ if(!tocou) viaNavegador(); };
+    a.play().then(()=>{ tocou=true; }).catch(()=>{ setTimeout(fimFala,m.ms||3000); }); }
+  else viaNavegador();
+}
+// o balão acompanha a cabeça da cobra
+function posFala(){ const b=$('fala'); if(falaAtual){ const x=Math.max(330,Math.min(750,headScreen.x)); const y=Math.max(560,Math.min(1500,headScreen.y-70));
+    b.style.left=x+'px'; b.style.top=y+'px'; } requestAnimationFrame(posFala); }
+requestAnimationFrame(posFala);
 
 // ---------- round flow ----------
 function endRound(){
@@ -1014,17 +1099,26 @@ S.lastStep=performance.now(); requestAnimationFrame(loop);
 })();
 
 // ---------- demo / keyboard ----------
-const NAMES=['Zosky','Lisa','Champi-Bot','nosewxd','Marco','Manuel_le','shawnnysideup','Bernaard01'];
+const NAMES=['Lisa','Marco','Juliana','Pedrinho','Bia_Gamer','Thiagão','Carol','Rafa','Dudu','Mari'];
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
 function fakeUser(){ const n=rnd(NAMES); return {id:n.toLowerCase(),name:n,avatar:`https://api.dicebear.com/9.x/thumbs/png?seed=${n}&size=96`}; }
-function fakeGift(){ const g=rnd([['Rose',1],['Rose',1],['Rose',1],['Finger Heart',5],['Donut',30],['Hand Hearts',100],['Hand Hearts',100],['Hand Hearts',100],['Galaxy',1000]]); const count=g[1]===1?1+Math.floor(Math.random()*9):1;
-  handle({type:'gift',user:fakeUser(),giftName:g[0],diamonds:g[1],count,coins:g[1]*count}); }
+// teste: os eventos falsos passam pelo servidor (assim a voz e o TOP 6 funcionam no teste também)
+function sim(ev){ const u=ev.user;
+  fetch('/api/sim',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:ev.type==='bomb'?'gift':ev.type,id:u.id,name:u.name,avatar:u.avatar,
+    giftName:ev.giftName,diamonds:ev.diamonds,count:ev.count,likes:ev.likes,text:ev.text})}).then(r=>{ if(!r.ok) handle(ev); }).catch(()=>handle(ev)); }
+const FALAS_TESTE=['oi cobrinha','quero ser sua maçã','kkkkkkk','te amo cobrinha','como faz pra crescer?','boa noite galera','que jogo top','manda GG nela','tô com fome tbm','salve salve'];
+function fakeGift(){ const g=rnd([['Rose',1],['Rose',1],['Rose',1],['Finger Heart',5],['Donut',30],['Hand Hearts',100],['Hand Hearts',100],['Galaxy',1000]]); const count=g[1]===1?1+Math.floor(Math.random()*9):1;
+  sim({type:'gift',user:fakeUser(),giftName:g[0],diamonds:g[1],count}); }
+const fakeBomb=()=>sim({type:'bomb',user:fakeUser(),giftName:'GG',diamonds:1,count:1+Math.floor(Math.random()*8)});
+const fakeChat=()=>sim({type:'chat',user:fakeUser(),text:rnd(FALAS_TESTE)});
 addEventListener('keydown',e=>{ const k=e.key.toLowerCase();
-  if(k==='g') fakeGift(); else if(k==='f') handle({type:'follow',user:fakeUser()}); else if(k==='l') handle({type:'like',user:fakeUser(),likes:1+Math.floor(Math.random()*20)});
-  else if(k==='c') handle({type:'chat',user:fakeUser(),text:rnd(['uau','KKKK','MEU DEUS','🔥🔥🔥','mais!'])}); else if(k==='k'){ for(let i=0;i<10;i++) handle({type:'like',user:fakeUser(),likes:15+Math.floor(Math.random()*15)}); } else if(k==='b') handle({type:'bomb',user:fakeUser(),giftName:'GG',diamonds:1,count:1+Math.floor(Math.random()*20),coins:1,power:1+Math.floor(Math.random()*20)}); else if(k==='e') endRound(); });
+  if(k==='g') fakeGift(); else if(k==='f') sim({type:'follow',user:fakeUser()}); else if(k==='l') sim({type:'like',user:fakeUser(),likes:1+Math.floor(Math.random()*20)});
+  else if(k==='c') fakeChat(); else if(k==='k'){ for(let i=0;i<10;i++) sim({type:'like',user:fakeUser(),likes:15+Math.floor(Math.random()*15)}); }
+  else if(k==='b') fakeBomb(); else if(k==='e') endRound(); });
 if(new URLSearchParams(location.search).get('demo')==='1'){
-  (function tick(){ const r=Math.random(); if(r<.3) fakeGift(); else if(r<.36) handle({type:'bomb',user:fakeUser(),giftName:'GG',diamonds:1,count:5,coins:5,power:5}); else if(r<.5) handle({type:'follow',user:fakeUser()}); else if(r<.85) handle({type:'like',user:fakeUser(),likes:1+Math.floor(Math.random()*20)}); else handle({type:'chat',user:fakeUser(),text:rnd(['wow','HAH','OMG','🔥'])});
-    setTimeout(tick,600+Math.random()*2500); })();
+  (function tick(){ const r=Math.random(); if(r<.25) fakeGift(); else if(r<.3) fakeBomb(); else if(r<.42) sim({type:'follow',user:fakeUser()});
+    else if(r<.8) sim({type:'like',user:fakeUser(),likes:1+Math.floor(Math.random()*20)}); else fakeChat();
+    setTimeout(tick,900+Math.random()*2600); })();
 }
 </script>
 </body>

@@ -9,6 +9,17 @@ COMO FUNCIONA
 - Os presentes GG, Fireworks, Boxing Gloves e Rocket são "bombas": explodem o rabo da cobra.
 - No fim da rodada (5 minutos) aparece o ranking: Top Apoiadores e Top Curtidas.
 
+NOVIDADES (versão 2)
+- TOP 6 DA LIVE fixo no alto da tela, com foto, nome e pontos de cada pessoa.
+  Pontos: 1 diamante = 100 · seguir = 500 · cada curtida = 10 · comentário = 20 (no máximo 1 a cada 10 s).
+  O ranking vale pela live inteira (zera quando você fecha o jogo).
+- A cobra FALA, com balão na tela e a foto da pessoa:
+  agradece cada presente pelo nome ("Valeu pelas 5 Rosas, Lisa!"), agradece quem segue,
+  lê comentários em voz alta e responde, dá boas-vindas e solta frases sozinha quando a live está parada.
+  Comentários com palavrão, link ou número de telefone não são lidos.
+  Em live agitada ela prioriza presentes e seguidores, e não responde a mesma pessoa toda hora.
+- A foto de quem mandou o presente aparece flutuando em cima da fruta dela.
+
 INSTALAR (uma vez só)
 1. Extraia esta pasta num lugar fixo, por exemplo Documentos\cobrinha-da-live.
 2. Clique duas vezes em INSTALAR.bat.
@@ -24,7 +35,7 @@ USAR NA LIVE
 
 TESTAR SEM ESTAR AO VIVO
 Com o jogo aberto, acesse no navegador: http://localhost:3000/?demo=1
-Ou use as teclas: G presente, B bomba, F seguir, L curtir, K chuva de curtidas, E encerrar rodada.
+Ou use as teclas: G presente, B bomba, F seguir, L curtir, C comentário, K chuva de curtidas, E encerrar rodada.
 (No navegador, clique uma vez na tela para liberar o som.)
 
 TROCAR O USUÁRIO DO TIKTOK
@@ -37,9 +48,11 @@ Na pasta do jogo, edite o iniciar.bat e coloque antes da linha "node server.js":
   set BOMB_GIFTS=GG,Rocket      nomes dos presentes que viram bomba
 A duração da rodada (ROUND_MS) e a velocidade ficam no começo do public\index.html.
 
-SOBRE A VOZ DE AGRADECIMENTO
-O jogo usa a voz em português do Windows. Se o seu PC não tiver voz em português,
-ele toca um efeito sonoro no lugar. Para instalar a voz: Configurações > Hora e idioma > Fala.
+SOBRE A VOZ
+A voz é a do próprio Windows (normalmente "Microsoft Maria"), e o áudio sai pela fonte Link do LIVE Studio.
+Ao abrir o jogo, a janela preta mostra "Voz da cobrinha: Microsoft Maria ...". Se mostrar que não achou
+voz em português, instale em Configurações > Hora e idioma > Fala > Adicionar vozes > Português (Brasil).
+No LIVE Studio, deixe o som ligado (ícone do alto-falante sem o X).
 
 AVISOS
 - Usa a biblioteca não oficial tiktok-live-connector. A live precisa estar no ar para conectar;

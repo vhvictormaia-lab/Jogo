@@ -45,6 +45,11 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Voz da cobrinha (agradecimentos, respostas aos comentários, falas) — ver voz.js
+const { criarVoz, DIR: VOZ_DIR } = require('./voz');
+let voz = null; // criada logo depois do broadcast()
+app.use('/voz', express.static(VOZ_DIR));
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
@@ -55,6 +60,25 @@ let tiktokStatus = { connected: false, username: USERNAME, error: null };
 function broadcast(msg) {
   const s = JSON.stringify(msg);
   for (const c of wss.clients) if (c.readyState === 1) c.send(s);
+}
+voz = criarVoz(broadcast);
+
+// Ranking da live (TOP 6 na tela): pontos por tudo que a pessoa faz
+const PTS = { diamante: 100, seguir: 500, curtida: 10, comentario: 20 };
+const pontos = new Map(); // id -> {id, name, avatar, pts}
+const chatPtsAt = new Map();
+let likesTotal = 0;
+function somar(user, pts) {
+  const cur = pontos.get(user.id) || { id: user.id, name: user.name, avatar: user.avatar || null, pts: 0 };
+  cur.pts += pts; cur.name = user.name; if (user.avatar) cur.avatar = user.avatar;
+  pontos.set(user.id, cur);
+  agendarRank();
+}
+function top6() { return [...pontos.values()].sort((a, b) => b.pts - a.pts).slice(0, 6); }
+let rankTimer = null;
+function agendarRank() {
+  if (rankTimer) return;
+  rankTimer = setTimeout(() => { rankTimer = null; broadcast({ type: 'rank', top: top6() }); }, 400);
 }
 
 function userInfo(u = {}) {
@@ -81,7 +105,10 @@ function addCoins(user, coins) {
 function handleGift(user, giftName, diamonds, count) {
   const coins = Math.max(1, diamonds) * count;
   addCoins(user, coins);
-  if (BOMB_GIFTS.includes(String(giftName).toLowerCase())) {
+  somar(user, coins * PTS.diamante);
+  const bomba = BOMB_GIFTS.includes(String(giftName).toLowerCase());
+  voz.presente(user, giftName, count, Math.max(1, diamonds), bomba);
+  if (bomba) {
     return broadcast({ type: 'bomb', user, giftName, diamonds, count, coins, power: coins });
   }
   broadcast({
@@ -96,27 +123,35 @@ function handleGift(user, giftName, diamonds, count) {
 }
 function handleFollow(user) {
   broadcast({ type: 'follow', user, apples: APPLES_PER_FOLLOW });
+  somar(user, PTS.seguir);
+  voz.seguiu(user);
   chatSay(CHAT.followMsg.replace('{name}', user.id).replace('{nickname}', user.name));
 }
 function handleLike(user, likes) {
   broadcast({ type: 'like', user, likes });
+  somar(user, likes * PTS.curtida);
+  likesTotal += likes; voz.curtidas(likesTotal);
 }
 function handleChat(user, text) {
   broadcast({ type: 'chat', user, text });
+  if (Date.now() - (chatPtsAt.get(user.id) || 0) > 10000) { chatPtsAt.set(user.id, Date.now()); somar(user, PTS.comentario); }
+  voz.comentario(user, text);
 }
 function handleJoin(user) {
   broadcast({ type: 'join', user });
+  voz.entrou(user);
 }
 
 const perf = new Map(); // latest frame stats reported by each game page
 wss.on('connection', (ws, req) => {
   const id = Math.random().toString(36).slice(2, 7);
-  ws.on('message', (m) => { try { const d = JSON.parse(m); if (d.type === 'perf') perf.set(id, { ...d, at: Date.now() }); } catch {} });
+  ws.on('message', (m) => { try { const d = JSON.parse(m); if (d.type === 'perf') perf.set(id, { ...d, at: Date.now() }); else if (d.type === 'falou') voz.fim(d.id); } catch {} });
   ws.on('close', () => perf.delete(id));
   ws.send(
     JSON.stringify({
       type: 'snapshot',
       supporters: [...supporters.values()],
+      rank: top6(),
       tiktok: tiktokStatus,
       config: { applesPerDiamond: APPLES_PER_DIAMOND, applesPerFollow: APPLES_PER_FOLLOW, bombGifts: BOMB_GIFTS },
     })
