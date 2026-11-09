@@ -20,5 +20,12 @@ echo  Testar no navegador:               http://localhost:3000/abismo.html?demo=
 echo  TikTok: @%U%
 echo  Deixe esta janela aberta durante a live.
 echo.
+echo  Painel de controle:  http://localhost:3000/painel.html
+echo.
+rem abre o painel no navegador uns segundos depois de o jogo ligar
+start "" /b cmd /c "timeout /t 4 /nobreak >nul & start "" http://localhost:3000/painel.html"
+:inicio
 node server.js %U%
+rem codigo 42 = o painel atualizou o sistema: liga de novo
+if "%errorlevel%"=="42" goto inicio
 pause

@@ -2,11 +2,12 @@
 // Esquenta com a live (mais rápida e com mais instrumentos), abaixa quando alguém fala,
 // e informa o ritmo (batida) para os palhaços dançarinos.
 export function criarMusica({ volume = 0.22, falando = () => false } = {}) {
-  let ac = null, out = null, duck = null, ok = false, rodando = false;
+  let ac = null, out = null, duck = null, ok = false, rodando = false, cfg = null;
+  const cfgVol = () => (cfg ? (cfg.ligada === false ? 0 : Math.max(0, Math.min(1, (cfg.volume ?? 22) / 100))) : volume);
   function init() {
     if (ac) return ac;
     try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
-    duck = ac.createGain(); out = ac.createGain(); out.gain.value = volume; duck.connect(out); out.connect(ac.destination); ok = true; return ac;
+    duck = ac.createGain(); out = ac.createGain(); out.gain.value = cfgVol(); duck.connect(out); out.connect(ac.destination); ok = true; return ac;
   }
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
   function nota(m, t, dur, tipo, vol, dest) {
@@ -59,6 +60,7 @@ export function criarMusica({ volume = 0.22, falando = () => false } = {}) {
   const VINHETAS = [[74, 77, 81, 86], [81, 80, 81, 77, 74, 77, 81], [69, 74, 69, 77, 69, 81], [86, 85, 83, 81, 83, 85, 86, 89]];
   const hash = (t) => { let h = 0; for (const c of String(t || '').toLowerCase()) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
   return {
+    config(m) { if (!m) return; cfg = m; if (out) out.gain.value = cfgVol(); },
     ligar() { if (!init()) return; if (ac.state === 'suspended') ac.resume().catch(() => {}); if (rodando) return; rodando = true; setInterval(agenda, 30); },
     proximaMusica() { musica = (musica + 1) % MUSICAS.length; passo = 0; },
     evento(tipo, valor = 1) {

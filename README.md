@@ -9,6 +9,23 @@ COMO FUNCIONA
 - Os presentes GG, Fireworks, Boxing Gloves e Rocket são "bombas": explodem o rabo da cobra.
 - No fim da rodada (5 minutos) aparece o ranking: Top Apoiadores e Top Curtidas.
 
+PAINEL DE CONTROLE (novo)
+Ao abrir o atalho, o painel abre sozinho no navegador: http://localhost:3000/painel.html
+- Resumo da live: espectadores, curtidas, presentes, diamantes, seguidores, comentários e tempo.
+- Conectar e desconectar da live, trocar o usuário do TikTok.
+- Escolher o modo (Cobrinha ou Abismo) e copiar os links para o LIVE Studio.
+- Fala manual: você digita e o palhaço, a serpente, a cobrinha ou o narrador falam na hora.
+- Eventos de teste (rosa, galáxia, GG, seguir, compartilhar, curtidas, comentário, entrou).
+- TOP 6 com botão de zerar, e a lista do que está acontecendo na live.
+- Vozes: escolher a voz de cada personagem, ajustar tom e velocidade, e testar.
+- Inteligência artificial: colar ou remover a chave da OpenAI e escolher o modelo.
+- Música: ligar/desligar e volume; tempo entre as falas sozinhas.
+- Cantorias: enviar um MP3 para cada presente direto pelo painel.
+- Palavras proibidas: editar a lista ali mesmo.
+- Atualizar sistema: baixa a versão nova do seu GitHub (com token, se o repositório for privado),
+  mantém suas configurações, cantorias e palavras, e reinicia o jogo sozinho. Fica bloqueado com a live conectada.
+As configurações ficam na pasta "privado" (nunca vai para o GitHub). O painel só funciona no computador da live.
+
 COBRINHA NO ABISMO
 O jogo da Cobrinha tem o mapa "Abismo": céu roxo com lua verde, tenda de circo, lanternas, árvores tortas e caveiras.
 Nesse mapa a cobra vira a SERPENTE DAS TREVAS e o PALHAÇO DO ABISMO fica na frente do tabuleiro dançando e reagindo aos presentes.

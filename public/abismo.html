@@ -299,7 +299,8 @@ function handle(m){
     case 'gift': onGift(m); break; case 'bomb': onBomb(m); break; case 'follow': onFollow(m); break; case 'share': onShare(m); break;
     case 'like': onLike(m); break; case 'chat': musica.evento('comentario'); break;
     case 'rank': renderTop6(m.top||[]); break; case 'say': falar(m); break;
-    case 'snapshot': renderTop6(m.rank||[]); setConn(m.tiktok); break; case 'tiktok': setConn(m); break;
+    case 'snapshot': renderTop6(m.rank||[]); setConn(m.tiktok); musica.config(m.musica); break; case 'tiktok': setConn(m); break;
+    case 'config': musica.config(m.musica); break;
   }
 }
 function setConn(t){ if(!t) return; $('conn').textContent=t.connected?`AO VIVO @${t.username}`:(t.username?`aguardando a live de @${t.username}…`:'modo teste'); }

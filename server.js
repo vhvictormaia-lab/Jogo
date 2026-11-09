@@ -8,7 +8,10 @@ const path = require('path');
 const { WebSocketServer } = require('ws');
 
 const PORT = Number(process.env.PORT || 3000);
-const USERNAME = (process.argv[2] || process.env.TIKTOK_USER || '').replace(/^@/, '');
+const CFG = require('./config');
+// usuário: o do painel; se ainda não tiver, o que o iniciar.bat passou
+{ const doBat = (process.argv[2] || process.env.TIKTOK_USER || '').replace(/^@/, '').trim(); if (doBat && !CFG.get().usuario) CFG.atualizar({ usuario: doBat }); }
+let USERNAME = CFG.get().usuario || (process.argv[2] || process.env.TIKTOK_USER || '').replace(/^@/, '');
 const APPLES_PER_DIAMOND = Number(process.env.APPLES_PER_DIAMOND || 1); // 1 💎 = 1 🍎
 const APPLES_PER_FOLLOW = Number(process.env.APPLES_PER_FOLLOW || 1);
 // Gifts that blow up the snake's tail instead of dropping apples (case-insensitive gift names).
@@ -42,7 +45,7 @@ function chatSay(text) {
 const BOMB_GIFTS = (process.env.BOMB_GIFTS || 'GG,Fireworks,Boxing Gloves,Rocket').split(',').map((s) => s.trim().toLowerCase());
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Voz da cobrinha (agradecimentos, respostas aos comentários, falas) — ver voz.js
@@ -65,6 +68,10 @@ function cantoriaDe(giftName) {
   return achados.length ? '/cantorias/' + encodeURIComponent(achados[Math.floor(Math.random() * achados.length)]) : null;
 }
 
+// um erro inesperado não derruba o jogo no meio da live
+process.on('unhandledRejection', (e) => console.error('Erro:', e?.message || e));
+process.on('uncaughtException', (e) => console.error('Erro:', e?.message || e));
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
@@ -76,9 +83,17 @@ function broadcast(msg) {
   const s = JSON.stringify(msg);
   for (const c of wss.clients) if (c.readyState === 1) c.send(s);
 }
-// MODO=abismo (iniciar-abismo.bat): Palhaço do Abismo + Serpente das Trevas em /abismo.html
-const MODO = (process.env.MODO || 'cobrinha').toLowerCase();
-voz = criarVoz(broadcast, MODO);
+// MODO=abismo (iniciar-abismo.bat) ou o modo escolhido no painel: Palhaço do Abismo + Serpente das Trevas em /abismo.html
+if (process.env.MODO) CFG.atualizar({ modo: process.env.MODO.toLowerCase() === 'abismo' ? 'abismo' : 'cobrinha' });
+voz = criarVoz(broadcast, CFG.get().modo);
+
+// ---------- estatísticas e registro para o painel ----------
+const stats = { espectadores: 0, curtidas: 0, presentes: 0, diamantes: 0, seguidores: 0, compartilhamentos: 0, comentarios: 0, entradas: 0, inicio: Date.now() };
+const registro = [];
+function registrar(tipo, user, texto) {
+  registro.push({ t: Date.now(), tipo, nome: user ? user.name : '', foto: user ? user.avatar : null, texto: String(texto || '').slice(0, 200) });
+  if (registro.length > 80) registro.shift();
+}
 
 // Ranking da live (TOP 6 na tela): pontos por tudo que a pessoa faz
 const PTS = { diamante: 100, seguir: 500, curtida: 10, comentario: 20, compartilhar: 200 };
@@ -121,6 +136,7 @@ function addCoins(user, coins) {
 
 function handleGift(user, giftName, diamonds, count) {
   const coins = Math.max(1, diamonds) * count;
+  stats.presentes += count; stats.diamantes += coins; registrar('presente', user, `${count}x ${giftName} (${coins} 💎)`);
   addCoins(user, coins);
   somar(user, coins * PTS.diamante);
   const bomba = BOMB_GIFTS.includes(String(giftName).toLowerCase());
@@ -140,28 +156,33 @@ function handleGift(user, giftName, diamonds, count) {
   });
 }
 function handleFollow(user) {
+  stats.seguidores++; registrar('seguiu', user, 'seguiu');
   broadcast({ type: 'follow', user, apples: APPLES_PER_FOLLOW });
   somar(user, PTS.seguir);
   voz.seguiu(user);
   chatSay(CHAT.followMsg.replace('{name}', user.id).replace('{nickname}', user.name));
 }
 function handleLike(user, likes) {
+  stats.curtidas += likes;
   broadcast({ type: 'like', user, likes });
   somar(user, likes * PTS.curtida);
   likesTotal += likes; voz.curtidas(likesTotal);
 }
 function handleChat(user, text) {
+  stats.comentarios++; registrar('comentario', user, text);
   broadcast({ type: 'chat', user, text });
   if (Date.now() - (chatPtsAt.get(user.id) || 0) > 10000) { chatPtsAt.set(user.id, Date.now()); somar(user, PTS.comentario); }
   voz.comentario(user, text);
 }
 const sharePtsAt = new Map();
 function handleShare(user) {
+  stats.compartilhamentos++; registrar('compartilhou', user, 'compartilhou a live');
   broadcast({ type: 'share', user });
   if (Date.now() - (sharePtsAt.get(user.id) || 0) > 60000) { sharePtsAt.set(user.id, Date.now()); somar(user, PTS.compartilhar); }
   voz.compartilhou(user);
 }
 function handleJoin(user) {
+  stats.entradas++;
   broadcast({ type: 'join', user });
   voz.entrou(user);
 }
@@ -178,13 +199,13 @@ wss.on('connection', (ws, req) => {
       rank: top6(),
       tiktok: tiktokStatus,
       config: { applesPerDiamond: APPLES_PER_DIAMOND, applesPerFollow: APPLES_PER_FOLLOW, bombGifts: BOMB_GIFTS },
+      musica: CFG.get().musica,
     })
   );
 });
 
 // Test events without a live stream: curl -X POST localhost:3000/api/sim -H 'content-type: application/json' -d '{"type":"gift","diamonds":5}'
-app.post('/api/sim', (req, res) => {
-  const b = req.body || {};
+function simular(b) {
   const user = { id: b.id || 'tester', name: b.name || 'Tester', avatar: b.avatar || null };
   if (b.type === 'gift') handleGift(user, b.giftName || 'Rose', Number(b.diamonds || 1), Number(b.count || 1));
   else if (b.type === 'follow') handleFollow(user);
@@ -192,18 +213,36 @@ app.post('/api/sim', (req, res) => {
   else if (b.type === 'chat') handleChat(user, String(b.text || 'wow'));
   else if (b.type === 'join') handleJoin(user);
   else if (b.type === 'share') handleShare(user);
-  else return res.status(400).json({ ok: false, error: 'unknown type' });
+  else return false;
+  return true;
+}
+app.post('/api/sim', (req, res) => {
+  if (!simular(req.body || {})) return res.status(400).json({ ok: false, error: 'unknown type' });
   res.json({ ok: true });
 });
 app.get('/api/perf', (_req, res) => res.json([...perf.values()]));
 app.get('/api/status', (_req, res) => res.json({ tiktok: tiktokStatus, supporters: supporters.size }));
 
+// ---------- conexão com o TikTok (liga e desliga pelo painel) ----------
+let tk = null; // { conn, probe, watchdog, timer, parado }
+function pararTikTok() {
+  if (!tk) return;
+  tk.parado = true; clearInterval(tk.watchdog); clearTimeout(tk.timer);
+  try { tk.conn.removeAllListeners && tk.conn.removeAllListeners(); } catch {}
+  try { tk.conn.disconnect(); } catch {}
+  tk = null; chatConn = null;
+  tiktokStatus = { connected: false, username: USERNAME, error: null };
+  broadcast({ type: 'tiktok', ...tiktokStatus });
+}
 async function connectTikTok() {
+  pararTikTok();
   if (!USERNAME) {
-    console.log('ℹ️  Nenhum usuário do TikTok informado. Use: node server.js <usuario>. Modo demo ativo (teclas G/F/L no jogo).');
+    console.log('ℹ️  Nenhum usuário do TikTok informado. Coloque no painel (http://localhost:' + PORT + '/painel.html). Modo teste ativo.');
     return;
   }
-  const { TikTokLiveConnection, WebcastEvent } = require('tiktok-live-connector');
+  let TikTokLiveConnection, WebcastEvent;
+  try { ({ TikTokLiveConnection, WebcastEvent } = require('tiktok-live-connector')); }
+  catch (e) { console.error('❌ Biblioteca do TikTok não instalada. Rode o INSTALAR.bat de novo.'); tiktokStatus = { connected: false, username: USERNAME, error: 'biblioteca ausente' }; return; }
   const conn = new TikTokLiveConnection(USERNAME, {
     processInitialData: false,
     enableExtendedGiftInfo: false, // true needs a paid EulerStream plan; diamondCount comes with every gift anyway
@@ -213,6 +252,7 @@ async function connectTikTok() {
           session: { cookie: { type: 'cookie', value: { sessionId: CHAT.sessionId, ttTargetIdc: CHAT.targetIdc } } } }
       : {}),
   });
+  const meu = tk = { conn, parado: false };
   chatConn = conn;
   console.log(chatEnabled ? '💬 Respostas no chat ligadas: cada seguidor recebe um agradecimento' : 'ℹ️  Respostas no chat desligadas (opcional)');
 
@@ -231,32 +271,34 @@ async function connectTikTok() {
   conn.on(WebcastEvent.CHAT, (d) => handleChat(userInfo(d.user), d.comment || ''));
   conn.on(WebcastEvent.MEMBER, (d) => handleJoin(userInfo(d.user)));
   conn.on(WebcastEvent.SHARE, (d) => handleShare(userInfo(d.user)));
+  conn.on(WebcastEvent.ROOM_USER, (d) => { const n = Number(d.total ?? d.viewerCount ?? d.totalUser ?? 0); if (n) stats.espectadores = n; });
   conn.on(WebcastEvent.STREAM_END, () => {
     tiktokStatus = { ...tiktokStatus, connected: false, error: 'stream ended' };
     broadcast({ type: 'tiktok', ...tiktokStatus });
   });
   conn.on('disconnected', () => {
+    if (meu.parado) return;
     tiktokStatus = { ...tiktokStatus, connected: false };
     broadcast({ type: 'tiktok', ...tiktokStatus });
     console.log('⚠️  Desconectado, reconectando em 10s');
-    setTimeout(tryConnect, 10000);
+    meu.timer = setTimeout(tryConnect, 10000);
   });
   conn.on('error', (e) => console.error('Erro do TikTok:', e?.message || e));
 
   let connecting = false;
   async function tryConnect() {
-    if (connecting || conn.isConnected) return;
+    if (meu.parado || connecting || conn.isConnected) return;
     connecting = true;
     try {
       const state = await conn.connect();
+      if (meu.parado) { try { conn.disconnect(); } catch {} return; }
       tiktokStatus = { connected: true, username: USERNAME, error: null, roomId: state.roomId };
       console.log(`✅ Conectado a @${USERNAME} (sala ${state.roomId})`);
     } catch (e) {
       tiktokStatus = { connected: false, username: USERNAME, error: e?.message || String(e) };
       console.error('❌ Não conectou (a live já está no ar?):', tiktokStatus.error, '- tentando de novo em 20s');
-      setTimeout(tryConnect, 20000);
-    }
-    connecting = false;
+      if (!meu.parado) meu.timer = setTimeout(tryConnect, 20000);
+    } finally { connecting = false; }
     broadcast({ type: 'tiktok', ...tiktokStatus });
   }
   tryConnect();
@@ -264,19 +306,27 @@ async function connectTikTok() {
   // Watchdog: a new "Go LIVE" creates a new room. If the account's current room id changes
   // (or we lost the connection), reconnect so likes/gifts keep flowing without a manual restart.
   const probe = new TikTokLiveConnection(USERNAME, { processInitialData: false, fetchRoomInfoOnConnect: false });
-  setInterval(async () => {
+  meu.watchdog = setInterval(async () => {
     try {
       const rid = String(await probe.fetchRoomId());
-      if (rid && rid !== String(tiktokStatus.roomId || '')) {
+      if (!meu.parado && rid && rid !== String(tiktokStatus.roomId || '')) {
         console.log(`🔄 Nova live detectada (${tiktokStatus.roomId || '-'} -> ${rid}), reconectando...`);
         try { await conn.disconnect(); } catch {}
-        setTimeout(tryConnect, 1000);
+        meu.timer = setTimeout(tryConnect, 1000);
       }
     } catch (e) { /* offline or lookup failed: try again next tick */ }
   }, 45000);
 }
 
+// ---------- painel (só funciona neste computador) ----------
+require('./painel')({ app, express, CFG, stats, registro, top6, voz, broadcast, PORT,
+  tiktok: () => tiktokStatus, conectar: () => connectTikTok(), desconectar: () => pararTikTok(),
+  trocarUsuario: (u) => { USERNAME = u; tiktokStatus = { connected: false, username: u, error: null }; },
+  zerarRanking: () => { pontos.clear(); supporters.clear(); broadcast({ type: 'rank', top: [] }); },
+  sim: (b) => simular(b) });
+
 server.listen(PORT, () => {
   console.log(`🐍 Jogo: http://localhost:${PORT}  (no LIVE Studio use http://localtest.me:${PORT}, 1080x1920)`);
+  console.log(`🎛️  Painel: http://localhost:${PORT}/painel.html`);
   connectTikTok();
 });

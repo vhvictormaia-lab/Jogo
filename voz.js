@@ -46,13 +46,19 @@ function startPs() {
 startPs();
 
 // ---------------- voz natural (Edge / Microsoft neural) ----------------
-const VOZ_NATURAL = (process.env.VOZ || 'pt-BR-FranciscaNeural').trim();          // voz da cobra
-const VOZ_NARRADOR = (process.env.VOZ_NARRADOR || 'pt-BR-AntonioNeural').trim();  // voz que lê os comentários
-// Abismo: cada personagem com a sua voz (tom e velocidade ajustáveis)
-const VOZES_ABISMO = {
-  palhaco: { voz: (process.env.VOZ_PALHACO || 'pt-BR-AntonioNeural').trim(), pitch: process.env.TOM_PALHACO || '-14Hz', rate: '-6%' },     // sombrio, arrastado
-  serpente: { voz: (process.env.VOZ_SERPENTE || 'pt-BR-FranciscaNeural').trim(), pitch: process.env.TOM_SERPENTE || '-28Hz', rate: '-14%' },  // grave e lenta
-};
+// Vozes: vêm do painel (privado/config.json). Variáveis de ambiente, se existirem, têm prioridade.
+const CFG = require('./config');
+const hz = (n) => (n >= 0 ? '+' : '') + Math.round(n) + 'Hz', pc = (n) => (n >= 0 ? '+' : '') + Math.round(n) + '%';
+const vozCobra = () => (process.env.VOZ || CFG.get().vozes.cobra || 'pt-BR-FranciscaNeural').trim();
+const vozNarrador = () => (process.env.VOZ_NARRADOR || CFG.get().vozes.narrador || 'pt-BR-AntonioNeural').trim();
+// Abismo: cada personagem com a sua voz (tom e velocidade ajustáveis no painel)
+function vozesAbismo() {
+  const v = CFG.get().vozes;
+  return {
+    palhaco: { voz: (process.env.VOZ_PALHACO || v.palhaco.voz).trim(), pitch: process.env.TOM_PALHACO || hz(v.palhaco.tom), rate: pc(v.palhaco.vel) },
+    serpente: { voz: (process.env.VOZ_SERPENTE || v.serpente.voz).trim(), pitch: process.env.TOM_SERPENTE || hz(v.serpente.tom), rate: pc(v.serpente.vel) },
+  };
+}
 const EDGE_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
 const EDGE_VER = '130.0.2849.68';
 let edgeSkew = 0;            // diferença de relógio com o servidor da Microsoft (segundos)
@@ -64,7 +70,7 @@ function secMsGec() {
 }
 const xml = (t) => String(t).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 function carimbo() { return new Date().toUTCString().replace(/^(\w+), (\d+) (\w+) (\d+) ([\d:]+) GMT$/, '$1 $3 $2 $4 $5 GMT+0000 (Coordinated Universal Time)'); }
-function synthNatural(text, voz = VOZ_NATURAL, pros = {}, tentativa = 0) {
+function synthNatural(text, voz = vozCobra(), pros = {}, tentativa = 0) {
   return new Promise((resolve) => {
     let WebSocket; try { WebSocket = require('ws'); } catch { return resolve(null); }
     const id = crypto.randomUUID().replace(/-/g, '');
@@ -107,12 +113,12 @@ function synthNatural(text, voz = VOZ_NATURAL, pros = {}, tentativa = 0) {
   });
 }
 
-async function synth(text, voz = VOZ_NATURAL, pros = {}) {
+async function synth(text, voz = vozCobra(), pros = {}) {
   // tenta a voz natural; se falhar 3 vezes seguidas, descansa 5 minutos e usa a do Windows
   if (Date.now() >= edgePausaAte) {
     const url = await synthNatural(text, voz, pros);
     if (url) {
-      if (!edgeAvisou) { edgeAvisou = true; console.log('🗣️  Voz natural ativada: ' + VOZ_NATURAL); }
+      if (!edgeAvisou) { edgeAvisou = true; console.log('🗣️  Voz natural ativada: ' + voz); }
       edgeFalhas = 0; return url;
     }
     if (++edgeFalhas >= 3) { edgePausaAte = Date.now() + 5 * 60000; edgeFalhas = 0; edgeAvisou = false;
@@ -160,10 +166,11 @@ F.setExtraProibido((t) => {
 // ---------------- IA opcional (OpenAI) ----------------
 // Com a chave (set OPENAI_API_KEY=... no iniciar.bat) a cobra responde com IA de verdade.
 // Sem a chave, ou se a IA falhar/demorar, usa as frases prontas acima.
-const OPENAI_KEY = (process.env.OPENAI_API_KEY || '').trim();
-const OPENAI_MODEL = (process.env.OPENAI_MODEL || 'gpt-4.1-mini').trim();
+const OPENAI_KEY_ = () => (process.env.OPENAI_API_KEY || CFG.get().openai.chave || '').trim();
+const OPENAI_MODEL_ = () => (process.env.OPENAI_MODEL || CFG.get().openai.modelo || 'gpt-4.1-mini').trim();
 let iaAvisou = false, iaFalhas = 0, iaPausaAte = 0;
 async function respostaIA(texto, n, persona) {
+  const OPENAI_KEY = OPENAI_KEY_(), OPENAI_MODEL = OPENAI_MODEL_();
   if (!OPENAI_KEY || Date.now() < iaPausaAte || typeof fetch !== 'function') return null;
   const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 6000);
   try {
@@ -196,8 +203,8 @@ async function respostaIA(texto, n, persona) {
 
 // ---------------- fila de falas ----------------
 // prioridade: 3 presente/bomba, 2 seguidor, 1 comentário/entrada, 0 fala solta
-function criarVoz(broadcast, modo = 'cobrinha') {
-  const ABISMO = modo === 'abismo';
+function criarVoz(broadcast, modoInicial = 'cobrinha') {
+  let modo = modoInicial; let ABISMO = modo === 'abismo';
   const fila = []; let falando = false, ultimaFala = Date.now(), seq = 0, atual = 0;
   const cooldownChat = new Map();
   const pode = (k, ms) => { const a = Date.now(); if (a - (cooldownChat.get(k) || 0) < ms) return false; cooldownChat.set(k, a); return true; }; let ultimoBemVindo = 0, ultimoMarco = 0;
@@ -211,8 +218,9 @@ function criarVoz(broadcast, modo = 'cobrinha') {
       fila.splice(low, 1);
     }
     let i = fila.length; while (i > 0 && fila[i - 1].pri < pri) i--; // mais importante passa na frente
-    const partes = (Array.isArray(texto) ? texto : [{ texto, voz: VOZ_NATURAL }])
-      .map((p) => (p.quem && VOZES_ABISMO[p.quem] ? { ...VOZES_ABISMO[p.quem], ...p, voz: p.voz || VOZES_ABISMO[p.quem].voz } : p));
+    const VA = vozesAbismo();
+    const partes = (Array.isArray(texto) ? texto : [{ texto, voz: vozCobra() }])
+      .map((p) => (p.quem && VA[p.quem] ? { ...VA[p.quem], ...p, voz: p.voz || VA[p.quem].voz } : p));
     fila.splice(i, 0, { pri, texto: partes.map((p) => p.texto).join(' '), partes, ...extra });
     proxima();
   }
@@ -239,15 +247,29 @@ function criarVoz(broadcast, modo = 'cobrinha') {
   let proximaSolta = 20000 + Math.random() * 10000;
   setInterval(() => {
     if (falando || fila.length || Date.now() - ultimaFala < proximaSolta) return;
-    if (ABISMO) { proximaSolta = 14000 + Math.random() * 10000; return por(0, F.ABISMO.solta(), { kind: 'solta' }); }
+    const fs_ = CFG.get().falaSolta; const intervalo = () => (fs_.min + Math.random() * Math.max(0, fs_.max - fs_.min)) * 1000;
+    if (ABISMO) { proximaSolta = intervalo(); return por(0, F.ABISMO.solta(), { kind: 'solta' }); }
     const opcoes = FALAS_DA_COBRA.filter((f) => !recentes.includes(f));
     const f = rnd(opcoes); recentes.push(f); if (recentes.length > 8) recentes.shift();
-    proximaSolta = 20000 + Math.random() * 10000;
+    proximaSolta = intervalo();
     por(0, f, { kind: 'cobra' });
   }, 2000);
 
   return {
     fim,
+    setModo(m) { modo = m === 'abismo' ? 'abismo' : 'cobrinha'; ABISMO = modo === 'abismo'; },
+    // fala digitada no painel: passa na frente de tudo
+    manual(quem, texto) {
+      const t = limparFala(texto).slice(0, 400); if (!t) return false;
+      if (quem === 'palhaco' || quem === 'serpente') por(4, [{ quem, texto: t, acao: null }], { kind: 'manual' });
+      else por(4, [{ texto: t, voz: quem === 'narrador' ? vozNarrador() : vozCobra() }], { kind: 'manual' });
+      return true;
+    },
+    testar(quem) {
+      const FR = { palhaco: 'Rá rá rá! Eu sou o Palhaço do Abismo! Manda uma rosa aí!', serpente: 'Ssss... eu sou a Serpente das Trevas. Bem-vindo ao abismo.',
+        cobra: 'Oi! Eu sou a cobrinha da live! Tô com fome!', narrador: 'Fulano disse: que live legal!' };
+      return this.manual(quem, FR[quem] || FR.cobra);
+    },
     presente(user, giftName, count, diamonds, bomba) {
       por(3, ABISMO ? F.ABISMO.presente(user, giftName, count, diamonds, bomba) : F.textoPresente(user, giftName, count, diamonds, bomba), { user, kind: bomba ? 'bomba' : 'presente' });
     },
@@ -271,7 +293,7 @@ function criarVoz(broadcast, modo = 'cobrinha') {
         return respostaIA(t, n, persona).then((ia) => { if (ia) partes[1].texto = ia; por(1, partes, { user, kind: 'comentario' }); });
       }
       respostaIA(t, n).then((ia) => {
-        por(1, [{ texto: lido, voz: VOZ_NARRADOR }, { texto: ia || responder(t, n), voz: VOZ_NATURAL }], { user, kind: 'comentario' });
+        por(1, [{ texto: lido, voz: vozNarrador() }, { texto: ia || responder(t, n), voz: vozCobra() }], { user, kind: 'comentario' });
       });
     },
     compartilhou(user) {
