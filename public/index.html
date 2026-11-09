@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Snake Live</title>
+<title>Cobrinha da Live</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
 <style>
@@ -118,6 +118,17 @@
   #fala.presente,#fala.bomba{border-color:#ff5e8a} #fala.seguiu{border-color:#7ff3ff}
   @keyframes falain{from{opacity:0;transform:translate(-50%,-80%) scale(.7)}to{opacity:1;transform:translate(-50%,-100%) scale(1)}}
 
+  /* Modo demonstração (página hospedada): toque para ligar o som */
+  #toque{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(4,10,18,.62);backdrop-filter:blur(3px);cursor:pointer}
+  #toque .caixa{display:flex;flex-direction:column;align-items:center;gap:14px;padding:28px 34px;border-radius:28px;background:rgba(8,16,28,.9);
+    border:2px solid rgba(255,209,102,.6);box-shadow:0 18px 60px rgba(0,0,0,.5);text-align:center;max-width:min(86vw,420px)}
+  #toque .t1{font-family:Orbitron,system-ui,sans-serif;font-size:clamp(20px,5.5vw,28px);letter-spacing:2px;color:#ffd166}
+  #toque .t2{font-size:clamp(16px,4.4vw,20px);color:#e8f1f8;line-height:1.3}
+  #toque .bt{margin-top:6px;padding:14px 26px;border-radius:40px;background:#ffd166;color:#2a1c00;font-weight:700;font-size:clamp(17px,4.6vw,21px)}
+  #toque:focus-visible .bt{outline:3px solid #fff;outline-offset:3px}
+  #demo-tag{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:40;padding:6px 14px;border-radius:20px;
+    background:rgba(8,16,28,.78);color:#ffd166;font:600 13px system-ui,sans-serif;letter-spacing:1px;pointer-events:none}
+
   #conn{position:absolute;right:36px;bottom:16px;font-size:20px;color:var(--muted);z-index:5;opacity:.8}
   #conn i{display:inline-block;width:12px;height:12px;border-radius:50%;background:#e33;margin-right:8px}
   #conn.on i{background:#3e6}
@@ -148,6 +159,8 @@
   <div id="conn" style="display:none"><i></i><span id="conn-t">modo demo — G presente · B bomba · F seguir · L curtir · K chuva de curtidas</span></div>
 </div>
 
+<script src="falas.js" charset="utf-8"></script>
+<script src="demo-local.js" charset="utf-8"></script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
 import * as THREE from 'three';
@@ -1192,19 +1205,22 @@ S.lastStep=performance.now(); requestAnimationFrame(loop);
 
 // ---------- websocket ----------
 (function connect(){
-  const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host); window.__ws=ws;
+  if(window.__demoLocal&&window.__demoLocal.ativo) return;
+  let ws; try{ ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host); }catch(e){ return; } window.__ws=ws;
   ws.onmessage=e=>{ try{ handle(JSON.parse(e.data)); }catch(err){ console.error(err); } };
-  ws.onclose=()=>setTimeout(connect,2000);
+  ws.onclose=()=>{ if(!(window.__demoLocal&&window.__demoLocal.ativo)) setTimeout(connect,2000); };
 })();
 
 // ---------- demo / keyboard ----------
 const NAMES=['Lisa','Marco','Juliana','Pedrinho','Bia_Gamer','Thiagão','Carol','Rafa','Dudu','Mari'];
 const rnd=a=>a[Math.floor(Math.random()*a.length)];
-function fakeUser(){ const n=rnd(NAMES); return {id:n.toLowerCase(),name:n,avatar:`https://api.dicebear.com/9.x/thumbs/png?seed=${n}&size=96`}; }
+function fakeUser(){ const n=rnd(NAMES); const L=window.__demoLocal; return {id:n.toLowerCase(),name:n,avatar:L&&L.ativo?L.foto(n):`https://api.dicebear.com/9.x/thumbs/png?seed=${n}&size=96`}; }
 // teste: os eventos falsos passam pelo servidor (assim a voz e o TOP 6 funcionam no teste também)
-function sim(ev){ const u=ev.user;
+function sim(ev){ if(window.__demoLocal&&window.__demoLocal.ativo) return local(ev); const u=ev.user;
   fetch('/api/sim',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:ev.type==='bomb'?'gift':ev.type,id:u.id,name:u.name,avatar:u.avatar,
-    giftName:ev.giftName,diamonds:ev.diamonds,count:ev.count,likes:ev.likes,text:ev.text})}).then(r=>{ if(!r.ok) handle(ev); }).catch(()=>handle(ev)); }
+    giftName:ev.giftName,diamonds:ev.diamonds,count:ev.count,likes:ev.likes,text:ev.text})}).then(r=>{ if(!r.ok) local(ev); }).catch(()=>local(ev)); }
+// sem servidor (página hospedada): o demo-local.js faz o papel do servidor
+const local=ev=>window.__demoLocal&&window.__demoLocal.ativo?window.__demoLocal.processar(ev,handle):handle(ev);
 const FALAS_TESTE=['oi cobrinha','quero ser sua maçã','kkkkkkk','te amo cobrinha','como faz pra crescer?','boa noite galera','que jogo top','manda GG nela','tô com fome tbm','salve salve'];
 function fakeGift(){ const g=rnd([['Rose',1],['Rose',1],['Rose',1],['Finger Heart',5],['Donut',30],['Hand Hearts',100],['Hand Hearts',100],['Galaxy',1000]]); const count=g[1]===1?1+Math.floor(Math.random()*9):1;
   sim({type:'gift',user:fakeUser(),giftName:g[0],diamonds:g[1],count}); }
@@ -1214,11 +1230,33 @@ addEventListener('keydown',e=>{ const k=e.key.toLowerCase();
   if(k==='g') fakeGift(); else if(k==='f') sim({type:'follow',user:fakeUser()}); else if(k==='l') sim({type:'like',user:fakeUser(),likes:1+Math.floor(Math.random()*20)});
   else if(k==='c') fakeChat(); else if(k==='k'){ for(let i=0;i<10;i++) sim({type:'like',user:fakeUser(),likes:15+Math.floor(Math.random()*15)}); }
   else if(k==='b') fakeBomb(); else if(k==='s') sim({type:'share',user:fakeUser()}); else if(k==='e') endRound(); });
-if(new URLSearchParams(location.search).get('demo')==='1'){
+let demoRodando=false;
+function iniciarDemo(){ if(demoRodando) return; demoRodando=true;
   (function tick(){ const r=Math.random(); if(r<.25) fakeGift(); else if(r<.3) fakeBomb(); else if(r<.42) sim({type:'follow',user:fakeUser()}); else if(r<.46) sim({type:'share',user:fakeUser()});
     else if(r<.8) sim({type:'like',user:fakeUser(),likes:1+Math.floor(Math.random()*20)}); else fakeChat();
     setTimeout(tick,900+Math.random()*2600); })();
 }
+if(new URLSearchParams(location.search).get('demo')==='1') iniciarDemo();
+// Página hospedada (sem o server.js): liga o modo demonstração local
+fetch('api/status',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(j=>{ if(!j||typeof j!=='object') throw 0; }).catch(()=>{
+  if(!window.__demoLocal) return;
+  window.__demoLocal.ativo=true; try{ window.__ws&&window.__ws.close(); }catch(e){}
+  $('conn').style.display='none'; $('demo-tag').hidden=false;
+  const t=$('toque'); t.hidden=false;
+  const comecar=()=>{ if(t.hidden) return; t.hidden=true;
+    try{ musica.ligar(); }catch(e){} try{ sfx.unlock&&sfx.unlock(); }catch(e){}
+    try{ const ss=window.speechSynthesis; if(ss){ const u=new SpeechSynthesisUtterance('Bora!'); u.lang='pt-BR'; u.volume=.01; ss.speak(u); } }catch(e){}
+    iniciarDemo(); };
+  t.addEventListener('click',comecar); t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') comecar(); });
+});
 </script>
+<div id="toque" role="button" tabindex="0" hidden>
+  <div class="caixa">
+    <div class="t1">🐍 COBRINHA DA LIVE</div>
+    <div class="t2">Demonstração com presentes, seguidores e comentários de mentira, como numa live.</div>
+    <div class="bt">🔊 Toque para começar</div>
+  </div>
+</div>
+<div id="demo-tag" hidden>MODO DEMONSTRAÇÃO</div>
 </body>
 </html>
