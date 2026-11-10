@@ -14,8 +14,8 @@ const PADRAO = {
   openai: { chave: '', modelo: 'gpt-4.1-mini' },
   vozes: {
     cobra: 'pt-BR-FranciscaNeural', narrador: 'pt-BR-AntonioNeural',
-    palhaco: { voz: 'pt-BR-AntonioNeural', tom: -8, vel: 6 },     // mais animado (antes: -14 / -6)
-    serpente: { voz: 'pt-BR-FranciscaNeural', tom: -16, vel: 0 },  // antes: -28 / -14
+    palhaco: { voz: 'en-US-AndrewMultilingualNeural', tom: -4, vel: 6 },  // Andrew: rapaz jovem, brincalhão
+    serpente: { voz: 'en-US-AvaMultilingualNeural', tom: -8, vel: 2 },     // Ava: moça jovem, debochada
   },
   vozEspectador: true,                    // cada espectador lê o próprio comentário com uma voz só dele
   musica: { ligada: true, volume: 22 },   // 0 a 100
@@ -38,7 +38,13 @@ try { cfg = mesclar(PADRAO, JSON.parse(fs.readFileSync(ARQ, 'utf8'))); } catch {
 // quem ainda tem o tom antigo (mais lento e grave) passa para o novo, mais animado
 { const v = cfg.vozes;
   if (v.palhaco.tom === -14 && v.palhaco.vel === -6) { v.palhaco.tom = -8; v.palhaco.vel = 6; }
-  if (v.serpente.tom === -28 && v.serpente.vel === -14) { v.serpente.tom = -16; v.serpente.vel = 0; } }
+  if (v.serpente.tom === -28 && v.serpente.vel === -14) { v.serpente.tom = -16; v.serpente.vel = 0; }
+  // uma vez só: troca as vozes padrão antigas (Antonio / Francisca) pelas novas (Andrew / Ava). Se depois você trocar no painel, fica a sua.
+  if (!cfg.vozesV2) {
+    if (v.palhaco.voz === 'pt-BR-AntonioNeural') Object.assign(v.palhaco, { voz: 'en-US-AndrewMultilingualNeural', tom: -4, vel: 6 });
+    if (v.serpente.voz === 'pt-BR-FranciscaNeural') Object.assign(v.serpente, { voz: 'en-US-AvaMultilingualNeural', tom: -8, vel: 2 });
+    cfg.vozesV2 = true; setTimeout(() => salvar(), 0);
+  } }
 if (!cfg.usuario) { try { cfg.usuario = fs.readFileSync(ARQ_USUARIO, 'utf8').trim().replace(/^@/, ''); } catch {} }
 
 function salvar() {
