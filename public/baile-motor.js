@@ -68,6 +68,8 @@
     function irPraFila(u, motivo) {
       let i = espera.findIndex((x) => x.id === u.id);
       if (i < 0) { espera.push({ id: u.id, name: u.name, avatar: u.avatar || null }); i = espera.length - 1; }
+      else if (agora() - (espera[i].aviso || 0) < 60000) return null;
+      espera[i].aviso = agora();
       emitir({ ev: 'fila', user: { id: u.id, name: u.name, avatar: u.avatar || null }, pos: i + 1, total: espera.length, motivo });
       return null;
     }

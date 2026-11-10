@@ -102,6 +102,7 @@
     <div class="linha"><input type="text" id="usuario" class="cresce" placeholder="seu_usuario" autocomplete="off" aria-label="Usuário do TikTok"><button class="pri" id="b-salvar-usuario">Salvar</button></div>
     <div class="linha"><button class="pri" id="b-conectar">Conectar</button><button id="b-desconectar">Desconectar</button></div>
     <div class="aviso" id="aviso-tiktok"></div>
+    <div class="aviso" id="aviso-tela"></div>
     <p class="dica" style="margin-top:12px">No LIVE Studio, adicione uma fonte <b>Link</b> com este endereço (1080×1920):</p>
     <div class="link"><code id="l-baile"></code><button data-copiar="l-baile">Copiar</button></div>
     <div class="linha"><a href="/baile.html" target="_blank" rel="noopener"><button>Abrir o baile</button></a><a href="/baile.html?demo=1" target="_blank" rel="noopener"><button>Abrir com gente de mentira</button></a></div>
@@ -185,6 +186,9 @@ function mostrar(e){
   $('n-roda').textContent=`${b.naRoda}/${b.maximo}`; $('n-fila').textContent=fmt(b.fila); $('n-resta').textContent=b.intervalo?'casamento':`${Math.floor(b.resta/60)}:${String(b.resta%60).padStart(2,'0')}`;
   $('n-esp').textContent=fmt(s.espectadores); $('n-pre').textContent=fmt(s.presentes); $('n-dia').textContent=fmt(s.diamantes); $('n-com').textContent=fmt(s.comentarios);
   $('l-baile').textContent=e.link;
+  const tl=e.telas||{}, at=$('aviso-tela'); const musOn=e.config.musica.ligada!==false;
+  at.textContent=!tl.abertas?'A tela do baile não está aberta. Adicione o link abaixo no LIVE Studio.':(!musOn?'Tela do baile aberta. A música está desligada (cartão Música).':tl.tocando?'Tela do baile aberta e a música tocando. ✔':'A tela do baile está aberta, mas a música está travada. No LIVE Studio, clique com o botão direito na fonte do baile → Interagir, e clique uma vez na tela.');
+  at.className='aviso '+(!tl.abertas||(musOn&&!tl.tocando)?'erro':'ok');
   for(const k of ['noivo','noiva']){ const u=b[k]; $('nm-'+k).textContent=u?`${u.name} · ${fmt(u.moedas)} moedas`:'ninguém ainda'; foto($('ft-'+k),u); }
   $('aviso-fila').textContent=b.fila?`Na fila do próximo baile: ${b.proximos.join(', ')}${b.fila>b.proximos.length?` e mais ${b.fila-b.proximos.length}`:''}.`:'Ninguém na fila.';
   if(!baileUI){ baileUI=true; $('b-duracao').value=b.duracao; $('o-b-duracao').textContent=b.duracao+' min'; $('b-maximo').value=b.maximo; $('o-b-maximo').textContent=b.maximo; }

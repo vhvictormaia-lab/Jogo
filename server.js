@@ -94,8 +94,11 @@ function handleChat(user, text) { stats.comentarios++; registrar('comentario', u
 function handleShare(user) { stats.compartilhamentos++; registrar('compartilhou', user, 'compartilhou a live'); baile.compartilhou(user); }
 function handleJoin(user) { stats.entradas++; baile.entrou(user); }
 
+const telas = new Map(); // tela do baile aberta -> a música está tocando?
+function somTelas() { const v = [...telas.values()].filter((t) => Date.now() - t.em < 10000); return { abertas: v.length, tocando: v.some((t) => t.ok) }; }
 wss.on('connection', (ws) => {
-  ws.on('message', () => {});
+  ws.on('message', (m) => { try { const d = JSON.parse(m); if (d.type === 'som') { telas.set(ws, { ok: !!d.ok, em: Date.now() }); } } catch {} });
+  ws.on('close', () => telas.delete(ws));
   ws.send(JSON.stringify({ type: 'snapshot', tiktok: tiktokStatus, musica: CFG.get().musica, baile: baile.estado() }));
 });
 
@@ -194,7 +197,7 @@ async function connectTikTok() {
 }
 
 // ---------- painel (só funciona neste computador) ----------
-require('./painel')({ app, express, CFG, stats, registro, broadcast, PORT, baile,
+require('./painel')({ app, express, CFG, stats, registro, broadcast, PORT, baile, somTelas,
   tiktok: () => tiktokStatus, conectar: () => connectTikTok(), desconectar: () => pararTikTok(),
   trocarUsuario: (u) => { USERNAME = u; tiktokStatus = { connected: false, username: u, error: null }; },
   sim: (b) => simular(b) });

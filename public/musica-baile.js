@@ -96,12 +96,13 @@ export function criarMusicaBaile({ falando = () => false } = {}) {
   }
   return {
     config(m) { if (!m) return; cfg = m; if (out) out.gain.value = vol(); },
-    ligar() { if (!init()) return; if (ac.state === 'suspended') ac.resume().catch(() => {}); if (rodando) return; rodando = true; setInterval(agenda, 25); if (lista.length && !audio) tocarMp3(0); },
+    ligar() { if (!init()) return; if (ac.state === 'suspended') ac.resume().catch(() => {}); if (!this._tenta) this._tenta = setInterval(() => { if (ac.state === 'suspended') ac.resume().catch(() => {}); }, 2000); if (rodando) return; rodando = true; setInterval(agenda, 25); if (lista.length && !audio) tocarMp3(0); },
     // lista de MP3 (urls); vazia = músicas do jogo
     playlist(urls) { lista = (urls || []).slice(); if (ok && lista.length && !audio) tocarMp3(0); },
     // "toque na banda": próxima música (MP3 ou estilo do jogo)
     tocar(i) { if (lista.length && ok) tocarMp3(i); else { estilo = ((i % ESTILOS.length) + ESTILOS.length) % ESTILOS.length; passo = 0; } },
     proxima() { if (lista.length && ok) tocarMp3(faixa + 1); else { estilo = (estilo + 1) % ESTILOS.length; passo = 0; } },
+    get tocando() { return !!ac && ac.state === 'running' && !(cfg && cfg.ligada === false); },
     get estilo() { return lista.length ? 'mp3' : ESTILOS[estilo].nome; },
     esquentar(x) { energia = Math.min(1, energia + x); },
     esfriar() { energia = Math.max(0.3, energia * 0.995); },
