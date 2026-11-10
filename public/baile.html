@@ -37,6 +37,7 @@
   .bal::after{content:"";position:absolute;left:50%;bottom:-10px;margin-left:-10px;border:10px solid transparent;border-top-color:#fff;border-bottom:0}
   #destaque{position:absolute;left:0;right:0;top:470px;z-index:4;text-align:center;pointer-events:none;opacity:0;transition:opacity .4s}
   #destaque.on{opacity:1}
+  #destaque .n .e{color:var(--ouro);font-size:64px}
   #destaque .n{display:inline-flex;align-items:center;gap:14px;font-size:76px;color:#fff;text-shadow:0 0 18px rgba(0,0,0,.6),0 5px 0 rgba(0,0,0,.45);-webkit-text-stroke:2px rgba(60,10,60,.6)}
   #destaque .n img,#destaque .n .av{width:86px;height:86px;border-radius:50%;object-fit:cover;border:4px solid #fff;font-size:40px;display:grid;place-items:center;background:linear-gradient(135deg,var(--rosa),var(--roxo))}
   /* baixo */
@@ -129,11 +130,9 @@
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { criarPalhaco, criarSerpente } from './personagens.js';
 import { criarMusicaBaile } from './musica-baile.js';
+import { criarDancarino, PASSOS, JUNTOS, SOLOS, poseVazia, poseAndar } from './dancarinos.js';
 const $=id=>document.getElementById(id);
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stage=$('stage');
@@ -250,7 +249,7 @@ const banda=(()=>{
   // luz e notas musicais do show
   const luz=new THREE.PointLight(0xffc83d,0,14,1.6); luz.position.set(PALCO.x,4,PALCO.z+5); cena.add(luz);
   const tex=(()=>{ const c=document.createElement('canvas'); c.width=c.height=64; const g=c.getContext('2d'); g.font='bold 54px serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='#fff'; g.shadowColor='#ff3d8b'; g.shadowBlur=8; g.fillText('♪',32,34); return new THREE.CanvasTexture(c); })();
-  const notas=[]; let showAte=0, proxNota=0;
+  const notas=[]; let showAte=0, proxNota=0, festaAte=0, festaIni=0;
   function nota(x){ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,color:[0xffffff,0xffc83d,0xff9ec7,0x5cff8a][Math.floor(Math.random()*4)],transparent:true,depthWrite:false}));
     x.P0.raiz.getWorldPosition(sp.position); sp.position.y+=2.6; sp.position.x+=(Math.random()-.5)*.6; sp.scale.setScalar(.6+Math.random()*.4); cena.add(sp); notas.push({sp,v:.9+Math.random()*.8,vida:2.2,dx:(Math.random()-.5)*.8}); }
   const s=Math.sin, abs=Math.abs;
@@ -267,147 +266,95 @@ const banda=(()=>{
         P.ombroE.rotation.x=P.ombroD.rotation.x=-.95; P.cotoveloE.rotation.x=P.cotoveloD.rotation.x=-1.1; P.ombroE.rotation.z=-.3-ab*.5*f; P.ombroD.rotation.z=.3+ab*.5*f; P.cabeca.rotation.z=s(b*2.5)*.15; }
       else if(x.tipo==='bateria'){ const hE=abs(s(b*(show?14:8))), hD=abs(s(b*(show?14:8)+1.57)); P.ombroE.rotation.x=-1.25+hE*.55*f; P.ombroD.rotation.x=-1.25+hD*.55*f;
         P.cotoveloE.rotation.x=P.cotoveloD.rotation.x=-.9; P.ombroE.rotation.z=-.3; P.ombroD.rotation.z=.3; P.cabeca.rotation.x=.15+s(b*7)*.12*f;
-        x.pratos.forEach((pr,i)=>pr.rotation.z=s(b*(show?18:9)+i)*.12*f); } }
+        x.pratos.forEach((pr,i)=>pr.rotation.z=s(b*(show?18:9)+i)*.12*f); }
+      // a banda larga os instrumentos um pouquinho e dança: pula em onda, gira, agacha e levanta os braços
+      if(agora<festaAte){ const k=(agora-festaIni)/1000, i=mus.indexOf(x), fase=k*2.4-i*.35, sub=Math.max(0,Math.sin(fase*Math.PI));
+        const mov=Math.floor(k/2.7)%3;
+        if(mov===0){ P0.raiz.position.y=Y+sub*.9; P0.raiz.rotation.y=RUMO+Math.PI*2*Math.min(1,Math.max(0,(k%2.7)-.4)/1.2); }
+        else if(mov===1){ P0.raiz.position.y=Y-.35*Math.abs(Math.sin(k*3+i)); P.tronco.rotation.z=Math.sin(k*8+i)*.35; }
+        else { P0.raiz.position.y=Y+Math.abs(Math.sin(k*6+i))*.4; P0.raiz.rotation.y=RUMO+Math.sin(k*4+i)*.6; }
+        P.ombroE.rotation.x=P.ombroD.rotation.x=-2.7+Math.sin(k*9+i)*.25; P.ombroE.rotation.z=-.4; P.ombroD.rotation.z=.4; P.cotoveloE.rotation.x=P.cotoveloD.rotation.x=-.2; } }
     for(let i=notas.length-1;i>=0;i--){ const n=notas[i]; n.vida-=dt; n.sp.position.y+=n.v*dt; n.sp.position.x+=n.dx*dt; n.sp.material.opacity=Math.min(1,n.vida); if(n.vida<=0){ cena.remove(n.sp); n.sp.material.dispose(); notas.splice(i,1); } } }
-  return { atualizar, show(seg=10){ showAte=performance.now()+seg*1000; }, centro:new THREE.Vector3(PALCO.x,1.6,PALCO.z+3.2) };
+  return { atualizar, show(seg=10){ showAte=performance.now()+seg*1000; }, dancar(seg=8){ festaIni=performance.now(); festaAte=festaIni+seg*1000; }, centro:new THREE.Vector3(PALCO.x,1.6,PALCO.z+3.2) };
 })();
 const serpente=criarSerpente(THREE); serpente.posicionar(4.2,ARCO_Z-.6,-0.9); serpente.raiz.scale.setScalar(.8); cena.add(serpente.raiz);
 // holofotes coloridos do palco
 const feixes=[]; for(const [cor,dx] of [[0xff3d8b,-2],[0x7a3cff,0],[0x5cff8a,2]]){ const f=new THREE.Mesh(new THREE.ConeGeometry(2.2,12,20,1,true),new THREE.MeshBasicMaterial({color:cor,transparent:true,opacity:.13,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
   f.position.set(PALCO.x+dx,6.5,PALCO.z); cena.add(f); feixes.push(f); }
 
-// ================= personagens (modelos 3D prontos, com esqueleto) =================
-const MOD=[]; let DANCAS=[], ANDAR=null, ACOES={};
-const gltf=new GLTFLoader(), fbx=new FBXLoader();
-const carregar=(url)=>new Promise((ok,erro)=>{
-  // página de demonstração: o boneco de teste vem embutido num script (robo-teste.js)
-  if(/RobotExpressive\.glb$/.test(url)&&window.ROBO_TESTE_B64){ const bin=Uint8Array.from(atob(window.ROBO_TESTE_B64),c=>c.charCodeAt(0)); return gltf.parse(bin.buffer,'',r=>ok(r),erro); }
-  (/\.fbx$/i.test(url)?fbx:gltf).load(url,r=>ok(r),undefined,erro); });
-function prepararModelo(r){ const raizM=r.scene||r; const clips=r.animations||[];
-  raizM.traverse(o=>{ if(o.isMesh){ o.frustumCulled=false; o.castShadow=false; } });
-  raizM.updateMatrixWorld(true);
-  // altura medida pelo esqueleto (a caixa da malha engana em modelos com ossos escalados, comuns no FBX/Mixamo)
-  let minY=Infinity,maxY=-Infinity; const v=new THREE.Vector3(); raizM.traverse(o=>{ if(o.isBone){ o.getWorldPosition(v); minY=Math.min(minY,v.y); maxY=Math.max(maxY,v.y); } });
-  const box=new THREE.Box3();
-  if(maxY>minY){ box.min.y=Math.min(minY,0); box.max.y=maxY+(maxY-Math.min(minY,0))*.1; } else box.setFromObject(raizM);
-  const alt=Math.max(.01,box.max.y-box.min.y);
-  const escala=2.1/alt;
-  let cabeca=null; raizM.traverse(o=>{ if(!cabeca&&(o.isBone||o.type==='Bone'||o.isObject3D)&&/head$|mixamorighead$/i.test(o.name)) cabeca=o.name; });
-  return { cena:raizM, clips, escala, baseY:-box.min.y*escala, cabeca, topo:box.max.y };
-}
-// tira o deslocamento do quadril (para dançar no lugar, sem sair andando)
-function noLugar(clip){ for(const tr of clip.tracks){ if(!/\.position$/.test(tr.name)) continue; const bone=tr.name.split('.')[0]; if(!/hips|root|pelvis|armature/i.test(bone)) continue;
-  const v=tr.values; const x0=v[0], z0=v[2]; for(let i=0;i<v.length;i+=3){ v[i]=x0; v[i+2]=z0; } } return clip; }
-async function carregarPersonagens(){
-  let lista=null; try{ const r=await fetch('api/baile/arquivos',{cache:'no-store'}); if(r.ok) lista=await r.json(); }catch(e){}
-  if(lista&&lista.musicas) musica.playlist(lista.musicas);
-  const modelos=lista&&lista.modelos&&lista.modelos.length?lista.modelos:['baile-teste/RobotExpressive.glb'];
-  const teste=!(lista&&lista.modelos&&lista.modelos.length);
-  // o nome do arquivo diz se o boneco é de menina ou de menino (ex.: palhacinha-menina.glb, cobrinha-menino.glb); sem isso serve para os dois
-  const sexoArq=u=>{ const n=decodeURIComponent(u.split('/').pop()).toLowerCase(); return /menina|femin|mulher|garota|noiva|girl|female|woman/.test(n)?'f':/menino|mascul|homem|garoto|noivo|boy|male|\bman\b/.test(n)?'m':null; };
-  for(const u of modelos){ try{ const m=prepararModelo(await carregar(u)); m.sexo=sexoArq(u); MOD.push(m); }catch(e){ console.warn('modelo não carregou',u,e); } }
-  if(!MOD.length){ MOD.push(prepararModelo(await carregar('baile-teste/RobotExpressive.glb'))); }
-  const todos=[]; for(const m of MOD) todos.push(...m.clips);
-  for(const u of (lista&&lista.dancas)||[]){ try{ const r=await carregar(u); for(const c of r.animations||[]){ c.name=c.name&&c.name!=='mixamo.com'&&c.name!=='Take 001'?c.name:u.split('/').pop().replace(/\.\w+$/,''); todos.push(c); } }catch(e){ console.warn('dança não carregou',u,e); } }
-  const ehDanca=c=>/danc|samba|hip ?hop|salsa|twist|funk|disco|chicken|silly|rumba|swing|thriller|macarena|robot|shuffle|breakdanc|bellydanc|tut|wave ?hip|gangnam|house|jazz|snake|step|bounce|party|groove/i.test(c.name);
-  DANCAS=todos.filter(ehDanca).map(noLugar);
-  ANDAR=todos.find(c=>/walk/i.test(c.name))||null; if(ANDAR) noLugar(ANDAR);
-  const pega=re=>{ const c=todos.find(c=>re.test(c.name)); return c?noLugar(c):null; };
-  ACOES={ acenar:pega(/wave(?! ?hip)|acen|hello/i), pular:pega(/^jump$|jump(?!.*walk)/i), sim:pega(/yes|thumbs|cheer|clap|victory/i), parado:pega(/idle|standing|breath/i) };
-  if(!DANCAS.length) DANCAS=todos.filter(c=>!/death|punch|sitting|run|walk|no$/i.test(c.name)).map(noLugar);
-  $('credito').textContent=teste?'Boneco de teste: RobotExpressive (Quaternius, CC0)':(lista.credito||'Personagens 3D criados com Meshy (CC BY 4.0) · danças Mixamo');
-}
-
-// ---------- roupas: cor nova + acessório na cabeça ----------
-const PALETA=[0xff2fb3,0x00e5ff,0xb8ff2e,0xffe600,0xff6a00,0x8a2be2,0xff3d8b,0x2f7bff,0x00ff9c,0xffffff,0x1c1c28,0xff9ec7]; // neon anos 80
-const ACESS=[null,'faixa','oculos80','black','moicano','fone','bone','laco','faixa','oculos80','black',null];
-function roupaDe(sem){ let s=(sem>>>0)||1; const r=()=>((s=(s*1664525+1013904223)>>>0)/4294967296); return { c1:rndS(PALETA,r), c2:rndS(PALETA,r), acess:rndS(ACESS,r), forte:r() }; }
-const rndS=(a,r)=>a[Math.floor(r()*a.length)];
-function acessorio(tipo,c2){ const g=new THREE.Group(); const m=c=>new THREE.MeshToonMaterial({color:c});
-  if(tipo==='cartola'||tipo==='noivo'){ const cor=tipo==='noivo'?0x111111:0x161620; const a=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.42,16),m(cor)); a.position.y=.24; g.add(a); const b=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.03,18),m(cor)); g.add(b); const f=new THREE.Mesh(new THREE.CylinderGeometry(.205,.205,.07,16),m(tipo==='noivo'?0xffffff:c2)); f.position.y=.07; g.add(f); }
-  else if(tipo==='coroa'||tipo==='rei'){ const o=m(0xffcc33); const a=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.15,10,1,true),o); a.material.side=THREE.DoubleSide; a.position.y=.08; g.add(a); for(let i=0;i<6;i++){ const p=new THREE.Mesh(new THREE.ConeGeometry(.055,.14,5),o); const an=i/6*Math.PI*2; p.position.set(Math.cos(an)*.2,.22,Math.sin(an)*.2); g.add(p); const j=new THREE.Mesh(new THREE.SphereGeometry(.03,6,5),m(0xff2a55)); j.position.set(Math.cos(an)*.22,.1,Math.sin(an)*.22); g.add(j); } }
-  else if(tipo==='laco'){ for(const l of [-1,1]){ const c=new THREE.Mesh(new THREE.ConeGeometry(.11,.2,8),m(c2)); c.rotation.z=Math.PI/2*l; c.position.set(.12*l,.05,0); g.add(c); } g.add(new THREE.Mesh(new THREE.SphereGeometry(.05,8,6),m(0xffffff))); }
-  else if(tipo==='cone'){ const c=new THREE.Mesh(new THREE.ConeGeometry(.17,.48,14),m(c2)); c.position.y=.26; g.add(c); const p=new THREE.Mesh(new THREE.SphereGeometry(.06,8,6),m(0xffffff)); p.position.y=.52; g.add(p); }
-  else if(tipo==='flor'){ for(let i=0;i<6;i++){ const a=i/6*Math.PI*2; const p=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),m(0xff2a55)); p.position.set(.18+Math.cos(a)*.08,.02+Math.sin(a)*.08,.05); g.add(p); } const c=new THREE.Mesh(new THREE.SphereGeometry(.05,8,6),m(0xffd23f)); c.position.set(.18,.02,.08); g.add(c); }
-  else if(tipo==='bone'){ const a=new THREE.Mesh(new THREE.SphereGeometry(.3,16,8,0,Math.PI*2,0,Math.PI/2),m(c2)); g.add(a); const b=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.03,14),m(c2)); b.scale.z=1.4; b.position.set(0,0,.3); g.add(b); }
-  else if(tipo==='oculos'){ g.userData.frente=true; for(const l of [-1,1]){ const o=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.04,16),m(0x111111)); o.rotation.x=Math.PI/2; o.position.set(.13*l,0,0); g.add(o); } const p=new THREE.Mesh(new THREE.BoxGeometry(.1,.03,.03),m(0x111111)); g.add(p); }
-  else if(tipo==='faixa'){ const f=new THREE.Mesh(new THREE.TorusGeometry(.27,.045,8,24),m(c2)); f.rotation.x=Math.PI/2; f.position.y=.05; g.add(f); }
-  else if(tipo==='oculos80'){ g.userData.frente=true; const o=new THREE.Mesh(new THREE.BoxGeometry(.5,.13,.04),m(c2)); g.add(o); for(let i=-2;i<=2;i++){ const r=new THREE.Mesh(new THREE.BoxGeometry(.48,.018,.05),m(0x111111)); r.position.y=i*.025; g.add(r); } }
-  else if(tipo==='black'){ const b=new THREE.Mesh(new THREE.SphereGeometry(.42,14,10),m(0x2a1a12)); b.scale.set(1,.85,1); b.position.y=.12; g.add(b); }
-  else if(tipo==='moicano'){ for(let i=0;i<6;i++){ const p=new THREE.Mesh(new THREE.ConeGeometry(.06,.32,6),m(c2)); p.position.set(0,.22,-.2+i*.08); g.add(p); } }
-  else if(tipo==='fone'){ const a=new THREE.Mesh(new THREE.TorusGeometry(.28,.025,6,18,Math.PI),m(0x222222)); a.position.y=.02; g.add(a); for(const l of [-1,1]){ const c=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,.06,14),m(c2)); c.rotation.z=Math.PI/2; c.position.set(.28*l,0,0); g.add(c); } }
-  else if(tipo==='veu'){ const v=new THREE.Mesh(new THREE.ConeGeometry(.55,1.1,18,1,true),new THREE.MeshToonMaterial({color:0xffffff,transparent:true,opacity:.8,side:THREE.DoubleSide})); v.position.set(0,-.35,-.12); g.add(v); for(let i=0;i<7;i++){ const a=i/6*Math.PI; const f=new THREE.Mesh(new THREE.SphereGeometry(.05,8,6),m(0xffd1e3)); f.position.set(Math.cos(a)*.22,.05+Math.sin(a)*.05,.02); g.add(f); } }
-  return g; }
-
-// ================= dançarinos =================
+// ================= dançarinos: palhaços e cobrinhas feitos no próprio jogo =================
+async function carregarMusicas(){ try{ const r=await fetch('api/baile/arquivos',{cache:'no-store'}); if(r.ok){ const l=await r.json(); if(l.musicas) musica.playlist(l.musicas); } }catch(e){} }
 const DS=new Map(); // id -> dançarino
 let ordem=[]; // ids na ordem de chegada (define o lugar na roda)
 const ENTRADA=new THREE.Vector3(0,0,18.5);
 function lugar(i){ // anéis em volta do centro
   let anel=0, resto=i; while(true){ const r=3.8+anel*1.9; const cap=Math.floor(2*Math.PI*r/1.6); if(resto<cap){ const a=resto/cap*Math.PI*2+anel*.37; return { x:Math.cos(a)*r, z:Math.sin(a)*r*.92, a }; } resto-=cap; anel++; } }
-function aplicarRoupa(d){
-  const R=roupaDe(d.info.roupa); d.roupaR=R;
-  let k=0; d.obj.traverse(o=>{ if(!o.isMesh) return; const mats=Array.isArray(o.material)?o.material:[o.material];
-    const novos=mats.map(mt=>{ const base=mt.userData.base||mt; const n=base.clone(); n.userData.base=base; const nome=(base.name||'').toLowerCase();
-      if(/eye|olho|teeth|dente|black|preto|pupil/.test(nome)) return n;
-      const cor=new THREE.Color(k++%2?R.c2:R.c1);
-      if(n.map) n.color.copy(new THREE.Color(0xffffff).lerp(cor,.35+R.forte*.25)); else if(/grey|gray|cinza|skin|pele|face/.test(nome)) n.color.copy(base.color); else n.color.copy(cor);
-      return n; });
-    o.material=Array.isArray(o.material)?novos:novos[0]; });
-  colocarAcessorio(d, d.noivo?d.noivo:R.acess, R.c2);
-}
-function colocarAcessorio(d,tipo,c2){
-  if(d.acess){ d.acess.parent&&d.acess.parent.remove(d.acess); d.acess=null; }
-  if(!tipo||!d.cabeca) return;
-  const g=acessorio(tipo,c2??0xff3d8b); d.acess=g;
-  // posiciona no topo da cabeça usando a pose atual
-  d.obj.updateMatrixWorld(true); const hp=new THREE.Vector3(); d.cabeca.getWorldPosition(hp);
-  const topoMundo=d.grupo.position.y+d.M.baseY+d.M.topo*d.M.escala*1.0;
-  const alvo=hp.clone(); alvo.y=g.userData.frente?hp.y+.12:Math.max(hp.y+.15,topoMundo-.08);
-  if(g.userData.frente){ const f=new THREE.Vector3(0,0,.32).applyQuaternion(d.grupo.quaternion); alvo.add(f); }
-  if(tipo==='veu') alvo.y=Math.max(hp.y+.15,topoMundo-.15);
-  const ws=new THREE.Vector3(); d.cabeca.getWorldScale(ws);
-  d.cabeca.add(g); g.position.copy(d.cabeca.worldToLocal(alvo.clone()));
-  const qInv=new THREE.Quaternion(); d.cabeca.getWorldQuaternion(qInv); qInv.invert(); g.quaternion.copy(qInv.multiply(d.grupo.quaternion));
-  g.scale.setScalar(1/ws.x);
+// palhaço ou cobrinha: fixo para cada pessoa; a roupa (cara, cabelo, cores...) muda com a semente
+const especie=id=>(hash('esp'+id)%100)<62?'palhaco':'cobra';
+function vestir(d){
+  if(d.boneco) d.grupo.remove(d.boneco.raiz);
+  d.boneco=criarDancarino(THREE,{semente:d.info.roupa||hash(d.id),sexo:d.info.sexo||'m',tipo:especie(d.id)});
+  d.grupo.add(d.boneco.raiz); d.alt=d.boneco.altura;
+  if(d.noivo) d.boneco.setPar(d.noivo==='noivo'?'noivo':'noiva');
 }
 function criarD(info,{chegando=true}={}){
   if(DS.has(info.id)) return DS.get(info.id);
-  const pool=MOD.filter(m=>!m.sexo||m.sexo===info.sexo); const lista=pool.length?pool:MOD;
-  const M=lista[(info.modelo||0)%lista.length];
-  const obj=SkeletonUtils.clone(M.cena); obj.scale.setScalar(M.escala); obj.position.y=M.baseY;
-  const grupo=new THREE.Group(); grupo.add(obj); cena.add(grupo);
-  const sombra=new THREE.Mesh(new THREE.CircleGeometry(.55,16),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.28,depthWrite:false})); sombra.rotation.x=-Math.PI/2; sombra.position.y=.04; grupo.add(sombra);
-  const mixer=new THREE.AnimationMixer(obj);
-  let cabeca=null; if(M.cabeca) obj.traverse(o=>{ if(o.name===M.cabeca&&!cabeca) cabeca=o; });
+  const grupo=new THREE.Group(); cena.add(grupo);
+  const sombra=new THREE.Mesh(SOMBRA_G,SOMBRA_M); sombra.rotation.x=-Math.PI/2; sombra.position.y=.04; grupo.add(sombra);
   const tag=document.createElement('div'); tag.className='tag'; $('tags').appendChild(tag);
-  const d={ id:info.id, info, M, obj, grupo, mixer, cabeca, tag, acao:null, atual:null, alvo:new THREE.Vector3(), rumo:0, andando:false, bal:null, balAte:0, noivo:null, ultAcao:performance.now()+Math.random()*8000, vel:2.6+Math.random()*.6 };
+  const d={ id:info.id, info, grupo, tag, alvo:new THREE.Vector3(), rumo:0, andando:false, bal:null, balAte:0, noivo:null, vel:2.6+Math.random()*.6,
+    passo:'balanco', pIni:bt-Math.random()*4, pDur:8, P:poseVazia(), Ps:poseVazia(), fasePe:Math.random()*6, trem:null, olhar:null };
+  vestir(d);
   DS.set(info.id,d); ordem.push(info.id);
-  atualizarTag(d); aplicarRoupa(d);
+  atualizarTag(d);
   const L=lugar(ordem.length-1); d.alvo.set(L.x,0,L.z); d.rumo=Math.atan2(-L.x,-L.z);
   if(chegando){ grupo.position.copy(ENTRADA); grupo.position.x+=(Math.random()-.5)*1.2; } else { grupo.position.copy(d.alvo); grupo.rotation.y=d.rumo; }
-  tocarDanca(d,true);
   if(casal.noivo===info.id) virarPar(d,'noivo',false); else if(casal.noiva===info.id) virarPar(d,'noiva',false);
   return d;
 }
+const SOMBRA_G=new THREE.CircleGeometry(.55,16), SOMBRA_M=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.28,depthWrite:false});
 function atualizarTag(d){ d.tag.className='tag'+(d.noivo?' noivo':''); d.tag.dataset.par=d.noivo==='noivo'?'🤵':d.noivo==='veu'?'👰':''; d.tag.innerHTML=`${avatar(d.info)}<span>${esc(d.info.name)}</span>`; }
-function removerD(id,poof=true){ const d=DS.get(id); if(!d) return; if(poof) estouro(d.grupo.position,0xffffff); cena.remove(d.grupo); d.tag.remove(); d.bal&&d.bal.remove(); d.mixer.stopAllAction(); DS.delete(id); ordem=ordem.filter(x=>x!==id); reposicionar(); }
+function removerD(id,poof=true){ const d=DS.get(id); if(!d) return; if(poof) estouro(d.grupo.position,0xffffff); cena.remove(d.grupo); d.tag.remove(); d.bal&&d.bal.remove(); DS.delete(id); ordem=ordem.filter(x=>x!==id); reposicionar(); }
 function reposicionar(){ ordem.forEach((id,i)=>{ const d=DS.get(id); if(!d||d.noivo) return; const L=lugar(i); d.alvo.set(L.x,0,L.z); d.rumo=Math.atan2(-L.x,-L.z); }); }
 let musicaIdx=0;
-function clipeDe(d){ if(!DANCAS.length) return null; return DANCAS[(musicaIdx*3+hash(d.id))%DANCAS.length]; }
-// a dança baixada com um boneco pode ser usada em outro de altura diferente: ajusta a altura do quadril para cada boneco
-function adaptar(M,clip){ M.adapt||=new Map(); if(M.adapt.has(clip)) return M.adapt.get(clip); let out=clip;
-  try{ const tr=clip.tracks.find(t=>/\.position$/.test(t.name)&&/hips|pelvis/i.test(t.name.split('.')[0]));
-    if(tr){ const osso=M.cena.getObjectByName(tr.name.split('.')[0]); const y0=tr.values[1], yR=osso?osso.position.y:0;
-      const r=y0&&yR?yR/y0:1; if(r>.2&&r<5&&Math.abs(r-1)>.04){ out=clip.clone(); const t2=out.tracks.find(t=>t.name===tr.name); for(let i=0;i<t2.values.length;i++) t2.values[i]*=r; } } }catch(e){}
-  M.adapt.set(clip,out); return out; }
-function tocar(d,clip,{fade=.35,loop=true,vel=1}={}){ if(!clip) return null; clip=adaptar(d.M,clip); const a=d.mixer.clipAction(clip); if(d.atual===a&&loop) return a;
-  a.reset(); a.setLoop(loop?THREE.LoopRepeat:THREE.LoopOnce,Infinity); a.clampWhenFinished=!loop; a.timeScale=vel; a.enabled=true; a.setEffectiveWeight(1);
-  if(d.atual&&d.atual!==a) d.atual.crossFadeTo(a,fade,false); a.play(); if(loop&&DANCAS.length===1&&d.atual==null) a.time=Math.random()*clip.duration; d.atual=a; return a; }
-function tocarDanca(d,inicio){ const c=d.andando&&ANDAR?ANDAR:clipeDe(d); const a=tocar(d,c,{vel:.92+(hash(d.id)%17)/100}); if(a&&inicio) a.time=Math.random()*(c?c.duration:1); }
-function acao(d,nome,dur=1.6){ const c=ACOES[nome]||(nome==='festa'?ACOES.pular:null); if(!c||d.andando) return; d.acao=performance.now()+Math.min(dur*1000,c.duration*1000);
-  tocar(d,c,{fade:.2,loop:false}); }
-
+// ---------- passos de dança ----------
+let bt=0; // batidas da música desde o começo
+const VOLTA=Math.PI*2, normAng=a=>((a%VOLTA)+VOLTA*1.5)%VOLTA-Math.PI;
+// a pose vai mudando suave de um passo para o outro
+const CHAVES=Object.keys(poseVazia());
+function suavizar(d,dt){ const k=Math.min(1,dt*14); for(const c of CHAVES) d.Ps[c]+=(d.P[c]-d.Ps[c])*k; }
+function fazer(d,passo,dur,inicio=bt){ for(const k of ['rx','ry','rz']) d.Ps[k]=normAng(d.Ps[k]); d.passo=passo; d.pIni=inicio; d.pDur=dur||PASSOS[passo].dur; }
+const SORTEIO=[['balanco',6],['requebra',3],['passinho',3],['bracos',2],['pula',2],['agacha',2],['gira',2],['robo',1],['bateCabeca',2],['aviaozinho',1],['polichinelo',2],['treme',1],['cambalhota',1],['deita',1],['estrela',1],['acena',1]];
+const SOMA=SORTEIO.reduce((s,x)=>s+x[1],0);
+function sortearPasso(){ let x=Math.random()*SOMA; for(const [p,w] of SORTEIO){ x-=w; if(x<=0) return p; } return 'balanco'; }
+function proximoPasso(d){ if(coreo.passo&&bt<coreo.ate) return fazer(d,coreo.passo,coreo.ate-bt);
+  d.olhar=null; const p=d.passo==='balanco'?sortearPasso():'balanco'; fazer(d,p,p==='balanco'?4+Math.floor(Math.random()*3)*2:PASSOS[p].dur*(PASSOS[p].dur<=4&&Math.random()<.5?2:1)); }
+const ACOES_P={sim:['pula',2],pular:['pula',4],acenar:['acena',4],festa:['pula',4]};
+function acao(d,nome){ const a=ACOES_P[nome]; if(!a||d.andando||d.trem) return; fazer(d,a[0],a[1]); }
+// o coreógrafo: de vez em quando a roda inteira faz o mesmo passo, uma dupla dança junto, um faz solo, ou a galera sai correndo em volta
+const coreo={passo:null,ate:0,proxJuntos:12,proxDupla:22,proxTrem:40,proxBanda:30};
+function todosJuntos(passo,batidas){ const dur=batidas||Math.max(8,PASSOS[passo].dur*(PASSOS[passo].dur<8?2:1)); const ini=Math.ceil(bt);
+  coreo.passo=passo; coreo.ate=ini+dur; for(const d of DS.values()) if(!d.andando&&!d.trem) fazer(d,passo,ini+dur-bt,ini); }
+function dupla(){ const ds=[...DS.values()].filter(d=>!d.andando&&!d.trem&&!d.noivo); if(ds.length<2) return;
+  const a=rndA(ds); let b=null, m=1e9; for(const x of ds){ if(x===a) continue; const q=x.grupo.position.distanceTo(a.grupo.position); if(q<m){ m=q; b=x; } }
+  if(!b) return; const passo=rndA(SOLOS), dur=8, ini=Math.ceil(bt);
+  for(const [x,y] of [[a,b],[b,a]]){ fazer(x,passo,ini+dur-bt,ini); x.olhar=y; }
+  cam.par=[a,b]; plano('dupla',7,1); mostrarDestaqueTxt(`${avatar(a.info)}${esc(a.info.name)} <span class="e">&</span> ${avatar(b.info)}${esc(b.info.name)}`); }
+function trem(){ const ds=[...DS.values()].filter(d=>!d.andando&&!d.trem&&!d.noivo); if(ds.length<4) return;
+  const n=Math.min(9,Math.max(4,Math.floor(ds.length/3))); const lista=ds.sort(()=>Math.random()-.5).slice(0,n); const a0=Math.random()*VOLTA;
+  lista.forEach((d,i)=>{ d.trem={ini:relogio,i,a0,de:d.grupo.position.clone()}; }); cam.trem=lista[0]; plano('trem',9,2); }
+const TREM_R=10.2, TREM_V=6.5, TREM_T=VOLTA*TREM_R/TREM_V+1.5;
+function posTrem(d,tt){ const k=tt-d.trem.ini, ang=d.trem.a0-Math.max(0,k-1)*TREM_V/TREM_R-d.trem.i*.16;
+  return { x:Math.cos(ang)*TREM_R, z:Math.sin(ang)*TREM_R, vx:Math.sin(ang), vz:-Math.cos(ang), k }; }
+let relogio=0;
+function coreografo(dt){
+  if(intervalo||!DS.size) return;
+  coreo.proxJuntos-=dt; coreo.proxDupla-=dt; coreo.proxTrem-=dt; coreo.proxBanda-=dt;
+  if(coreo.proxJuntos<=0){ coreo.proxJuntos=18+Math.random()*12; if(DS.size>=3){ todosJuntos(rndA(JUNTOS)); plano(rndA(['drone','roda','cima','baixo','giro']),7,1); } }
+  else if(coreo.proxDupla<=0){ coreo.proxDupla=24+Math.random()*14; dupla(); }
+  else if(coreo.proxTrem<=0){ coreo.proxTrem=50+Math.random()*30; trem(); }
+  else if(coreo.proxBanda<=0){ coreo.proxBanda=40+Math.random()*25; banda.dancar(8); plano('banda',8,1); }
+}
 // ---------- bolhas de fala, corações, estouros ----------
 function balao2(d,texto){ if(!d.bal){ d.bal=document.createElement('div'); d.bal.className='bal'; $('tags').appendChild(d.bal); } d.bal.textContent=texto; d.balAte=performance.now()+3800; }
 const particulas=[];
@@ -415,7 +362,7 @@ function estouro(pos,cor=0xff3d8b,n=26){ for(let i=0;i<n;i++){ const m=new THREE
   const v=new THREE.Vector3((Math.random()-.5)*6,3+Math.random()*4,(Math.random()-.5)*6); cena.add(m); particulas.push({m,v,vida:1.2}); } }
 function confete(n=160){ const el=document.createElement('div'); el.className='fx chuva'; el.innerHTML=Array.from({length:n},()=>`<span style="left:${Math.random()*100}%;width:${10+Math.random()*10}px;height:${16+Math.random()*12}px;background:${rndA(['#ff3d8b','#ffcc33','#5cff8a','#7a3cff','#2fd5ff','#fff'])};animation-duration:${2+Math.random()*2}s;animation-delay:${Math.random()*1.2}s;--r:${(Math.random()*2-1)*720}deg"></span>`).join('');
   stage.appendChild(el); setTimeout(()=>el.remove(),5000); }
-function coracoesEm(d,n=6){ const p=telaDe(d,2.6); if(!p) return; for(let i=0;i<n;i++){ const h=document.createElement('div'); h.className='coracao'; h.textContent=rndA(['❤️','💖','💜','✨']); h.style.left=(p.x-20+Math.random()*40)+'px'; h.style.top=(p.y)+'px'; stage.appendChild(h);
+function coracoesEm(d,n=6){ const p=telaDe(d,d.alt||2.6); if(!p) return; for(let i=0;i<n;i++){ const h=document.createElement('div'); h.className='coracao'; h.textContent=rndA(['❤️','💖','💜','✨']); h.style.left=(p.x-20+Math.random()*40)+'px'; h.style.top=(p.y)+'px'; stage.appendChild(h);
   h.animate([{transform:'translateY(0) scale(.5)',opacity:1},{transform:`translate(${(Math.random()-.5)*120}px,-260px) scale(1.2)`,opacity:0}],{duration:1600+Math.random()*700,delay:i*90,easing:'ease-out'}).onfinish=()=>h.remove(); } }
 const banQ=[]; let banOc=false;
 function banner(html){ banQ.push(html); if(!banOc) proxB(); }
@@ -426,8 +373,9 @@ function piscar(id){ const e=$(id); e.classList.remove('pisca'); void e.offsetWi
 // ================= câmera drone =================
 const cam={ pos:new THREE.Vector3(0,9,26), olha:new THREE.Vector3(0,1,0), alvoPos:new THREE.Vector3(0,9,26), alvoOlha:new THREE.Vector3(0,1,0), plano:'roda', ate:0, foco:null, t0:0, prioridade:0 };
 camera.position.copy(cam.pos);
-function focar(d,seg=6,prio=1){ if(!d||performance.now()<cam.ate&&prio<cam.prioridade) return; cam.plano='destaque'; cam.foco=d; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; cam.lado=Math.random()<.5?-1:1; mostrarDestaque(d); }
+function focar(d,seg=6,prio=1){ if(!d||performance.now()<cam.ate&&prio<cam.prioridade) return; cam.plano='destaque'; cam.foco=d; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; cam.lado=Math.random()<.5?-1:1; mostrarDestaque(d); if(!d.andando&&!d.trem&&!(coreo.passo&&bt<coreo.ate)) fazer(d,rndA(SOLOS)); }
 function plano(nome,seg=7,prio=0){ if(performance.now()<cam.ate&&prio<cam.prioridade) return; cam.plano=nome; cam.foco=null; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; esconderDestaque(); }
+function mostrarDestaqueTxt(h){ $('destaque').firstElementChild.innerHTML=h; $('destaque').classList.add('on'); }
 function mostrarDestaque(d){ $('destaque').firstElementChild.innerHTML=`${avatar(d.info)}${esc(d.info.name)}`; $('destaque').classList.add('on'); }
 function esconderDestaque(){ $('destaque').classList.remove('on'); }
 function diretor(){ // escolhe o próximo ângulo sozinho, como um drone filmando o baile
@@ -451,6 +399,10 @@ function moverCamera(dt,t){
   else if(cam.plano==='cima'){ p.set(Math.sin(t*.05)*2,30,6+Math.cos(t*.05)*2); o.set(0,0,-.5); }
   else if(cam.plano==='palco'){ p.set(PALCO.x+5.5,5.2,PALCO.z+12); o.set(PALCO.x,3.6,PALCO.z); }
   else if(cam.plano==='banda'){ p.set(PALCO.x+2.4+Math.sin(k*.4)*1.2,5.0,PALCO.z+15-Math.min(k,8)*.3); o.set(PALCO.x-.2,2.7,PALCO.z+2); }
+  else if(cam.plano==='dupla'&&cam.par&&cam.par.every(x=>DS.has(x.id))){ const [a,b]=cam.par; const ax=a.grupo.position, bx=b.grupo.position; const mx=(ax.x+bx.x)/2, mz=(ax.z+bx.z)/2;
+    let nx=-(bx.z-ax.z), nz=bx.x-ax.x; const L=Math.hypot(nx,nz)||1; nx/=L; nz/=L; if(nx*mx+nz*mz<0){ nx=-nx; nz=-nz; } // de fora da roda
+    p.set(mx+nx*4.6+Math.sin(k*.5)*.6,2.3,mz+nz*4.6); o.set(mx,1.2,mz); }
+  else if(cam.plano==='trem'&&cam.trem&&cam.trem.trem){ const g=cam.trem.grupo.position; const a=Math.atan2(g.z,g.x); p.set(Math.cos(a+.5)*15.5,4.2,Math.sin(a+.5)*15.5); o.set(g.x,1,g.z); }
   else if(cam.plano==='altar'){ p.set(Math.sin(t*.2)*1.6,3,ARCO_Z+7); o.set(0,1.6,ARCO_Z+.8); }
   else if(cam.plano==='entrada'&&cam.foco&&DS.has(cam.foco.id)){ const g=cam.foco.grupo; const a=g.rotation.y+.5; p.set(g.position.x+Math.sin(a)*4.2,2.6,g.position.z+Math.cos(a)*4.2); o.set(g.position.x,1.3,g.position.z); }
   else if(cam.plano==='baixo'){ const a=k*.16+cam.t0*.001; p.set(Math.sin(a)*7.6,.7,Math.cos(a)*7.6); o.set(0,2.4,0); }
@@ -487,12 +439,12 @@ function placa(tipo,u){ const el=$(tipo==='noivo'?'pNoivo':'pNoiva'); const ic=t
   el.className='par'; el.innerHTML=`<div class="f">${avatar(u)}<i>${ic}</i></div><div class="x"><small>${tipo.toUpperCase()}</small><b>${esc(u.name)}</b><em>${Number(u.moedas||0).toLocaleString('pt-BR')} moedas</em></div>`; }
 placa('noivo',null); placa('noiva',null);
 function virarPar(d,tipo,anunciar=true){
-  d.noivo=tipo==='noivo'?'noivo':'veu'; atualizarTag(d); colocarAcessorio(d,d.noivo,0xffffff);
+  d.noivo=tipo==='noivo'?'noivo':'veu'; atualizarTag(d); d.boneco.setPar(tipo==='noivo'?'noivo':'noiva'); d.trem=null;
   d.alvo.set(tipo==='noivo'?-.8:.8,0,ARCO_Z+1.7); d.rumo=0; d.vel=7; // corre pro altar
   if(anunciar){ banner(`${tipo==='noivo'?'🤵 NOVO NOIVO!':'👰 NOVA NOIVA!'}<small>${esc(d.info.name)}</small>`); plano('altar',6,2); confete(90); serpente.acao('comemorar',2.4);
     setTimeout(()=>{ if(DS.has(d.id)){ coracoesEm(d,12); acao(d,'sim',2); } },2600); }
 }
-function largarPar(id){ const d=DS.get(id); if(!d||!d.noivo) return; d.noivo=null; atualizarTag(d); aplicarRoupa(d); reposicionar(); }
+function largarPar(id){ const d=DS.get(id); if(!d||!d.noivo) return; d.noivo=null; atualizarTag(d); d.boneco.setPar(null); reposicionar(); }
 function definirCasal(noivo,noiva,anunciar){
   for(const [tipo,u] of [['noivo',noivo],['noiva',noiva]]){
     const antes=casal[tipo], agora=u?u.id:null; placa(tipo,u);
@@ -509,24 +461,19 @@ function onBaile(m){
     case 'saiu': tirarDaChegada(m.id); removerD(m.id); contar(); break;
     case 'lotado': lotou=true; trocarChamada(true); break;
     case 'fala': { const d=DS.get(m.id); if(d){ d.info.ultimo=Date.now(); balao2(d,m.texto); if(Math.random()<.5) acao(d,rndA(['acenar','sim','pular'])); } break; }
-    case 'sexo': { tirarDaChegada(m.d.id); const velho=DS.get(m.d.id); const pos=velho?velho.grupo.position.clone():null; if(velho) removerD(m.d.id,false);
-      const d=criarD(m.d,{chegando:false}); if(pos){ d.grupo.position.copy(pos); } estouro(d.grupo.position,m.d.sexo==='f'?0xff9ec7:0x2fd5ff,34); focar(d,4,2);
-      contar(); break; }
-    case 'roupa': { const q=chegadaQ.find(x=>x.id===m.d.id); if(q) Object.assign(q,m.d); const d=DS.get(m.d.id);
-      if(d){ const trocaModelo=d.info.modelo!==m.d.modelo&&MOD.length>1; d.info=Object.assign(d.info,m.d); d.info.ultimo=Date.now();
-        if(trocaModelo&&!d.noivo){ const pos=d.grupo.position.clone(), ali=d.alvo.clone(); removerD(d.id,false); const n=criarD(d.info,{chegando:false}); n.grupo.position.copy(pos); n.alvo.copy(ali); estouro(pos,0xff3d8b,34); acao(n,'sim'); focar(n,5,2); }
-        else { aplicarRoupa(d); estouro(d.grupo.position,0xff3d8b,34); acao(d,'sim'); focar(d,5,2); } }
-      piscar('ppRoupa'); break; }
+    case 'sexo': case 'roupa': { const q=chegadaQ.find(x=>x.id===m.d.id); if(q) Object.assign(q,m.d); const d=DS.get(m.d.id);
+      if(d){ d.info=Object.assign(d.info,m.d); d.info.ultimo=Date.now(); vestir(d); estouro(d.grupo.position,m.ev==='sexo'?(m.d.sexo==='f'?0xff9ec7:0x2fd5ff):0xff3d8b,34); acao(d,'sim'); focar(d,5,2); }
+      if(m.ev==='roupa') piscar('ppRoupa'); break; }
     case 'presente': if(m.coins<30||!m.naRoda) feed(m.user,`<b>${esc(m.user.name)}</b> mandou ${esc(window.Texto?window.Texto.presente(m.giftName).nome.toUpperCase():m.giftName)}${m.naRoda&&m.coins<30?' e trocou de roupa!':'!'}`);
       if(m.naRoda) musica.vinheta([72,76,79,84]); break;
     case 'banda': musicaIdx=m.musica; musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎸 TOQUE NA BANDA!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> tocou na banda!`);
-      for(const d of DS.values()) if(!d.andando&&!d.noivo) { d.atual=null; tocarDanca(d); } dj.acao('comemorar',2); banda.show(10); plano('banda',9,3); confete(60); break;
+      todosJuntos(rndA(['bracos','pula','passinho','polichinelo']),8); dj.acao('comemorar',2); banda.show(10); plano('banda',9,3); confete(60); break;
     case 'noivos': definirCasal(m.noivo,m.noiva,true); break;
     case 'placar': placa('noivo',m.noivo); placa('noiva',m.noiva); break;
     case 'seguiu': { const d=DS.get(m.id); if(d){ coracoesEm(d,10); acao(d,'pular'); } break; }
     case 'compartilhou': { const d=DS.get(m.id); if(d){ estouro(d.grupo.position,0x2fd5ff,20); acao(d,'acenar'); } break; }
     case 'curtiu': { const d=DS.get(m.id); if(d&&Math.random()<.4) coracoesEm(d,2); break; }
-    case 'festa': confete(200); for(const d of DS.values()) acao(d,'pular'); plano('cima',5,2); break;
+    case 'festa': confete(200); todosJuntos('pula',8); plano('cima',5,2); break;
     case 'fim': fimBaile(m); break;
     case 'novo': novoBaile(m.fim); break;
     case 'tempo': setResta(m.resta); break;
@@ -610,34 +557,42 @@ const rel=new THREE.Clock();
 function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=performance.now();
   if(pronto){
     if(chegadaQ.length&&agora>proxChegada){ proxChegada=agora+(chegadaQ.length>12?280:chegadaQ.length>4?450:650); chegar(); }
+    const B=musica.batida(); bt+=dt*(B.porSeg||2); relogio+=dt; coreografo(dt);
     for(const d of DS.values()){
+      const g=d.grupo;
+      if(d.trem){ // correndo em volta da roda, em fila
+        const q=posTrem(d,relogio);
+        if(q.k>TREM_T){ d.trem=null; }
+        else { const f=Math.min(1,q.k/1); g.position.set(d.trem.de.x+(q.x-d.trem.de.x)*f,0,d.trem.de.z+(q.z-d.trem.de.z)*f); const r=Math.atan2(q.vx,q.vz); g.rotation.y=f<1?Math.atan2(q.x-d.trem.de.x,q.z-d.trem.de.z):r;
+          d.fasePe+=dt*15; poseAndar(d.fasePe,true,d.P); suavizar(d,dt); d.boneco.aplicar(d.Ps,bt); continue; }
+      }
       // andar até o lugar
-      const g=d.grupo; tmpV.subVectors(d.alvo,g.position); tmpV.y=0; const dist=tmpV.length();
+      tmpV.subVectors(d.alvo,g.position); tmpV.y=0; const dist=tmpV.length();
       const andando=dist>.12;
       if(andando){ const passo=Math.min(dist,d.vel*dt); g.position.addScaledVector(tmpV.normalize(),passo); const r=Math.atan2(tmpV.x,tmpV.z); let dr=r-g.rotation.y; while(dr>Math.PI) dr-=2*Math.PI; while(dr<-Math.PI) dr+=2*Math.PI; g.rotation.y+=dr*Math.min(1,dt*8); }
-      else { let dr=d.rumo-g.rotation.y; while(dr>Math.PI) dr-=2*Math.PI; while(dr<-Math.PI) dr+=2*Math.PI; g.rotation.y+=dr*Math.min(1,dt*4); }
-      if(andando!==d.andando){ d.andando=andando; d.atual=null; tocarDanca(d); }
-      if(d.acao&&agora>d.acao){ d.acao=null; d.atual=null; tocarDanca(d); }
-      if(!d.acao&&!d.andando&&agora>d.ultAcao){ d.ultAcao=agora+9000+Math.random()*14000; if(Math.random()<.35) acao(d,rndA(['acenar','sim','pular'])); }
-      if(!andando&&!d.noivo&&DANCAS.length===1&&d.atual) d.atual.timeScale=.85+.25*Math.abs(Math.sin(t*.3+hash(d.id)));
-      d.mixer.update(dt);
+      else { const rumo=d.olhar&&DS.has(d.olhar.id)&&bt<d.pIni+d.pDur?Math.atan2(d.olhar.grupo.position.x-g.position.x,d.olhar.grupo.position.z-g.position.z):d.rumo;
+        let dr=rumo-g.rotation.y; while(dr>Math.PI) dr-=2*Math.PI; while(dr<-Math.PI) dr+=2*Math.PI; g.rotation.y+=dr*Math.min(1,dt*4); }
+      d.andando=andando;
+      if(andando){ d.fasePe+=dt*(d.vel>4?15:9); poseAndar(d.fasePe,d.vel>4,d.P); }
+      else { let b=bt-d.pIni; if(b>=d.pDur){ proximoPasso(d); b=bt-d.pIni; } poseVazia(d.P); if(b>=0) PASSOS[d.passo].f(b,d.P); else PASSOS.balanco.f(bt,d.P); }
+      suavizar(d,dt); d.boneco.aplicar(d.Ps,bt);
     }
     // nomes e balões em cima das cabeças
     for(const d of DS.values()){
-      const p=telaDe(d,2.45); const perto=cam.plano==='destaque'&&cam.foco===d;
+      const p=telaDe(d,(d.alt||2.4)+.15); const perto=cam.plano==='destaque'&&cam.foco===d;
       if(!p||p.x<-120||p.x>1200||p.y<40||p.y>1900||(perto)){ d.tag.style.opacity=0; if(d.bal) d.bal.style.opacity=0; continue; }
       const dist=camera.position.distanceTo(d.grupo.position); const s=Math.max(.45,Math.min(1.25,9/dist));
       d.tag.style.opacity=dist>34?0:1; d.tag.style.transform=`translate(${p.x}px,${p.y}px) translate(-50%,-100%) scale(${s})`; d.tag.style.zIndex=Math.round((1-p.z)*10000);
       if(d.bal){ if(agora>d.balAte){ d.bal.remove(); d.bal=null; } else { d.bal.style.opacity=1; d.bal.style.transform=`translate(${p.x}px,${p.y-52*s}px) translate(-50%,-100%) scale(${s})`; } }
     }
-    diretor(); if(cam.plano!=='destaque') esconderDestaque();
+    diretor(); if(cam.plano!=='destaque'&&cam.plano!=='dupla') esconderDestaque();
     // no close, quem estiver colado na câmera some (não tampa a pessoa em destaque)
     // quem estiver colado na câmera some (não tampa a pessoa em destaque nem o altar)
     for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=d===cam.foco||!!d.noivo||camera.position.distanceTo(tmpV)>(cam.plano==='altar'||cam.plano==='banda'?5:3); }
   }
   moverCamera(dt,t);
   // vida no cenário
-  dj.atualizar(dt,t); serpente.atualizar(dt,t); banda.atualizar(dt,t); if(!dj.ocupado()) dj.acao(Math.random()<.8?'dancar':rndA(['comemorar','rir','acenar']),2); // o DJ não para
+  dj.atualizar(dt,t); serpente.atualizar(dt,t); banda.atualizar(dt,t); if(!dj.ocupado()){ const r=Math.random(); dj.acao(r<.55?'dancar':r<.7?'girar':r<.82?'pular':r<.9?'comemorar':r<.97?'rir':'voar',r>.97?5:2); } // o DJ não para
   feixes.forEach((f,i)=>{ f.rotation.z=Math.sin(t*1.3+i*2)*.5; f.rotation.x=Math.cos(t*1.1+i)*.3; });
   const b=musica.batida(); luzRosa.intensity=30+Math.pow(1-b.fase,3)*40; luzRoxa.intensity=22+Math.pow(1-((b.fase+.5)%1),3)*30;
   for(let i=particulas.length-1;i>=0;i--){ const q=particulas[i]; q.vida-=dt; q.v.y-=9*dt; q.m.position.addScaledVector(q.v,dt); q.m.rotation.x+=dt*6; if(q.vida<=0){ cena.remove(q.m); q.m.geometry.dispose(); particulas.splice(i,1); } }
@@ -652,13 +607,13 @@ setInterval(()=>trocarChamada(false),5000); trocarChamada(true);
 
 // ================= começar =================
 (async()=>{
-  try{ await carregarPersonagens(); }catch(e){ console.error(e); $('carregando').textContent='Não consegui carregar os personagens 😢'; return; }
+  await carregarMusicas();
   $('carregando').hidden=true; pronto=true; mostrarMusica(0);
   if(snapshot) handle(snapshot); for(const m of handle.fila||[]) handle(m); handle.fila=[];
   let servidor=false; try{ const r=await fetch('api/status',{cache:'no-store'}); servidor=r.ok&&!!(await r.json()); }catch(e){}
   if(!servidor&&window.BaileMotor) ligarDemoLocal(); else { musica.ligar(); if(new URLSearchParams(location.search).get('demo')==='1') iniciarDemo(); }
 })();
-window.__baile={DS,handle,cena,camera,MOD,cam,focar,plano,musica};
+window.__baile={DS,handle,cena,camera,cam,focar,plano,musica,todosJuntos,dupla,trem,banda};
 </script>
 </body>
 </html>
