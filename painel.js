@@ -24,7 +24,7 @@ module.exports = function painel(ctx) {
       ok: true, config: CFG.publico(), tiktok: ctx.tiktok(), stats: { ...stats, minutos: Math.floor((Date.now() - stats.inicio) / 60000) },
       registro: registro.slice(-40).reverse(),
       link: `http://localtest.me:${PORT}/baile.html`, telas: ctx.somTelas(),
-      baile: { naRoda: e.roda.length, fila: e.fila, proximos: e.proximos, resta: e.resta, intervalo: e.intervalo, noivo: e.noivo, noiva: e.noiva, duracao: e.cfg.duracao, maximo: e.cfg.maximo },
+      baile: { naRoda: e.roda.length, resta: e.resta, intervalo: e.intervalo, noivo: e.noivo, noiva: e.noiva, duracao: e.cfg.duracao, maximo: e.cfg.maximo },
     };
   }
   app.get('/api/painel/estado', (_req, res) => res.json(estado()));

@@ -101,9 +101,6 @@
   <canvas id="cena" width="1080" height="1920"></canvas>
   <div id="tags"></div>
   <div id="titulo" class="lil"><span class="ic">💃</span>BAILE DO ABISMO</div>
-  <div id="musica">🎵 Funk do Abismo</div>
-  <div id="conn">conectando…</div>
-  <div id="comente" class="lil"><div class="b">💬</div><div class="t">COMENTE</div><small>ENTRE NA RODA</small></div>
   <div id="painelP">
     <div id="tempo" class="lil">30:00</div>
     <div class="pp" id="ppRoupa"><div class="i">🌹<b>1</b></div><span>Troque de<br>Roupa</span></div>
@@ -116,8 +113,7 @@
   </div>
   <div id="destaque"><div class="n lil"></div></div>
   <div id="feed"></div>
-  <div id="naroda" class="lil"><div id="nRoda"><b>0</b>/35 na roda</div><div class="fila" id="nFila" hidden></div></div>
-  <div id="chamada" class="lil">COMENTE PRA ENTRAR NA RODA</div>
+  <div id="chamada" class="lil">COMENTE PRA ENTRAR NO BAILE</div>
   <div id="credito"></div>
   <div id="fim"></div>
   <div id="carregando" class="lil">Montando o baile… 💃</div>
@@ -405,21 +401,19 @@ function telaDe(d,altura=2.5){ vt.set(d.grupo.position.x,altura,d.grupo.position
 const musica=criarMusicaBaile();
 ['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>musica.ligar()));
 const NOMES_M=(window.BaileMotor&&window.BaileMotor.MUSICAS)||['Funk do Abismo','Forró da Roda','Disco Assombrado','Pagodinho do Palhaço'];
-function mostrarMusica(i,nome){ $('musica').textContent='🎵 '+(musica.estilo==='mp3'?'Música '+(i+1):(nome||NOMES_M[i%NOMES_M.length])); }
+function mostrarMusica(i,nome){ if($('musica')) $('musica').textContent='🎵 '+(musica.estilo==='mp3'?'Música '+(i+1):(nome||NOMES_M[i%NOMES_M.length])); }
 
 // ================= eventos do baile =================
 let restaSeg=1800, restaBase=performance.now();
 function setResta(s){ restaSeg=s; restaBase=performance.now(); }
-function contar(){ const max=maxRoda; const cheia=DS.size+chegadaQ.length>=max;
-  const n=DS.size+chegadaQ.length; $('nRoda').className=cheia?'cheia':''; $('nRoda').innerHTML=n>max?`<b>${n}</b> na roda`:`<b>${n}</b>/${max} na roda`;
-  $('nFila').hidden=!filaN; $('nFila').textContent=`⏳ ${filaN} na fila do próximo baile`; lotou=cheia; }
-let maxRoda=35, filaN=0, lotou=false, intervalo=false;
+function contar(){ const antes=lotou; lotou=intervalo||DS.size+chegadaQ.length>=maxRoda; if(lotou!==antes) trocarChamada(true); }
+let maxRoda=35, lotou=false, intervalo=false;
 const casal={noivo:null,noiva:null};
 // quem comenta entra pelo tapete vermelho, um de cada vez
 const chegadaQ=[]; let proxChegada=0;
 function chegar(){ const info=chegadaQ.shift(); if(!info||DS.has(info.id)) return; const d=criarD(info); d.info.ultimo=Date.now(); contar();
   if(cam.prioridade<2&&(Math.random()<.45||DS.size<6)){ cam.plano='entrada'; cam.foco=d; cam.ate=performance.now()+4200; cam.t0=performance.now(); cam.prioridade=1; mostrarDestaque(d); } }
-function tirarDaFila(id){ const i=chegadaQ.findIndex(x=>x.id===id); if(i>=0) chegadaQ.splice(i,1); }
+function tirarDaChegada(id){ const i=chegadaQ.findIndex(x=>x.id===id); if(i>=0) chegadaQ.splice(i,1); }
 // placa do noivo e da noiva no canto da tela
 function placa(tipo,u){ const el=$(tipo==='noivo'?'pNoivo':'pNoiva'); const ic=tipo==='noivo'?'🤵':'👰';
   if(!u){ el.className='par vazio'; el.innerHTML=`<div class="f"><span class="av">${ic}</span></div><div class="x"><small>${tipo.toUpperCase()}</small><b>Mande o maior presente!</b></div>`; return; }
@@ -444,41 +438,37 @@ function definirCasal(noivo,noiva,anunciar){
 }
 function onBaile(m){
   switch(m.ev){
-    case 'entrou': { if(typeof m.fila==='number') filaN=m.fila; if(m.max) maxRoda=m.max; if(!DS.has(m.d.id)&&!chegadaQ.some(x=>x.id===m.d.id)) chegadaQ.push(m.d); feed(m.d,`<b>${esc(m.d.name)}</b> ${m.motivo==='fila'?'saiu da fila e':m.motivo==='noivos'?'voltou e':''} entrou no baile`); contar(); break; }
-    case 'saiu': tirarDaFila(m.id); removerD(m.id); contar(); break;
-    case 'fila': filaN=m.total; contar(); feed(m.user,`<b>${esc(m.user.name)}</b> ${m.motivo==='intervalo'?'já garantiu lugar no próximo baile':`tá na fila (${m.pos}º)`}`);
-      if(m.motivo==='lotou'&&performance.now()-(onBaile.ultLotou||0)>20000){ onBaile.ultLotou=performance.now(); banner('RODA LOTADA!<small>comenta que você entra no próximo baile</small>'); } break;
-    case 'filaTotal': filaN=m.total; contar(); break;
+    case 'entrou': { if(m.max) maxRoda=m.max; if(!DS.has(m.d.id)&&!chegadaQ.some(x=>x.id===m.d.id)) chegadaQ.push(m.d); contar(); break; }
+    case 'saiu': tirarDaChegada(m.id); removerD(m.id); contar(); break;
+    case 'lotado': lotou=true; trocarChamada(true); break;
     case 'fala': { const d=DS.get(m.id); if(d){ d.info.ultimo=Date.now(); balao2(d,m.texto); if(Math.random()<.5) acao(d,rndA(['acenar','sim','pular'])); } break; }
-    case 'sexo': { tirarDaFila(m.d.id); const velho=DS.get(m.d.id); const pos=velho?velho.grupo.position.clone():null; if(velho) removerD(m.d.id,false);
+    case 'sexo': { tirarDaChegada(m.d.id); const velho=DS.get(m.d.id); const pos=velho?velho.grupo.position.clone():null; if(velho) removerD(m.d.id,false);
       const d=criarD(m.d,{chegando:false}); if(pos){ d.grupo.position.copy(pos); } estouro(d.grupo.position,m.d.sexo==='f'?0xff9ec7:0x2fd5ff,34); focar(d,4,2);
-      feed(m.d,`<b>${esc(m.d.name)}</b> agora é ${m.d.sexo==='f'?'menina 👧':'menino 👦'}`); contar(); break; }
+      contar(); break; }
     case 'roupa': { const q=chegadaQ.find(x=>x.id===m.d.id); if(q) Object.assign(q,m.d); const d=DS.get(m.d.id);
       if(d){ const trocaModelo=d.info.modelo!==m.d.modelo&&MOD.length>1; d.info=Object.assign(d.info,m.d); d.info.ultimo=Date.now();
         if(trocaModelo&&!d.noivo){ const pos=d.grupo.position.clone(), ali=d.alvo.clone(); removerD(d.id,false); const n=criarD(d.info,{chegando:false}); n.grupo.position.copy(pos); n.alvo.copy(ali); estouro(pos,0xff3d8b,34); acao(n,'sim'); focar(n,5,2); }
         else { aplicarRoupa(d); estouro(d.grupo.position,0xff3d8b,34); acao(d,'sim'); focar(d,5,2); } }
       piscar('ppRoupa'); break; }
-    case 'presente': if(m.coins<30||!m.naRoda) feed(m.user,`<b>${esc(m.user.name)}</b> mandou ${esc(window.Texto?window.Texto.presente(m.giftName).nome.toUpperCase():m.giftName)}${m.naRoda?' e trocou de roupa!':' e já entra no próximo baile!'}`);
+    case 'presente': if(m.coins<30||!m.naRoda) feed(m.user,`<b>${esc(m.user.name)}</b> mandou ${esc(window.Texto?window.Texto.presente(m.giftName).nome.toUpperCase():m.giftName)}${m.naRoda&&m.coins<30?' e trocou de roupa!':'!'}`);
       if(m.naRoda) musica.vinheta([72,76,79,84]); break;
     case 'banda': musicaIdx=m.musica; musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎸 TOQUE NA BANDA!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> tocou na banda!`);
       for(const d of DS.values()) if(!d.andando&&!d.noivo) { d.atual=null; tocarDanca(d); } dj.acao('comemorar',2); plano('palco',4,2); confete(60); break;
     case 'noivos': definirCasal(m.noivo,m.noiva,true); break;
     case 'placar': placa('noivo',m.noivo); placa('noiva',m.noiva); break;
-    case 'seguiu': { const d=DS.get(m.id); if(d){ coracoesEm(d,10); acao(d,'pular'); } feed(m.user,`<b>${esc(m.user.name)}</b> seguiu!`); break; }
-    case 'compartilhou': { const d=DS.get(m.id); if(d){ estouro(d.grupo.position,0x2fd5ff,20); acao(d,'acenar'); } feed(m.user,`<b>${esc(m.user.name)}</b> compartilhou a LIVE!`); break; }
+    case 'seguiu': { const d=DS.get(m.id); if(d){ coracoesEm(d,10); acao(d,'pular'); } break; }
+    case 'compartilhou': { const d=DS.get(m.id); if(d){ estouro(d.grupo.position,0x2fd5ff,20); acao(d,'acenar'); } break; }
     case 'curtiu': { const d=DS.get(m.id); if(d&&Math.random()<.4) coracoesEm(d,2); break; }
-    case 'chegou': if(performance.now()-(onBaile.ultChegou||0)>6000&&Math.random()<.5){ onBaile.ultChegou=performance.now(); feed(m.user,`<b>${esc(m.user.name)}</b> chegou na live`); } break;
-    case 'festa': confete(200); banner(`🎉 ${m.curtidas} CURTIDAS!<small>festa no baile!</small>`); for(const d of DS.values()) acao(d,'pular'); plano('cima',5,2); break;
+    case 'festa': confete(200); for(const d of DS.values()) acao(d,'pular'); plano('cima',5,2); break;
     case 'fim': fimBaile(m); break;
     case 'novo': novoBaile(m.fim); break;
-    case 'voltaram': banner(`💍 OS NOIVOS VOLTARAM!<small>${m.quem.map(u=>esc(u.name)).join(' & ')}</small>`); break;
     case 'tempo': setResta(m.resta); break;
-    case 'limpou': chegadaQ.length=0; filaN=0; for(const id of [...DS.keys()]) removerD(id,true); definirCasal(null,null,false); contar(); break;
+    case 'limpou': chegadaQ.length=0; for(const id of [...DS.keys()]) removerD(id,true); definirCasal(null,null,false); contar(); break;
   }
 }
 // fim do baile: casamento no altar e depois a tela do casal
 function fimBaile(m){
-  intervalo=true; setResta(0);
+  intervalo=true; setResta(0); contar();
   const n=m.noivo, a=m.noiva, tem=n||a;
   for(const d of DS.values()) if(!d.noivo) acao(d,'sim',3);
   if(tem){ plano('altar',m.intervalo||12,9); banner(`💍 CASAMENTO!<small>${[n,a].filter(Boolean).map(u=>esc(u.name)).join(' & ')}</small>`); confete(220); serpente.acao('comemorar',3); dj.acao('comemorar',3);
@@ -489,16 +479,16 @@ function fimBaile(m){
   el.innerHTML=`<div class="c"><div class="t lil">${tem?'CASAMENTO DO BAILE':'FIM DO BAILE!'}</div>`+
     (tem?`<div class="casal">${pessoa(n,'🤵','Noivo')}${n&&a?'<div class="anel">💍</div>':''}${pessoa(a,'👰','Noiva')}</div><div class="s">${n&&a?'Os noivos':'Quem casou'} já ${n&&a?'entram':'entra'} no próximo baile!</div>`
        :'<div class="s">Ninguém casou desta vez… no próximo baile, o maior presente vira noivo ou noiva 💍</div>')+
-    `<div class="s">${filaN?`⏳ ${filaN} na fila entrando agora`:'Comente pra entrar no próximo baile 💃'}</div></div>`;
+    `<div class="s">Comente pra entrar no próximo baile 💃</div></div>`;
   setTimeout(()=>{ if(intervalo) el.classList.add('on'); },tem?4500:500);
 }
 function novoBaile(seg){
-  intervalo=false; $('fim').classList.remove('on'); chegadaQ.length=0;
+  intervalo=false; $('fim').classList.remove('on'); chegadaQ.length=0; lotou=false; trocarChamada(true);
   for(const id of [...DS.keys()]) removerD(id,false);
   ordem=[]; casal.noivo=casal.noiva=null; placa('noivo',null); placa('noiva',null); setResta(seg); contar(); plano('tapete',8,4);
 }
 function estadoInicial(e){ if(!e) return; for(const id of [...DS.keys()]) removerD(id,false); ordem=[]; chegadaQ.length=0;
-  maxRoda=(e.cfg&&e.cfg.maximo)||35; filaN=e.fila||0;
+  maxRoda=(e.cfg&&e.cfg.maximo)||35;
   musicaIdx=e.musica||0; musica.tocar(musicaIdx); mostrarMusica(musicaIdx,e.nomeMusica); setResta(e.resta||300);
   casal.noivo=e.noivo?e.noivo.id:null; casal.noiva=e.noiva?e.noiva.id:null; placa('noivo',e.noivo); placa('noiva',e.noiva);
   for(const info of e.roda||[]) criarD(info,{chegando:false}); contar(); }
@@ -512,7 +502,7 @@ function handle(m){
     case 'tiktok': setConn(m); break; case 'config': musica.config(m.musica); break;
   }
 }
-function setConn(t){ if(!t) return; $('conn').textContent=t.connected?`AO VIVO @${t.username}`:(t.username?`aguardando a live de @${t.username}…`:'modo teste'); }
+function setConn(t){ if(!t||!$('conn')) return; $('conn').textContent=t.connected?`AO VIVO @${t.username}`:(t.username?`aguardando a live de @${t.username}…`:'modo teste'); }
 (function conectar(){ if(window.__demo) return; let ws; try{ ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/?pagina=baile'); }catch(e){ return; } window.__ws=ws;
   ws.onmessage=ev=>{ try{ handle(JSON.parse(ev.data)); }catch(e){ console.warn(e); } }; ws.onopen=()=>{ const av=()=>{ if(ws.readyState===1){ try{ ws.send(JSON.stringify({type:'som',ok:musica.tocando})); }catch(e){} setTimeout(av,3000); } }; av(); }; ws.onclose=()=>{ if(!window.__demo) setTimeout(conectar,2000); }; })();
 
@@ -540,7 +530,7 @@ function iniciarDemo(){ if(demoRodando) return; demoRodando=true;
     else if(r<.72) sim({type:'follow',user:u}); else if(r<.8) sim({type:'join',user:u}); else if(r<.83) sim({type:'share',user:u}); else sim({type:'like',user:u,likes:10+Math.floor(Math.random()*40)});
     setTimeout(tick,1100+Math.random()*1700); })(); }
 function ligarDemoLocal(){
-  window.__demo=true; try{ window.__ws&&window.__ws.close(); }catch(e){} $('conn').style.display='none'; $('demo-tag').hidden=false;
+  window.__demo=true; try{ window.__ws&&window.__ws.close(); }catch(e){} $('demo-tag').hidden=false;
   motorLocal=window.BaileMotor.criar({ texto:window.Texto, cfg:{duracao:2,maximo:35}, emitir:m=>handle(m) }); // demonstração: baile de 2 minutos
   const t=$('toque'); t.hidden=false;
   const comecar=()=>{ if(t.hidden) return; t.hidden=true; musica.ligar();
@@ -587,9 +577,11 @@ function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=
   const resta=Math.max(0,restaSeg-(agora-restaBase)/1000); $('tempo').textContent=`${String(Math.floor(resta/60)).padStart(2,'0')}:${String(Math.floor(resta%60)).padStart(2,'0')}`;
   renderer.render(cena,camera); requestAnimationFrame(loop); }
 loop();
-// a frase de baixo vai alternando
-{ const FR=()=>lotou?['LOTOU! COMENTE PRA ENTRAR NA FILA','MAIOR PRESENTE VIRA NOIVO(A) 💍']:['COMENTE PRA ENTRAR NA RODA','COMENTE MENINA OU MENINO 👧👦','MAIOR PRESENTE VIRA NOIVO(A) 💍']; let i=0;
-  setInterval(()=>{ const l=FR(); i=(i+1)%l.length; const c=$('chamada'); c.style.fontSize=''; c.innerHTML=`<span>${esc(l[i])}</span>`; const w=c.firstChild.offsetWidth; if(w>1030) c.style.fontSize=Math.floor(60*1030/w)+'px'; },5000); }
+// a frase de baixo: lotou = "continue comentando"; senão alterna o convite
+let iCham=0;
+function trocarChamada(agoraJa){ const l=lotou?['CONTINUE COMENTANDO PARA ENTRAR NO BAILE']:['COMENTE PRA ENTRAR NO BAILE','MAIOR PRESENTE VIRA NOIVO(A) 💍','COMENTE MENINA OU MENINO 👧👦'];
+  iCham=agoraJa?0:(iCham+1)%l.length; const c=$('chamada'); c.style.fontSize=''; c.innerHTML=`<span>${esc(l[iCham])}</span>`; const w=c.firstChild.offsetWidth; if(w>1030) c.style.fontSize=Math.floor(60*1030/w)+'px'; }
+setInterval(()=>trocarChamada(false),5000); trocarChamada(true);
 
 // ================= começar =================
 (async()=>{

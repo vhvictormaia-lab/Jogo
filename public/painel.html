@@ -87,7 +87,6 @@
 
 <div class="resumo" aria-label="Resumo da live">
   <div class="num"><b id="n-roda">0</b><span>na roda</span></div>
-  <div class="num"><b id="n-fila">0</b><span>na fila</span></div>
   <div class="num"><b id="n-resta">5:00</b><span>fim do baile</span></div>
   <div class="num"><b id="n-esp">0</b><span>espectadores</span></div>
   <div class="num"><b id="n-pre">0</b><span>presentes</span></div>
@@ -110,9 +109,8 @@
 
   <section>
     <h2>💃 Baile agora</h2>
-    <p class="dica">Comentou, entrou na roda. Lotou, vai pra fila do próximo baile. Quem mandar mais presente vira noivo ou noiva. Comentar <b>menina</b> ou <b>menino</b> troca o boneco.</p>
+    <p class="dica">Comentou, entrou na roda. Lotou, a tela pede pra continuar comentando: quem comentar no próximo baile entra. Quem mandar mais presente vira noivo ou noiva. Comentar <b>menina</b> ou <b>menino</b> troca o boneco.</p>
     <div class="casal"><div><span class="ft" id="ft-noivo"></span><span class="tx"><small>🤵 Noivo</small><b id="nm-noivo">ninguém ainda</b></span></div><div><span class="ft" id="ft-noiva"></span><span class="tx"><small>👰 Noiva</small><b id="nm-noiva">ninguém ainda</b></span></div></div>
-    <div class="aviso" id="aviso-fila"></div>
     <div class="faixa"><label for="b-duracao">Duração</label><input type="range" id="b-duracao" min="1" max="30" step="1" value="5"><output id="o-b-duracao">5 min</output></div>
     <div class="faixa"><label for="b-maximo">Na roda</label><input type="range" id="b-maximo" min="5" max="80" step="1" value="35"><output id="o-b-maximo">35</output></div>
     <div class="linha"><button class="rosa" id="b-fim">🏁 Terminar baile agora</button><button id="b-limpar">♻ Esvaziar a roda</button></div>
@@ -183,14 +181,13 @@ function mostrar(e){
   $('estado-t').textContent=t.connected?`AO VIVO · @${t.username}`:t.username?(t.error==='stream ended'?'live encerrada':`esperando a live de @${t.username}`):'sem usuário';
   $('aviso-tiktok').textContent=t.connected?'Conectado: comentários e presentes estão chegando no baile.':(t.error&&t.error!=='stream ended'?'A live ainda não foi encontrada. Ela está no ar? O jogo tenta de novo sozinho.':'');
   const s=e.stats, b=e.baile;
-  $('n-roda').textContent=`${b.naRoda}/${b.maximo}`; $('n-fila').textContent=fmt(b.fila); $('n-resta').textContent=b.intervalo?'casamento':`${Math.floor(b.resta/60)}:${String(b.resta%60).padStart(2,'0')}`;
+  $('n-roda').textContent=`${b.naRoda}/${b.maximo}`; $('n-resta').textContent=b.intervalo?'casamento':`${Math.floor(b.resta/60)}:${String(b.resta%60).padStart(2,'0')}`;
   $('n-esp').textContent=fmt(s.espectadores); $('n-pre').textContent=fmt(s.presentes); $('n-dia').textContent=fmt(s.diamantes); $('n-com').textContent=fmt(s.comentarios);
   $('l-baile').textContent=e.link;
   const tl=e.telas||{}, at=$('aviso-tela'); const musOn=e.config.musica.ligada!==false;
   at.textContent=!tl.abertas?'A tela do baile não está aberta. Adicione o link abaixo no LIVE Studio.':(!musOn?'Tela do baile aberta. A música está desligada (cartão Música).':tl.tocando?'Tela do baile aberta e a música tocando. ✔':'A tela do baile está aberta, mas a música está travada. No LIVE Studio, clique com o botão direito na fonte do baile → Interagir, e clique uma vez na tela.');
   at.className='aviso '+(!tl.abertas||(musOn&&!tl.tocando)?'erro':'ok');
   for(const k of ['noivo','noiva']){ const u=b[k]; $('nm-'+k).textContent=u?`${u.name} · ${fmt(u.moedas)} moedas`:'ninguém ainda'; foto($('ft-'+k),u); }
-  $('aviso-fila').textContent=b.fila?`Na fila do próximo baile: ${b.proximos.join(', ')}${b.fila>b.proximos.length?` e mais ${b.fila-b.proximos.length}`:''}.`:'Ninguém na fila.';
   if(!baileUI){ baileUI=true; $('b-duracao').value=b.duracao; $('o-b-duracao').textContent=b.duracao+' min'; $('b-maximo').value=b.maximo; $('o-b-maximo').textContent=b.maximo; }
   $('registro').innerHTML=e.registro.length?e.registro.map(r=>`<li><span class="ft" style="${r.foto?`background-image:url('${esc(r.foto)}')`:''}"></span><span class="tx"><b>${esc(r.nome)}</b><span>${esc(r.texto)}</span></span><span class="tag ${r.tipo}">${esc(r.tipo)}</span></li>`).join(''):'<li class="vazio">Os presentes, seguidores e comentários aparecem aqui.</li>';
   if(!cfgCarregada){ cfgCarregada=true; preencherConfig(e.config); }
@@ -205,7 +202,7 @@ $('b-duracao').oninput=e=>$('o-b-duracao').textContent=e.target.value+' min';
 $('b-maximo').oninput=e=>$('o-b-maximo').textContent=e.target.value;
 $('b-duracao').onchange=async()=>{ mostrar(await api('baile',{acao:'config',duracao:+$('b-duracao').value})); toast('Salvo. O cronômetro recomeçou.'); };
 $('b-maximo').onchange=async()=>{ mostrar(await api('baile',{acao:'config',maximo:+$('b-maximo').value})); toast('Salvo.'); };
-$('b-limpar').onclick=async()=>{ mostrar(await api('baile',{acao:'limpar'})); toast('Roda e fila vazias.'); };
+$('b-limpar').onclick=async()=>{ mostrar(await api('baile',{acao:'limpar'})); toast('Roda vazia.'); };
 $('b-fim').onclick=async()=>{ mostrar(await api('baile',{acao:'fim'})); toast('Fim do baile! Casamento e já começa outro.'); };
 document.addEventListener('click',async ev=>{ const b=ev.target.closest('button'); if(!b) return;
   if(b.dataset.copiar){ const t=$(b.dataset.copiar).textContent; try{ await navigator.clipboard.writeText(t); toast('Link copiado.'); }catch(e){ const r=document.createRange(); r.selectNodeContents($(b.dataset.copiar)); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Selecionado: copie com Ctrl+C.'); } }

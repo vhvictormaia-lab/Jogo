@@ -1,7 +1,7 @@
 // Motor do Baile do Abismo: quem comenta entra na roda e dança.
 // Roda no servidor (server.js) e também no navegador, no modo demonstração.
 // Regras:
-//  - 35 pessoas na roda (muda no painel). Lotou: quem comenta entra na fila e dança no próximo baile.
+//  - 35 pessoas na roda (muda no painel). Lotou: a tela pede "continue comentando" e quem comentar quando abrir vaga (no próximo baile) entra.
 //  - Cada baile dura 5 minutos (muda no painel). No fim tem o casamento e começa outro.
 //  - Presentes: até 29 moedas troca a roupa · 30 ou mais toca na banda (muda a música e a dança).
 //  - Todo presente soma moedas: quem mais mandou no baile vira o NOIVO (bonecos masculinos) ou a NOIVA (femininos).
@@ -41,7 +41,6 @@
     const agora = opc.agora || (() => Date.now());
     const cfg = Object.assign({ maximo: 35, duracao: 5, ativoMin: 10, intervalo: 12, vipExtra: 10 }, opc.cfg || {});
     const roda = new Map();     // id -> dançarino
-    let espera = [];            // fila para o próximo baile: [{id, name, avatar}]
     const moedas = new Map();   // id -> moedas mandadas neste baile
     const sexo = new Map();     // id -> 'm' | 'f' (vale para os próximos bailes)
     const visto = new Map();    // id -> último sinal de vida (comentou, curtiu, presente...)
@@ -65,24 +64,21 @@
         par: d.id === noivo ? 'noivo' : d.id === noiva ? 'noiva' : null, moedas: moedas.get(d.id) || 0 };
     }
     const lotado = (vip) => roda.size >= cfg.maximo + (vip ? cfg.vipExtra : 0);
-    function irPraFila(u, motivo) {
-      let i = espera.findIndex((x) => x.id === u.id);
-      if (i < 0) { espera.push({ id: u.id, name: u.name, avatar: u.avatar || null }); i = espera.length - 1; }
-      else if (agora() - (espera[i].aviso || 0) < 60000) return null;
-      espera[i].aviso = agora();
-      emitir({ ev: 'fila', user: { id: u.id, name: u.name, avatar: u.avatar || null }, pos: i + 1, total: espera.length, motivo });
+    // roda cheia (ou casamento acontecendo): avisa a tela "continue comentando" — sem fila
+    let ultLotado = 0;
+    function lotou(u, motivo) {
+      if (agora() - ultLotado > 4000) { ultLotado = agora(); emitir({ ev: 'lotado', motivo, user: { id: u.id, name: u.name, avatar: u.avatar || null } }); }
       return null;
     }
     function entrar(u, motivo = 'comentou', vip = false) {
       if (!u || !u.id) return null;
       const ja = roda.get(u.id); if (ja) return ja;
-      if (pausaAte) return irPraFila(u, 'intervalo');
-      if (lotado(vip)) return irPraFila(u, 'lotou');
-      espera = espera.filter((x) => x.id !== u.id);
+      if (pausaAte) return lotou(u, 'intervalo');
+      if (lotado(vip)) return lotou(u, 'lotou');
       sexoDe(u);
       const d = { id: u.id, name: u.name, avatar: u.avatar || null, roupa: semente(), modelo: Math.floor(Math.random() * 1000), entrou: agora(), ultimo: agora() };
       roda.set(u.id, d);
-      emitir({ ev: 'entrou', d: publicoD(d), total: roda.size, fila: espera.length, max: cfg.maximo, motivo });
+      emitir({ ev: 'entrou', d: publicoD(d), total: roda.size, max: cfg.maximo, motivo });
       return d;
     }
 
@@ -102,7 +98,7 @@
       sinal(u);
       const coins = Math.max(1, Number(diamonds) || 1) * Math.max(1, Number(count) || 1);
       moedas.set(u.id, (moedas.get(u.id) || 0) + coins);
-      const d = entrar(u, 'presente', true); // presente fura a fila (até 10 a mais na roda)
+      const d = entrar(u, 'presente', true); // presente entra mesmo com a roda cheia (até 10 a mais)
       const user = { id: u.id, name: u.name, avatar: u.avatar || null };
       if (d) {
         if (coins >= 30) { musica = (musica + 1) % MUSICAS.length; emitir({ ev: 'banda', musica, nomeMusica: MUSICAS[musica], user, coins, d: publicoD(d) }); }
@@ -145,7 +141,7 @@
       if (pausaAte) return;
       const n = noivo && roda.get(noivo), a = noiva && roda.get(noiva);
       casalAnterior = [n, a].filter(Boolean).map((d) => ({ id: d.id, name: d.name, avatar: d.avatar }));
-      emitir({ ev: 'fim', noivo: n ? publicoD(n) : null, noiva: a ? publicoD(a) : null, intervalo: cfg.intervalo, fila: espera.length });
+      emitir({ ev: 'fim', noivo: n ? publicoD(n) : null, noiva: a ? publicoD(a) : null, intervalo: cfg.intervalo });
       pausaAte = agora() + cfg.intervalo * 1000;
     }
     function novoBaile() {
@@ -153,14 +149,11 @@
       roda.clear(); moedas.clear(); noivo = null; noiva = null;
       fimEm = agora() + cfg.duracao * 60000;
       emitir({ ev: 'novo', fim: cfg.duracao * 60 });
-      // primeiro o casal do baile anterior (se ainda estiver na live), depois a fila, na ordem
+      // o casal do baile anterior (se ainda estiver na live) já entra; o resto entra comentando
       const voltaram = [];
       for (const c of casalAnterior) if (ativo(c.id)) { const p = pessoas.get(c.id) || c; if (entrar(p, 'noivos')) voltaram.push({ id: p.id, name: p.name, avatar: p.avatar || null }); }
       if (voltaram.length) emitir({ ev: 'voltaram', quem: voltaram });
       casalAnterior = [];
-      const fila = espera; espera = [];
-      for (const u of fila) { if (lotado(false)) { espera.push(u); continue; } entrar(pessoas.get(u.id) || u, 'fila'); }
-      emitir({ ev: 'filaTotal', total: espera.length });
     }
     function iniciar() { if (timer) return; fimEm = agora() + cfg.duracao * 60000; timer = setInterval(tick, 1000); }
     function parar() { clearInterval(timer); timer = null; }
@@ -169,14 +162,14 @@
       if (c.maximo) cfg.maximo = Math.max(5, Math.min(80, Number(c.maximo) || 35));
       return { ...cfg };
     }
-    function limpar() { roda.clear(); espera = []; moedas.clear(); noivo = null; noiva = null; emitir({ ev: 'limpou' }); }
+    function limpar() { roda.clear(); moedas.clear(); noivo = null; noiva = null; emitir({ ev: 'limpou' }); }
     function estado() {
-      return { roda: [...roda.values()].map(publicoD), fila: espera.length, proximos: espera.slice(0, 5).map((u) => u.name),
+      return { roda: [...roda.values()].map(publicoD),
         resta: pausaAte ? 0 : Math.max(0, Math.round((fimEm - agora()) / 1000)), intervalo: !!pausaAte, musica, nomeMusica: MUSICAS[musica],
         noivo: noivo && roda.get(noivo) ? publicoD(roda.get(noivo)) : null, noiva: noiva && roda.get(noiva) ? publicoD(roda.get(noiva)) : null, cfg: { ...cfg } };
     }
     return { iniciar, parar, config, limpar, estado, chat, presente, seguiu, compartilhou, entrou: entrouLive, curtidas: curtir, fimDoBaile,
-      get rodando() { return !!timer; }, get tamanho() { return roda.size; }, get fila() { return espera.length; } };
+      get rodando() { return !!timer; }, get tamanho() { return roda.size; } };
   }
   return { criar, MUSICAS, palpiteSexo, comandoSexo };
 });

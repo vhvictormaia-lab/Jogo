@@ -8,7 +8,8 @@ Quem comenta vira um boneco 3D dançando na roda, com a FOTO e o NOME em cima da
 
 COMO FUNCIONA
 - Comentou, entrou: o boneco chega pelo tapete vermelho e vai dançar na roda.
-- A roda tem 35 lugares. LOTOU? Quem comenta entra na FILA e dança no próximo baile (aparece "tá na fila (3º)").
+- Tela limpa: só os presentes, as fotos e os nomes (e o tempo que falta pro fim do baile).
+- A roda tem 35 lugares. LOTOU? Aparece "CONTINUE COMENTANDO PARA ENTRAR NO BAILE": quem comentar quando o próximo baile começar entra.
 - Cada baile dura 5 minutos. No fim tem o CASAMENTO no altar e já começa outro baile.
 - Comentar MENINA ou MENINO escolhe o tipo de boneco (o jogo tenta adivinhar pelo nome, mas a pessoa pode trocar).
 - Quem já está na roda e comenta: aparece um balãozinho com o comentário em cima da cabeça.
@@ -21,7 +22,7 @@ PRESENTES
   🍩 30 moedas ou mais (Rosquinha...) = TOQUE NA BANDA: troca a música e todo mundo muda a dança
   💍 Todo presente soma moedas. Quem mais mandou no baile vira o NOIVO (bonecos de menino) ou a NOIVA (bonecas de menina):
      ganha cartola ou véu, vai pro altar e aparece no canto da tela com a foto. Se alguém mandar mais, toma o lugar.
-  🎟️ Quem está na fila e manda presente fura a fila e entra na hora (até 10 a mais que o limite).
+  🎟️ Quem manda presente entra na hora, mesmo com a roda cheia (até 10 a mais que o limite).
   Noivo e noiva que ainda estiverem na live (comentaram, curtiram ou mandaram presente nos últimos 10 minutos)
   entram direto no próximo baile. O TikTok não avisa quando alguém sai da live, por isso o jogo usa esse tempo.
   Seguir e compartilhar também colocam a pessoa na roda. A cada 500 curtidas tem festa com confete.
@@ -33,7 +34,7 @@ COMO USAR
 Testar sem live: no painel, cartão "Testar sem estar ao vivo", ou abra http://localhost:3000/baile.html?demo=1
 
 PAINEL (http://localhost:3000/painel.html, só funciona no computador da live)
-- Quantos estão na roda e na fila, quanto falta pro fim do baile, quem é o noivo e a noiva.
+- Quantos estão na roda, quanto falta pro fim do baile, quem é o noivo e a noiva.
 - Duração do baile e quantas pessoas cabem na roda. Botões: terminar o baile agora e esvaziar a roda.
 - Botões de teste: comentário, "menina", "menino", rosa, rosquinha, presentão, seguir, compartilhar, curtidas, encher a roda.
 - Música (ligada e volume), palavras proibidas, lista do que está acontecendo e Atualizar sistema.

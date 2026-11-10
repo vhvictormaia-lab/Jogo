@@ -120,7 +120,7 @@ app.post('/api/sim', (req, res) => {
   if (!simular(req.body || {})) return res.status(400).json({ ok: false, error: 'tipo desconhecido' });
   res.json({ ok: true });
 });
-app.get('/api/status', (_req, res) => res.json({ tiktok: tiktokStatus, naRoda: baile.tamanho, fila: baile.fila }));
+app.get('/api/status', (_req, res) => res.json({ tiktok: tiktokStatus, naRoda: baile.tamanho }));
 
 // ---------- conexão com o TikTok (liga e desliga pelo painel) ----------
 let tk = null; // { conn, watchdog, timer, parado }
