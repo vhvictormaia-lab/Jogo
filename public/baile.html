@@ -32,7 +32,7 @@
   .tag img,.tag .av{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none}
   .tag .av{display:grid;place-items:center;font:900 18px Nunito,sans-serif;background:linear-gradient(135deg,var(--rosa),var(--roxo))}
   .tag.rei{border-color:var(--ouro);box-shadow:0 0 16px rgba(255,204,51,.8)} .tag.rei::before{content:"👑";position:absolute;left:50%;top:-30px;transform:translateX(-50%);font-size:28px}
-  .tag.noivo{border-color:#fff;background:rgba(255,61,139,.85)}
+  .tag.noivo{border-color:#fff;background:rgba(255,61,139,.9)} .tag.noivo::before{content:attr(data-par);position:absolute;left:50%;top:-34px;transform:translateX(-50%);font-size:30px}
   .bal{position:absolute;left:0;top:0;max-width:300px;padding:8px 14px;border-radius:18px;background:#fff;color:#2a0b2f;font:800 22px/1.15 Nunito,sans-serif;transform-origin:50% 100%;white-space:normal;box-shadow:0 6px 18px rgba(0,0,0,.35)}
   .bal::after{content:"";position:absolute;left:50%;bottom:-10px;margin-left:-10px;border:10px solid transparent;border-top-color:#fff;border-bottom:0}
   #destaque{position:absolute;left:0;right:0;top:470px;z-index:4;text-align:center;pointer-events:none;opacity:0;transition:opacity .4s}
@@ -46,8 +46,24 @@
   .fp .av{display:grid;place-items:center;font:900 22px Nunito,sans-serif;background:rgba(255,255,255,.2)}
   .fp b{color:var(--ouro);margin-right:6px}
   @keyframes entraF{from{transform:translateX(-60px);opacity:0}}
-  #naroda{position:absolute;right:24px;bottom:140px;z-index:5;padding:8px 22px;border-radius:30px;background:rgba(30,10,45,.8);font-size:34px}
-  #naroda b{color:var(--verde)}
+  #naroda{position:absolute;right:24px;bottom:140px;z-index:5;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+  #naroda>div{padding:8px 22px;border-radius:30px;background:rgba(30,10,45,.8);font-size:34px}
+  #naroda b{color:var(--verde)} #naroda .cheia b{color:var(--rosa)} #naroda .fila{font-size:28px;color:#ffe0f0}
+  #naroda .fila[hidden]{display:none}
+  /* casal da rodada (noivo e noiva = quem mais mandou presente) */
+  #casal{position:absolute;right:24px;top:560px;z-index:5;width:300px;display:flex;flex-direction:column;gap:10px}
+  .par{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:22px;background:rgba(30,10,45,.82);border:3px solid rgba(255,255,255,.16);transition:transform .3s}
+  .par .f{position:relative;flex:none} .par .f img,.par .f .av{width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #fff;display:grid;place-items:center;font:900 28px Nunito,sans-serif;background:linear-gradient(135deg,var(--rosa),var(--roxo))}
+  .par .f i{position:absolute;right:-8px;bottom:-6px;font-style:normal;font-size:30px}
+  .par .x{min-width:0} .par small{display:block;font:900 18px Nunito,sans-serif;color:#ffd9ec;letter-spacing:1px}
+  .par b{display:block;font:900 26px Nunito,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px} .par em{font:800 19px Nunito,sans-serif;font-style:normal;color:var(--ouro)}
+  .par.vazio b{color:rgba(255,255,255,.55);font-size:21px;white-space:normal}
+  .par.pisca{animation:piscaP 1.2s ease-out}
+  #fim .casal{display:flex;gap:40px;align-items:flex-start;justify-content:center}
+  #fim .casal>div{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:420px}
+  #fim .casal img,#fim .casal .av{width:250px;height:250px}
+  #fim .casal .n{font-size:54px;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #fim .anel{font-size:110px;align-self:center}
   #chamada{position:absolute;left:0;right:0;bottom:40px;z-index:5;text-align:center;font-size:60px;white-space:nowrap;color:#fff;-webkit-text-stroke:3px #3b0a4a;paint-order:stroke fill;text-shadow:0 6px 0 rgba(0,0,0,.35);animation:chama 1.6s ease-in-out infinite}
   @keyframes chama{50%{transform:scale(1.04)}}
   #credito{position:absolute;right:16px;bottom:10px;z-index:5;font:700 14px Nunito,sans-serif;color:rgba(255,255,255,.45)}
@@ -65,7 +81,7 @@
   #fim.on{display:grid}
   #fim .c{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center}
   #fim .t{font-size:110px;color:var(--ouro);-webkit-text-stroke:4px #3a1a00;paint-order:stroke fill}
-  #fim .s{font:900 46px Nunito,sans-serif}
+  #fim .s{font:900 46px Nunito,sans-serif;max-width:960px}
   #fim img,#fim .av{width:300px;height:300px;border-radius:50%;object-fit:cover;border:10px solid var(--ouro);box-shadow:0 0 80px rgba(255,204,51,.8);font-size:120px;display:grid;place-items:center;background:linear-gradient(135deg,var(--rosa),var(--roxo))}
   #fim .n{font:900 70px Nunito,sans-serif}
   #toque{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(11,6,20,.7);backdrop-filter:blur(3px);cursor:pointer}
@@ -92,11 +108,15 @@
     <div id="tempo" class="lil">30:00</div>
     <div class="pp" id="ppRoupa"><div class="i">🌹<b>1</b></div><span>Troque de<br>Roupa</span></div>
     <div class="pp" id="ppBanda"><div class="i">🍩<b>30</b></div><span>Toque na<br>banda</span></div>
-    <div class="pp" id="ppNoivos"><div class="i">🦁<b>100</b></div><span>Vire<br>Noivos</span></div>
+    <div class="pp" id="ppNoivos"><div class="i">💍</div><span>Maior presente<br>vira noivo(a)</span></div>
+  </div>
+  <div id="casal">
+    <div class="par vazio" id="pNoivo"></div>
+    <div class="par vazio" id="pNoiva"></div>
   </div>
   <div id="destaque"><div class="n lil"></div></div>
   <div id="feed"></div>
-  <div id="naroda" class="lil"><b>0</b> na roda</div>
+  <div id="naroda" class="lil"><div id="nRoda"><b>0</b>/35 na roda</div><div class="fila" id="nFila" hidden></div></div>
   <div id="chamada" class="lil">COMENTE PRA ENTRAR NA RODA</div>
   <div id="credito"></div>
   <div id="fim"></div>
@@ -104,11 +124,11 @@
 </div>
 <div id="toque" role="button" tabindex="0" hidden>
   <div class="caixa"><div class="t1">BAILE DO ABISMO</div>
-    <div class="t2">Quem comenta entra na roda e dança! Aqui tem espectadores e presentes de mentira, como numa live.</div>
+    <div class="t2">Quem comenta entra na roda e dança! Quem manda o maior presente vira noivo ou noiva. Aqui tem espectadores e presentes de mentira, como numa live.</div>
     <div class="bt">🔊 Toque para entrar no baile</div></div>
 </div>
 <div id="demo-tag" hidden>MODO DEMONSTRAÇÃO</div>
-<script src="falas.js" charset="utf-8"></script>
+<script src="texto.js" charset="utf-8"></script>
 <script src="baile-motor.js" charset="utf-8"></script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
@@ -191,7 +211,6 @@ const dj=criarPalhaco(THREE,{terror:true}); dj.posicionar(PALCO.x,PALCO.z-.6,0.5
       const a=new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,.27,18),m(0x00e5ff)); a.rotation.z=Math.PI/2; a.position.x=1.12*l; g.add(a); }
     cab.add(g); } }
 const serpente=criarSerpente(THREE); serpente.posicionar(4.2,ARCO_Z-.6,-0.9); serpente.raiz.scale.setScalar(.8); cena.add(serpente.raiz);
-const PERS={palhaco:dj,serpente};
 // holofotes coloridos do palco
 const feixes=[]; for(const [cor,dx] of [[0xff3d8b,-2],[0x7a3cff,0],[0x5cff8a,2]]){ const f=new THREE.Mesh(new THREE.ConeGeometry(2.2,12,20,1,true),new THREE.MeshBasicMaterial({color:cor,transparent:true,opacity:.13,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
   f.position.set(PALCO.x+dx,6.5,PALCO.z); cena.add(f); feixes.push(f); }
@@ -223,7 +242,9 @@ async function carregarPersonagens(){
   if(lista&&lista.musicas) musica.playlist(lista.musicas);
   const modelos=lista&&lista.modelos&&lista.modelos.length?lista.modelos:['baile-teste/RobotExpressive.glb'];
   const teste=!(lista&&lista.modelos&&lista.modelos.length);
-  for(const u of modelos){ try{ MOD.push(prepararModelo(await carregar(u))); }catch(e){ console.warn('modelo não carregou',u,e); } }
+  // o nome do arquivo diz se o boneco é de menina ou de menino (ex.: palhacinha-menina.glb, cobrinha-menino.glb); sem isso serve para os dois
+  const sexoArq=u=>{ const n=decodeURIComponent(u.split('/').pop()).toLowerCase(); return /menina|femin|mulher|garota|noiva|girl|female|woman/.test(n)?'f':/menino|mascul|homem|garoto|noivo|boy|male|\bman\b/.test(n)?'m':null; };
+  for(const u of modelos){ try{ const m=prepararModelo(await carregar(u)); m.sexo=sexoArq(u); MOD.push(m); }catch(e){ console.warn('modelo não carregou',u,e); } }
   if(!MOD.length){ MOD.push(prepararModelo(await carregar('baile-teste/RobotExpressive.glb'))); }
   const todos=[]; for(const m of MOD) todos.push(...m.clips);
   for(const u of (lista&&lista.dancas)||[]){ try{ const r=await carregar(u); for(const c of r.animations||[]){ c.name=c.name&&c.name!=='mixamo.com'&&c.name!=='Take 001'?c.name:u.split('/').pop().replace(/\.\w+$/,''); todos.push(c); } }catch(e){ console.warn('dança não carregou',u,e); } }
@@ -272,7 +293,7 @@ function aplicarRoupa(d){
       if(n.map) n.color.copy(new THREE.Color(0xffffff).lerp(cor,.35+R.forte*.25)); else if(/grey|gray|cinza|skin|pele|face/.test(nome)) n.color.copy(base.color); else n.color.copy(cor);
       return n; });
     o.material=Array.isArray(o.material)?novos:novos[0]; });
-  colocarAcessorio(d, d.noivo?d.noivo:(d.info.rei?'rei':R.acess), R.c2);
+  colocarAcessorio(d, d.noivo?d.noivo:R.acess, R.c2);
 }
 function colocarAcessorio(d,tipo,c2){
   if(d.acess){ d.acess.parent&&d.acess.parent.remove(d.acess); d.acess=null; }
@@ -291,7 +312,8 @@ function colocarAcessorio(d,tipo,c2){
 }
 function criarD(info,{chegando=true}={}){
   if(DS.has(info.id)) return DS.get(info.id);
-  const M=MOD[(info.modelo||0)%MOD.length];
+  const pool=MOD.filter(m=>!m.sexo||m.sexo===info.sexo); const lista=pool.length?pool:MOD;
+  const M=lista[(info.modelo||0)%lista.length];
   const obj=SkeletonUtils.clone(M.cena); obj.scale.setScalar(M.escala); obj.position.y=M.baseY;
   const grupo=new THREE.Group(); grupo.add(obj); cena.add(grupo);
   const sombra=new THREE.Mesh(new THREE.CircleGeometry(.55,16),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.28,depthWrite:false})); sombra.rotation.x=-Math.PI/2; sombra.position.y=.04; grupo.add(sombra);
@@ -304,9 +326,10 @@ function criarD(info,{chegando=true}={}){
   const L=lugar(ordem.length-1); d.alvo.set(L.x,0,L.z); d.rumo=Math.atan2(-L.x,-L.z);
   if(chegando){ grupo.position.copy(ENTRADA); grupo.position.x+=(Math.random()-.5)*1.2; } else { grupo.position.copy(d.alvo); grupo.rotation.y=d.rumo; }
   tocarDanca(d,true);
+  if(casal.noivo===info.id) virarPar(d,'noivo',false); else if(casal.noiva===info.id) virarPar(d,'noiva',false);
   return d;
 }
-function atualizarTag(d){ d.tag.className='tag'+(d.info.rei?' rei':'')+(d.noivo?' noivo':''); d.tag.innerHTML=`${avatar(d.info)}<span>${esc(d.info.name)}</span>`; }
+function atualizarTag(d){ d.tag.className='tag'+(d.noivo?' noivo':''); d.tag.dataset.par=d.noivo==='noivo'?'🤵':d.noivo==='veu'?'👰':''; d.tag.innerHTML=`${avatar(d.info)}<span>${esc(d.info.name)}</span>`; }
 function removerD(id,poof=true){ const d=DS.get(id); if(!d) return; if(poof) estouro(d.grupo.position,0xffffff); cena.remove(d.grupo); d.tag.remove(); d.bal&&d.bal.remove(); d.mixer.stopAllAction(); DS.delete(id); ordem=ordem.filter(x=>x!==id); reposicionar(); }
 function reposicionar(){ ordem.forEach((id,i)=>{ const d=DS.get(id); if(!d||d.noivo) return; const L=lugar(i); d.alvo.set(L.x,0,L.z); d.rumo=Math.atan2(-L.x,-L.z); }); }
 let musicaIdx=0;
@@ -340,11 +363,15 @@ function focar(d,seg=6,prio=1){ if(!d||performance.now()<cam.ate&&prio<cam.prior
 function plano(nome,seg=7,prio=0){ if(performance.now()<cam.ate&&prio<cam.prioridade) return; cam.plano=nome; cam.foco=null; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; esconderDestaque(); }
 function mostrarDestaque(d){ $('destaque').firstElementChild.innerHTML=`${avatar(d.info)}${esc(d.info.name)}`; $('destaque').classList.add('on'); }
 function esconderDestaque(){ $('destaque').classList.remove('on'); }
-function diretor(){ // escolhe o próximo plano sozinho
+function diretor(){ // escolhe o próximo ângulo sozinho, como um drone filmando o baile
   if(performance.now()<cam.ate) return;
-  const ids=[...DS.keys()]; const r=Math.random();
-  if(ids.length&&r<.5){ const recentes=[...DS.values()].sort((a,b)=>(b.info.ultimo||0)-(a.info.ultimo||0)).slice(0,8); focar(rndA(recentes.length?recentes:[...DS.values()]),6,0); }
-  else if(r<.72) plano('roda',8); else if(r<.86) plano('cima',6); else plano('palco',5);
+  if(intervalo){ plano(casal.noivo||casal.noiva?'altar':'drone',6); return; }
+  const ds=[...DS.values()]; const r=Math.random();
+  if(chegadaQ.length>3&&r<.5) return plano('tapete',6);
+  if(ds.length&&r<.38){ const recentes=ds.sort((a,b)=>(b.info.ultimo||0)-(a.info.ultimo||0)).slice(0,8); return focar(rndA(recentes),6,0); }
+  if((casal.noivo||casal.noiva)&&r<.46) return plano('altar',6);
+  const planos=[['roda',8,14],['drone',9,12],['baixo',7,10],['giro',7,8],['cima',6,7],['palco',5,7],['tapete',5,4]];
+  let x=Math.random()*planos.reduce((s,p)=>s+p[2],0); for(const [n,seg,peso] of planos){ x-=peso; if(x<=0) return plano(n,seg); }
 }
 const tmpV=new THREE.Vector3();
 function moverCamera(dt,t){
@@ -355,37 +382,21 @@ function moverCamera(dt,t){
     const dist=cam.foco.noivo?5:4.6; p.set(g.position.x+Math.sin(a)*dist,2.9,g.position.z+Math.cos(a)*dist); o.set(g.position.x,1.3,g.position.z); }
   else if(cam.plano==='cima'){ p.set(Math.sin(t*.05)*2,30,6+Math.cos(t*.05)*2); o.set(0,0,-.5); }
   else if(cam.plano==='palco'){ p.set(PALCO.x+5.5,5.2,PALCO.z+12); o.set(PALCO.x,3.6,PALCO.z); }
-  else if(cam.plano==='altar'){ p.set(Math.sin(t*.2)*2,3.4,ARCO_Z+8.5); o.set(0,1.7,ARCO_Z+.8); }
+  else if(cam.plano==='altar'){ p.set(Math.sin(t*.2)*1.6,3,ARCO_Z+7); o.set(0,1.6,ARCO_Z+.8); }
   else if(cam.plano==='entrada'&&cam.foco&&DS.has(cam.foco.id)){ const g=cam.foco.grupo; const a=g.rotation.y+.5; p.set(g.position.x+Math.sin(a)*4.2,2.6,g.position.z+Math.cos(a)*4.2); o.set(g.position.x,1.3,g.position.z); }
+  else if(cam.plano==='baixo'){ const a=k*.16+cam.t0*.001; p.set(Math.sin(a)*7.6,.7,Math.cos(a)*7.6); o.set(0,2.4,0); }
+  else if(cam.plano==='drone'){ const a=k*.13+cam.t0*.0007; p.set(Math.sin(a)*19,13+Math.sin(k*.4)*3,Math.cos(a)*19); o.set(0,0,0); }
+  else if(cam.plano==='giro'){ const a=k*.32+cam.t0*.0003; p.set(Math.sin(a)*1.1,1.8,Math.cos(a)*1.1); o.set(Math.sin(a)*7,1.4,Math.cos(a)*7); }
+  else if(cam.plano==='tapete'){ p.set(Math.sin(k*.2)*1.5,5.6,ENTRADA.z+4.5-Math.min(k,8)*.3); o.set(0,.8,ENTRADA.z-10); }
   else { const a=Math.PI*.25+Math.sin(t*.05)*1.1; const R=Math.max(15,9+ordem.length*.08); p.set(Math.sin(a)*R,8.5,Math.cos(a)*R*.8); o.set(0,1,-1.5); }
-  const s=1-Math.exp(-dt*(cam.plano==='cima'?1.4:2.2)); cam.pos.lerp(p,s); cam.olha.lerp(o,s);
+  const s=1-Math.exp(-dt*(cam.plano==='cima'||cam.plano==='drone'?1.4:2.2)); cam.pos.lerp(p,s); cam.olha.lerp(o,s);
   camera.position.copy(cam.pos); camera.lookAt(cam.olha);
 }
 const vt=new THREE.Vector3();
 function telaDe(d,altura=2.5){ vt.set(d.grupo.position.x,altura,d.grupo.position.z).project(camera); if(vt.z>1) return null; return { x:(vt.x*.5+.5)*1080, y:(-vt.y*.5+.5)*1920, z:vt.z }; }
 
-// ================= voz (vem do servidor; no modo demonstração usa a voz do aparelho) =================
-let acFala=null, analisador=null; const buf=new Uint8Array(256); let falaAtual=null; const falaQ=[];
-function ligarAnalisador(a){ try{ if(!acFala){ acFala=new (window.AudioContext||window.webkitAudioContext)(); analisador=acFala.createAnalyser(); analisador.fftSize=512; analisador.connect(acFala.destination); } if(acFala.state==='suspended') acFala.resume().catch(()=>{}); acFala.createMediaElementSource(a).connect(analisador); return true; }catch(e){ return false; } }
-function nivelVoz(){ if(!analisador) return 0; analisador.getByteTimeDomainData(buf); let s=0; for(let i=0;i<buf.length;i++){ const v=(buf[i]-128)/128; s+=v*v; } return Math.min(1,Math.sqrt(s/buf.length)*5); }
-function falar(m){ falaQ.push(m); if(falaQ.length>5) falaQ.shift(); if(!falaAtual) proximaFala(); }
-function fimFala(){ const m=falaAtual; if(!m) return; falaAtual=null; clearTimeout(m._t); for(const p of Object.values(PERS)) p.falar(0);
-  try{ if(window.__ws&&window.__ws.readyState===1) window.__ws.send(JSON.stringify({type:'falou',id:m.id})); }catch(e){} setTimeout(()=>{ if(!falaAtual) proximaFala(); },200); }
-function proximaFala(){ const m=falaQ.shift(); if(!m) return; falaAtual=m; m._t=setTimeout(fimFala,(m.ms||5000)+8000);
-  const partes=m.partes&&m.partes.length?m.partes:[{quem:'palhaco',texto:m.text,url:m.url||null}]; let k=0;
-  const parte=()=>{ if(falaAtual!==m) return; if(k>=partes.length) return fimFala(); const pa=partes[k++]; const P=PERS[pa.quem]||dj; m.quem=P;
-    if(pa.acao) try{ P.acao(pa.acao==='voar'?'comemorar':pa.acao,1.6); }catch(e){}
-    const fim=()=>{ P.falar(0); parte(); };
-    if(pa.url){ const a=new Audio(pa.url); a.crossOrigin='anonymous'; m.analisa=ligarAnalisador(a); a.onended=fim; a.onerror=fim; a.play().catch(()=>setTimeout(fim,1500)); }
-    else falarNavegador(pa.texto,pa.quem,fim,m); };
-  parte(); }
-function falarNavegador(texto,quem,fim,m){ m.analisa=false; m.simula=true;
-  try{ const ss=window.speechSynthesis; const vs=ss?ss.getVoices().filter(v=>/^pt/i.test(v.lang)):[]; if(!ss||!vs.length) return setTimeout(fim,900+texto.length*55);
-    const u=new SpeechSynthesisUtterance(texto.replace(/(^|\s)s{3,}[.…!]*/gi,'$1').replace(/s{3,}/gi,'s')); u.lang='pt-BR'; u.voice=vs.find(v=>/BR/i.test(v.lang))||vs[0]; u.pitch=quem==='serpente'?1.1:.9; u.rate=1.05;
-    let ok=false; u.onend=()=>{ ok=true; fim(); }; u.onerror=()=>{ if(!ok) setTimeout(fim,600); }; ss.speak(u); setTimeout(()=>{ if(!ok&&!ss.speaking) fim(); },900+texto.length*90); }catch(e){ setTimeout(fim,1500); } }
-
 // ================= música =================
-const musica=criarMusicaBaile({falando:()=>!!falaAtual});
+const musica=criarMusicaBaile();
 ['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>musica.ligar()));
 const NOMES_M=(window.BaileMotor&&window.BaileMotor.MUSICAS)||['Funk do Abismo','Forró da Roda','Disco Assombrado','Pagodinho do Palhaço'];
 function mostrarMusica(i,nome){ $('musica').textContent='🎵 '+(musica.estilo==='mp3'?'Música '+(i+1):(nome||NOMES_M[i%NOMES_M.length])); }
@@ -393,55 +404,103 @@ function mostrarMusica(i,nome){ $('musica').textContent='🎵 '+(musica.estilo==
 // ================= eventos do baile =================
 let restaSeg=1800, restaBase=performance.now();
 function setResta(s){ restaSeg=s; restaBase=performance.now(); }
-function contar(){ $('naroda').innerHTML=`<b>${DS.size}</b> na roda`; }
+function contar(){ const max=maxRoda; const cheia=DS.size+chegadaQ.length>=max;
+  const n=DS.size+chegadaQ.length; $('nRoda').className=cheia?'cheia':''; $('nRoda').innerHTML=n>max?`<b>${n}</b> na roda`:`<b>${n}</b>/${max} na roda`;
+  $('nFila').hidden=!filaN; $('nFila').textContent=`⏳ ${filaN} na fila do próximo baile`; lotou=cheia; }
+let maxRoda=35, filaN=0, lotou=false, intervalo=false;
+const casal={noivo:null,noiva:null};
+// quem comenta entra pelo tapete vermelho, um de cada vez
+const chegadaQ=[]; let proxChegada=0;
+function chegar(){ const info=chegadaQ.shift(); if(!info||DS.has(info.id)) return; const d=criarD(info); d.info.ultimo=Date.now(); contar();
+  if(cam.prioridade<2&&(Math.random()<.45||DS.size<6)){ cam.plano='entrada'; cam.foco=d; cam.ate=performance.now()+4200; cam.t0=performance.now(); cam.prioridade=1; mostrarDestaque(d); } }
+function tirarDaFila(id){ const i=chegadaQ.findIndex(x=>x.id===id); if(i>=0) chegadaQ.splice(i,1); }
+// placa do noivo e da noiva no canto da tela
+function placa(tipo,u){ const el=$(tipo==='noivo'?'pNoivo':'pNoiva'); const ic=tipo==='noivo'?'🤵':'👰';
+  if(!u){ el.className='par vazio'; el.innerHTML=`<div class="f"><span class="av">${ic}</span></div><div class="x"><small>${tipo.toUpperCase()}</small><b>Mande o maior presente!</b></div>`; return; }
+  el.className='par'; el.innerHTML=`<div class="f">${avatar(u)}<i>${ic}</i></div><div class="x"><small>${tipo.toUpperCase()}</small><b>${esc(u.name)}</b><em>${Number(u.moedas||0).toLocaleString('pt-BR')} moedas</em></div>`; }
+placa('noivo',null); placa('noiva',null);
+function virarPar(d,tipo,anunciar=true){
+  d.noivo=tipo==='noivo'?'noivo':'veu'; atualizarTag(d); colocarAcessorio(d,d.noivo,0xffffff);
+  d.alvo.set(tipo==='noivo'?-.8:.8,0,ARCO_Z+1.7); d.rumo=0; d.vel=7; // corre pro altar
+  if(anunciar){ banner(`${tipo==='noivo'?'🤵 NOVO NOIVO!':'👰 NOVA NOIVA!'}<small>${esc(d.info.name)}</small>`); plano('altar',6,3); confete(90); serpente.acao('comemorar',2.4);
+    setTimeout(()=>{ if(DS.has(d.id)){ coracoesEm(d,12); acao(d,'sim',2); } },2600); }
+}
+function largarPar(id){ const d=DS.get(id); if(!d||!d.noivo) return; d.noivo=null; atualizarTag(d); aplicarRoupa(d); reposicionar(); }
+function definirCasal(noivo,noiva,anunciar){
+  for(const [tipo,u] of [['noivo',noivo],['noiva',noiva]]){
+    const antes=casal[tipo], agora=u?u.id:null; placa(tipo,u);
+    if(antes===agora) continue;
+    if(antes) largarPar(antes);
+    casal[tipo]=agora; piscar(tipo==='noivo'?'pNoivo':'pNoiva');
+    if(agora){ const d=DS.get(agora); if(d) virarPar(d,tipo,anunciar); if(anunciar) feed(u,`<b>${esc(u.name)}</b> virou ${tipo==='noivo'?'o NOIVO 🤵':'a NOIVA 👰'}`); }
+  }
+  piscar('ppNoivos');
+}
 function onBaile(m){
   switch(m.ev){
-    case 'entrou': { const d=criarD(m.d); d.info.ultimo=Date.now(); feed(m.d,`<b>${esc(m.d.name)}</b> entrou no baile`); contar(); if(Math.random()<.5||DS.size<6) setTimeout(()=>{ cam.plano='entrada'; cam.foco=d; cam.ate=performance.now()+4500; cam.t0=performance.now(); cam.prioridade=1; mostrarDestaque(d); },300); break; }
-    case 'saiu': removerD(m.id); contar(); break;
+    case 'entrou': { if(typeof m.fila==='number') filaN=m.fila; if(m.max) maxRoda=m.max; if(!DS.has(m.d.id)&&!chegadaQ.some(x=>x.id===m.d.id)) chegadaQ.push(m.d); feed(m.d,`<b>${esc(m.d.name)}</b> ${m.motivo==='fila'?'saiu da fila e':m.motivo==='noivos'?'voltou e':''} entrou no baile`); contar(); break; }
+    case 'saiu': tirarDaFila(m.id); removerD(m.id); contar(); break;
+    case 'fila': filaN=m.total; contar(); feed(m.user,`<b>${esc(m.user.name)}</b> ${m.motivo==='intervalo'?'já garantiu lugar no próximo baile':`tá na fila (${m.pos}º)`}`);
+      if(m.motivo==='lotou'&&performance.now()-(onBaile.ultLotou||0)>20000){ onBaile.ultLotou=performance.now(); banner('RODA LOTADA!<small>comenta que você entra no próximo baile</small>'); } break;
+    case 'filaTotal': filaN=m.total; contar(); break;
     case 'fala': { const d=DS.get(m.id); if(d){ d.info.ultimo=Date.now(); balao2(d,m.texto); if(Math.random()<.5) acao(d,rndA(['acenar','sim','pular'])); } break; }
-    case 'roupa': { const d=DS.get(m.d.id); if(d){ d.info=Object.assign(d.info,m.d); d.info.ultimo=Date.now(); aplicarRoupa(d); estouro(d.grupo.position,0xff3d8b,34); acao(d,'sim'); focar(d,5,2); } piscar('ppRoupa'); break; }
-    case 'presente': feed(m.user,`<b>${esc(m.user.name)}</b> mandou ${esc(window.Falas?window.Falas.presente(m.giftName).nome.toUpperCase():m.giftName)} e ganhou roupa nova!`); musica.vinheta([72,76,79,84]); break;
+    case 'sexo': { tirarDaFila(m.d.id); const velho=DS.get(m.d.id); const pos=velho?velho.grupo.position.clone():null; if(velho) removerD(m.d.id,false);
+      const d=criarD(m.d,{chegando:false}); if(pos){ d.grupo.position.copy(pos); } estouro(d.grupo.position,m.d.sexo==='f'?0xff9ec7:0x2fd5ff,34); focar(d,4,2);
+      feed(m.d,`<b>${esc(m.d.name)}</b> agora é ${m.d.sexo==='f'?'menina 👧':'menino 👦'}`); contar(); break; }
+    case 'roupa': { const q=chegadaQ.find(x=>x.id===m.d.id); if(q) Object.assign(q,m.d); const d=DS.get(m.d.id);
+      if(d){ const trocaModelo=d.info.modelo!==m.d.modelo&&MOD.length>1; d.info=Object.assign(d.info,m.d); d.info.ultimo=Date.now();
+        if(trocaModelo&&!d.noivo){ const pos=d.grupo.position.clone(), ali=d.alvo.clone(); removerD(d.id,false); const n=criarD(d.info,{chegando:false}); n.grupo.position.copy(pos); n.alvo.copy(ali); estouro(pos,0xff3d8b,34); acao(n,'sim'); focar(n,5,2); }
+        else { aplicarRoupa(d); estouro(d.grupo.position,0xff3d8b,34); acao(d,'sim'); focar(d,5,2); } }
+      piscar('ppRoupa'); break; }
+    case 'presente': if(m.coins<30||!m.naRoda) feed(m.user,`<b>${esc(m.user.name)}</b> mandou ${esc(window.Texto?window.Texto.presente(m.giftName).nome.toUpperCase():m.giftName)}${m.naRoda?' e trocou de roupa!':' e já entra no próximo baile!'}`);
+      if(m.naRoda) musica.vinheta([72,76,79,84]); break;
     case 'banda': musicaIdx=m.musica; musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎸 TOQUE NA BANDA!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> tocou na banda!`);
       for(const d of DS.values()) if(!d.andando&&!d.noivo) { d.atual=null; tocarDanca(d); } dj.acao('comemorar',2); plano('palco',4,2); confete(60); break;
-    case 'noivos': virarNoivos(m.a,m.b,m.seg); break;
-    case 'fimNoivos': acabarNoivos(m.a,m.b); break;
-    case 'rei': { for(const d of DS.values()) if(d.info.rei){ d.info.rei=false; atualizarTag(d); aplicarRoupa(d); } const d=DS.get(m.d.id); if(d){ d.info.rei=true; atualizarTag(d); aplicarRoupa(d); estouro(d.grupo.position,0xffcc33,40); focar(d,5,2); }
-      banner(`👑 REI DO BAILE<small>${esc(m.d.name)}</small>`); break; }
+    case 'noivos': definirCasal(m.noivo,m.noiva,true); break;
+    case 'placar': placa('noivo',m.noivo); placa('noiva',m.noiva); break;
     case 'seguiu': { const d=DS.get(m.id); if(d){ coracoesEm(d,10); acao(d,'pular'); } feed(m.user,`<b>${esc(m.user.name)}</b> seguiu!`); break; }
     case 'compartilhou': { const d=DS.get(m.id); if(d){ estouro(d.grupo.position,0x2fd5ff,20); acao(d,'acenar'); } feed(m.user,`<b>${esc(m.user.name)}</b> compartilhou a LIVE!`); break; }
     case 'curtiu': { const d=DS.get(m.id); if(d&&Math.random()<.4) coracoesEm(d,2); break; }
     case 'chegou': if(Math.random()<.35) feed(m.user,`<b>${esc(m.user.name)}</b> chegou na live`); break;
     case 'festa': confete(200); banner(`🎉 ${m.curtidas} CURTIDAS!<small>festa no baile!</small>`); for(const d of DS.values()) acao(d,'pular'); plano('cima',5,2); break;
-    case 'fim': fimBaile(m.rei); for(const id of [...DS.keys()]) removerD(id,false); contar(); break; /* a roda esvazia por trás da tela de fim */
-    case 'novo': setResta(m.fim); break;
+    case 'fim': fimBaile(m); break;
+    case 'novo': novoBaile(m.fim); break;
+    case 'voltaram': banner(`💍 OS NOIVOS VOLTARAM!<small>${m.quem.map(u=>esc(u.name)).join(' & ')}</small>`); break;
     case 'tempo': setResta(m.resta); break;
-    case 'limpou': for(const id of [...DS.keys()]) removerD(id,true); contar(); break;
+    case 'limpou': chegadaQ.length=0; filaN=0; for(const id of [...DS.keys()]) removerD(id,true); definirCasal(null,null,false); contar(); break;
   }
 }
-function virarNoivos(a,b,seg){
-  const da=DS.get(a.id)||criarD(a), db=DS.get(b.id)||criarD(b);
-  const pares=[[da,-.75,'noivo'],[db,.75,'veu']];
-  for(const [d,x,tipo] of pares){ d.noivo=tipo; atualizarTag(d); colocarAcessorio(d,tipo,0xffffff); d.alvo.set(x,0,ARCO_Z+1.6); d.rumo=x<0?Math.PI/2:-Math.PI/2; }
-  banner(`💍 VIRARAM NOIVOS!<small>${esc(a.name)} & ${esc(b.name)}</small>`); piscar('ppNoivos');
-  feed(a,`<b>${esc(a.name)}</b> e <b>${esc(b.name)}</b> viraram noivos!`);
-  plano('altar',Math.min(14,seg),3); confete(140); serpente.acao('comemorar',2.4);
-  setTimeout(()=>{ for(const [d] of pares) if(DS.has(d.id)){ coracoesEm(d,12); acao(d,'sim',2); } },3500);
+// fim do baile: casamento no altar e depois a tela do casal
+function fimBaile(m){
+  intervalo=true; setResta(0);
+  const n=m.noivo, a=m.noiva, tem=n||a;
+  for(const d of DS.values()) if(!d.noivo) acao(d,'sim',3);
+  if(tem){ plano('altar',m.intervalo||12,9); banner(`💍 CASAMENTO!<small>${[n,a].filter(Boolean).map(u=>esc(u.name)).join(' & ')}</small>`); confete(220); serpente.acao('comemorar',3); dj.acao('comemorar',3);
+    for(const u of [n,a]) if(u){ const d=DS.get(u.id); if(!d) continue;
+      if(d.grupo.position.distanceTo(d.alvo)>3){ estouro(d.grupo.position,0xffffff,20); d.grupo.position.copy(d.alvo); estouro(d.alvo,0xff3d8b,30); } // ainda vinha andando: aparece no altar
+      setTimeout(()=>{ if(DS.has(d.id)) coracoesEm(d,16); },1200); } }
+  const el=$('fim'), pessoa=(u,ic,t)=>u?`<div>${avatar(u)}<div class="s">${ic} ${t}</div><div class="n">${esc(u.name)}</div></div>`:'';
+  el.innerHTML=`<div class="c"><div class="t lil">${tem?'CASAMENTO DO BAILE':'FIM DO BAILE!'}</div>`+
+    (tem?`<div class="casal">${pessoa(n,'🤵','Noivo')}${n&&a?'<div class="anel">💍</div>':''}${pessoa(a,'👰','Noiva')}</div><div class="s">${n&&a?'Os noivos':'Quem casou'} já ${n&&a?'entram':'entra'} no próximo baile!</div>`
+       :'<div class="s">Ninguém casou desta vez… no próximo baile, o maior presente vira noivo ou noiva 💍</div>')+
+    `<div class="s">${filaN?`⏳ ${filaN} na fila entrando agora`:'Comente pra entrar no próximo baile 💃'}</div></div>`;
+  setTimeout(()=>{ if(intervalo) el.classList.add('on'); },tem?4500:500);
 }
-function acabarNoivos(a,b){ for(const id of [a,b]){ const d=DS.get(id); if(!d) continue; d.noivo=null; atualizarTag(d); aplicarRoupa(d); } reposicionar(); }
-function fimBaile(rei){
-  const el=$('fim'); el.innerHTML=`<div class="c"><div class="t lil">FIM DO BAILE!</div>${rei?`<div class="s">👑 Rei do baile</div>${avatar(rei)}<div class="n">${esc(rei.name)}</div>`:'<div class="s">Obrigado por dançar!</div>'}<div class="s">Comente pra entrar no próximo 💃</div></div>`;
-  el.classList.add('on'); confete(220); setTimeout(()=>el.classList.remove('on'),9000);
+function novoBaile(seg){
+  intervalo=false; $('fim').classList.remove('on'); chegadaQ.length=0;
+  for(const id of [...DS.keys()]) removerD(id,false);
+  ordem=[]; casal.noivo=casal.noiva=null; placa('noivo',null); placa('noiva',null); setResta(seg); contar(); plano('tapete',8,4);
 }
-function estadoInicial(e){ if(!e) return; for(const id of [...DS.keys()]) removerD(id,false); ordem=[];
-  musicaIdx=e.musica||0; musica.tocar(musicaIdx); mostrarMusica(musicaIdx,e.nomeMusica); setResta(e.resta||1800);
-  for(const info of e.roda||[]) criarD(info,{chegando:false}); contar();
-  if(e.noivos){ const a=DS.get(e.noivos.a), b=DS.get(e.noivos.b); if(a&&b) virarNoivos(a.info,b.info,e.noivos.seg); } }
+function estadoInicial(e){ if(!e) return; for(const id of [...DS.keys()]) removerD(id,false); ordem=[]; chegadaQ.length=0;
+  maxRoda=(e.cfg&&e.cfg.maximo)||35; filaN=e.fila||0;
+  musicaIdx=e.musica||0; musica.tocar(musicaIdx); mostrarMusica(musicaIdx,e.nomeMusica); setResta(e.resta||300);
+  casal.noivo=e.noivo?e.noivo.id:null; casal.noiva=e.noiva?e.noiva.id:null; placa('noivo',e.noivo); placa('noiva',e.noiva);
+  for(const info of e.roda||[]) criarD(info,{chegando:false}); contar(); }
 let snapshot=null, pronto=false;
 function handle(m){
-  if(!pronto){ if(m.type==='snapshot') snapshot=m; else if(m.type==='baile'||m.type==='say') (handle.fila||=[]).push(m); return; }
+  if(!pronto){ if(m.type==='snapshot') snapshot=m; else if(m.type==='baile') (handle.fila||=[]).push(m); return; }
   switch(m.type){
     case 'baile': onBaile(m); break;
-    case 'say': falar(m); break;
     case 'like': musica.esquentar(Math.min(.04,(m.likes||1)*.002)); break;
     case 'snapshot': setConn(m.tiktok); musica.config(m.musica); estadoInicial(m.baile); break;
     case 'tiktok': setConn(m); break; case 'config': musica.config(m.musica); break;
@@ -455,14 +514,14 @@ function setConn(t){ if(!t) return; $('conn').textContent=t.connected?`AO VIVO @
 const NOMES=['Lisa','Marco','Juliana','Pedrinho','Bia_Gamer','Thiagão','Carol','Rafa','Dudu','Mari','Kauã','Lari','Gabi','Nando','Duda','Léo','Yasmin','Caio','Manu','Vitória','Enzo','Sofia','Davi','Helena','Bruno','Alice'];
 function fotoFake(n){ const c=document.createElement('canvas'); c.width=c.height=96; const g=c.getContext('2d'); const h=hash(n);
   g.fillStyle=`hsl(${h%360},55%,40%)`; g.fillRect(0,0,96,96); g.fillStyle=`hsl(${(h>>8)%360},70%,75%)`; g.beginPath(); g.arc(48,40,20,0,7); g.fill(); g.beginPath(); g.arc(48,100,36,0,7); g.fill(); return c.toDataURL(); }
-const fotos={}; const fakeUser=()=>{ const n=rndA(NOMES); return {id:n.toLowerCase(),name:n,avatar:fotos[n]||=fotoFake(n)}; };
+const fotos={}; const fakeUser=()=>{ const n=rndA(NOMES)+(Math.random()<.55?'':'_'+(1+Math.floor(Math.random()*2))); return {id:n.toLowerCase(),name:n,avatar:fotos[n]||=fotoFake(n)}; };
 let motorLocal=null;
 function sim(ev){ const u=ev.user;
   if(motorLocal){ const L=motorLocal;
     if(ev.type==='chat') L.chat(u,ev.text); else if(ev.type==='gift') L.presente(u,ev.giftName,ev.diamonds,ev.count||1); else if(ev.type==='follow') L.seguiu(u);
     else if(ev.type==='join') L.entrou(u); else if(ev.type==='share') L.compartilhou(u); else if(ev.type==='like'){ handle({type:'like',likes:ev.likes}); L.curtidas(u,ev.likes); } return; }
   fetch('/api/sim',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:ev.type,id:u.id,name:u.name,avatar:null,giftName:ev.giftName,diamonds:ev.diamonds,count:ev.count,likes:ev.likes,text:ev.text})}).catch(()=>{}); }
-const FALAS_CHAT=['eu','euuu','oiii','bora dançar','kkkkk','que roupa linda','me coloca na roda','dança muito','olha eu aqui','uhuuuu','quero ser noiva','toca funk'];
+const FALAS_CHAT=['eu','euuu','oiii','bora dançar','kkkkk','que roupa linda','me coloca na roda','dança muito','olha eu aqui','uhuuuu','quero ser noiva','toca funk','menina','menino'];
 addEventListener('keydown',e=>{ const k=e.key.toLowerCase(); const u=fakeUser();
   if(k==='c') sim({type:'chat',user:u,text:rndA(FALAS_CHAT)}); else if(k==='g') sim({type:'gift',user:u,giftName:'Rose',diamonds:1,count:1});
   else if(k==='d') sim({type:'gift',user:u,giftName:'Donut',diamonds:30,count:1}); else if(k==='b') sim({type:'gift',user:u,giftName:'Lion',diamonds:29999,count:1});
@@ -476,12 +535,10 @@ function iniciarDemo(){ if(demoRodando) return; demoRodando=true;
     setTimeout(tick,1100+Math.random()*1700); })(); }
 function ligarDemoLocal(){
   window.__demo=true; try{ window.__ws&&window.__ws.close(); }catch(e){} $('conn').style.display='none'; $('demo-tag').hidden=false;
-  let seq=0; motorLocal=window.BaileMotor.criar({ falas:window.Falas, cfg:{duracao:30,maximo:60},
-    emitir:m=>handle(m), falar:(partes,o)=>handle({type:'say',id:++seq,partes:partes.map(p=>({...p,url:null})),text:partes.map(p=>p.texto).join(' '),kind:o.kind,ms:3000}) });
+  motorLocal=window.BaileMotor.criar({ texto:window.Texto, cfg:{duracao:2,maximo:35}, emitir:m=>handle(m) }); // demonstração: baile de 2 minutos
   const t=$('toque'); t.hidden=false;
   const comecar=()=>{ if(t.hidden) return; t.hidden=true; musica.ligar();
-    try{ const ss=window.speechSynthesis; if(ss){ const u=new SpeechSynthesisUtterance('Bora!'); u.lang='pt-BR'; u.volume=.01; ss.speak(u); } }catch(e){}
-    motorLocal.iniciar(); handle({type:'baile',ev:'novo',fim:1800}); for(let i=0;i<10;i++) setTimeout(()=>sim({type:'chat',user:fakeUser(),text:'eu'}),300+i*450); iniciarDemo(); };
+    motorLocal.iniciar(); handle({type:'baile',ev:'novo',fim:120}); for(let i=0;i<26;i++) setTimeout(()=>sim({type:'chat',user:fakeUser(),text:'eu'}),300+i*350); iniciarDemo(); };
   t.addEventListener('click',comecar); t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') comecar(); });
 }
 
@@ -489,6 +546,7 @@ function ligarDemoLocal(){
 const rel=new THREE.Clock();
 function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=performance.now();
   if(pronto){
+    if(chegadaQ.length&&agora>proxChegada){ proxChegada=agora+(chegadaQ.length>12?280:chegadaQ.length>4?450:650); chegar(); }
     for(const d of DS.values()){
       // andar até o lugar
       const g=d.grupo; tmpV.subVectors(d.alvo,g.position); tmpV.y=0; const dist=tmpV.length();
@@ -512,18 +570,20 @@ function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=
     diretor(); if(cam.plano!=='destaque') esconderDestaque();
     // no close, quem estiver colado na câmera some (não tampa a pessoa em destaque)
     // quem estiver colado na câmera some (não tampa a pessoa em destaque nem o altar)
-    for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=d===cam.foco||camera.position.distanceTo(tmpV)>3; }
+    for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=d===cam.foco||!!d.noivo||camera.position.distanceTo(tmpV)>(cam.plano==='altar'?5:3); }
   }
   moverCamera(dt,t);
   // vida no cenário
   dj.atualizar(dt,t); serpente.atualizar(dt,t); if(!dj.ocupado()) dj.acao(Math.random()<.8?'dancar':rndA(['comemorar','rir','acenar']),2); // o DJ não para
-  if(falaAtual&&falaAtual.quem){ const nv=falaAtual.analisa?nivelVoz():(falaAtual.simula?(.35+Math.abs(Math.sin(t*14))*.5):0); falaAtual.quem.falar(nv); }
   feixes.forEach((f,i)=>{ f.rotation.z=Math.sin(t*1.3+i*2)*.5; f.rotation.x=Math.cos(t*1.1+i)*.3; });
   const b=musica.batida(); luzRosa.intensity=30+Math.pow(1-b.fase,3)*40; luzRoxa.intensity=22+Math.pow(1-((b.fase+.5)%1),3)*30;
   for(let i=particulas.length-1;i>=0;i--){ const q=particulas[i]; q.vida-=dt; q.v.y-=9*dt; q.m.position.addScaledVector(q.v,dt); q.m.rotation.x+=dt*6; if(q.vida<=0){ cena.remove(q.m); q.m.geometry.dispose(); particulas.splice(i,1); } }
   const resta=Math.max(0,restaSeg-(agora-restaBase)/1000); $('tempo').textContent=`${String(Math.floor(resta/60)).padStart(2,'0')}:${String(Math.floor(resta%60)).padStart(2,'0')}`;
   renderer.render(cena,camera); requestAnimationFrame(loop); }
 loop();
+// a frase de baixo vai alternando
+{ const FR=()=>lotou?['LOTOU! COMENTE PRA ENTRAR NA FILA','MAIOR PRESENTE VIRA NOIVO(A) 💍']:['COMENTE PRA ENTRAR NA RODA','COMENTE MENINA OU MENINO 👧👦','MAIOR PRESENTE VIRA NOIVO(A) 💍']; let i=0;
+  setInterval(()=>{ const l=FR(); i=(i+1)%l.length; const c=$('chamada'); c.style.fontSize=''; c.innerHTML=`<span>${esc(l[i])}</span>`; const w=c.firstChild.offsetWidth; if(w>1030) c.style.fontSize=Math.floor(60*1030/w)+'px'; },5000); }
 
 // ================= começar =================
 (async()=>{

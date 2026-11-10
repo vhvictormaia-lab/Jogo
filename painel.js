@@ -5,9 +5,8 @@ const path = require('path');
 const { execFile, exec } = require('child_process');
 
 module.exports = function painel(ctx) {
-  const { app, express, CFG, stats, registro, top6, voz, broadcast, PORT } = ctx;
+  const { app, CFG, stats, registro, broadcast, PORT, baile } = ctx;
   const RAIZ = __dirname;
-  const CANT_DIR = path.join(RAIZ, 'cantorias');
   const ARQ_PALAVRAS = path.join(RAIZ, 'palavras-proibidas.txt');
 
   const local = (req, res, next) => {
@@ -18,15 +17,14 @@ module.exports = function painel(ctx) {
   app.use('/api/painel', local);
 
   const num = (v, min, max, padrao) => { const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : padrao; };
-  const VOZES_OK = /^[a-z]{2}-[A-Z]{2}-[A-Za-z]+Neural$/;
 
   function estado() {
+    const e = baile.estado();
     return {
       ok: true, config: CFG.publico(), tiktok: ctx.tiktok(), stats: { ...stats, minutos: Math.floor((Date.now() - stats.inicio) / 60000) },
-      top: top6(), registro: registro.slice(-40).reverse(),
-      links: { cobrinha: `http://localtest.me:${PORT}/`, cobrinhaAbismo: `http://localtest.me:${PORT}/?tema=abismo`, abismo: `http://localtest.me:${PORT}/abismo.html`, quiz: `http://localtest.me:${PORT}/quiz.html`, baile: `http://localtest.me:${PORT}/baile.html` },
-      baile: ctx.baile ? { rodando: ctx.baile.rodando, na_roda: ctx.baile.tamanho, ...ctx.baile.estado().cfg } : null,
-      quiz: ctx.quiz ? { rodando: ctx.quiz.rodando, ...ctx.quiz.estado().cfg, categorias: ctx.quiz.estado().categorias } : null,
+      registro: registro.slice(-40).reverse(),
+      link: `http://localtest.me:${PORT}/baile.html`,
+      baile: { naRoda: e.roda.length, fila: e.fila, proximos: e.proximos, resta: e.resta, intervalo: e.intervalo, noivo: e.noivo, noiva: e.noiva, duracao: e.cfg.duracao, maximo: e.cfg.maximo },
     };
   }
   app.get('/api/painel/estado', (_req, res) => res.json(estado()));
@@ -36,29 +34,9 @@ module.exports = function painel(ctx) {
     const b = req.body || {}, atual = CFG.get(), novo = {};
     if (typeof b.usuario === 'string') {
       const u = b.usuario.trim().replace(/^@/, '').replace(/[^A-Za-z0-9._]/g, '').slice(0, 40);
-      if (u !== atual.usuario) { novo.usuario = u; }
+      if (u !== atual.usuario) novo.usuario = u;
     }
-    if (['abismo', 'cobrinha', 'quiz', 'baile'].includes(b.modo)) novo.modo = b.modo;
-    if (b.openai) {
-      novo.openai = {};
-      if (b.openai.remover) novo.openai.chave = '';
-      else if (typeof b.openai.chave === 'string' && b.openai.chave.trim().startsWith('sk-')) novo.openai.chave = b.openai.chave.trim();
-      if (typeof b.openai.modelo === 'string' && /^[A-Za-z0-9._-]{2,40}$/.test(b.openai.modelo)) novo.openai.modelo = b.openai.modelo;
-    }
-    if (b.vozes) {
-      const v = b.vozes, nv = {};
-      for (const k of ['cobra', 'narrador']) if (typeof v[k] === 'string' && VOZES_OK.test(v[k])) nv[k] = v[k];
-      for (const k of ['palhaco', 'serpente']) if (v[k]) {
-        nv[k] = {};
-        if (typeof v[k].voz === 'string' && VOZES_OK.test(v[k].voz)) nv[k].voz = v[k].voz;
-        if (v[k].tom !== undefined) nv[k].tom = num(v[k].tom, -50, 50, 0);
-        if (v[k].vel !== undefined) nv[k].vel = num(v[k].vel, -40, 40, 0);
-      }
-      novo.vozes = nv;
-    }
-    if (b.musica) novo.musica = { ligada: b.musica.ligada !== undefined ? !!b.musica.ligada : atual.musica.ligada, volume: num(b.musica.volume ?? atual.musica.volume, 0, 100, 22) };
-    if (b.vozEspectador !== undefined) novo.vozEspectador = !!b.vozEspectador;
-    if (b.falaSolta) { const mi = num(b.falaSolta.min, 5, 600, 20), ma = num(b.falaSolta.max, 5, 600, 30); novo.falaSolta = { min: Math.min(mi, ma), max: Math.max(mi, ma) }; }
+    if (b.musica) novo.musica = { ligada: b.musica.ligada !== undefined ? !!b.musica.ligada : atual.musica.ligada, volume: num(b.musica.volume ?? atual.musica.volume, 0, 100, 40) };
     if (b.atualizacao) {
       novo.atualizacao = {};
       if (typeof b.atualizacao.repo === 'string' && /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(b.atualizacao.repo)) novo.atualizacao.repo = b.atualizacao.repo;
@@ -66,48 +44,21 @@ module.exports = function painel(ctx) {
       else if (typeof b.atualizacao.token === 'string' && b.atualizacao.token.trim().length > 10) novo.atualizacao.token = b.atualizacao.token.trim();
     }
     CFG.atualizar(novo);
-    if (novo.modo) { voz.setModo(novo.modo); ctx.ligarQuiz && ctx.ligarQuiz(); ctx.ligarBaile && ctx.ligarBaile(); }
     if (novo.musica) broadcast({ type: 'config', musica: CFG.get().musica });
     if (novo.usuario !== undefined) { ctx.trocarUsuario(novo.usuario); ctx.conectar(); }
     res.json(estado());
   });
 
-  // ----- Quiz do Abismo -----
-  app.post('/api/painel/quiz', (req, res) => {
-    const b = req.body || {}, q = ctx.quiz; if (!q) return res.status(400).json({ ok: false });
-    const modo = ['dia', 'semana', 'geral'].includes(b.placar) ? b.placar : undefined;
-    if (b.acao === 'pular') q.pular();
-    else if (b.acao === 'campeao') q.campeao(modo);
-    else if (b.acao === 'esconderCampeao') broadcast({ type: 'quiz', ev: 'esconderCampeao' });
-    else if (b.acao === 'zerar') q.zerar(modo);
-    else if (b.acao === 'config') {
-      const c = {};
-      if (b.tempo !== undefined) c.tempo = num(b.tempo, 10, 90, 30);
-      if (Array.isArray(b.cats)) c.cats = b.cats.filter((x) => typeof x === 'string').slice(0, 30);
-      if (modo) c.placar = modo;
-      const novo = q.config(c); CFG.atualizar({ quiz: { tempo: novo.tempo, cats: novo.cats, placar: novo.placar } });
-    }
-    res.json(estado());
-  });
-
-  // ----- Baile do Abismo -----
+  // ----- baile -----
   app.post('/api/painel/baile', (req, res) => {
-    const b = req.body || {}, B = ctx.baile; if (!B) return res.status(400).json({ ok: false });
-    if (b.acao === 'limpar') B.limpar();
-    else if (b.acao === 'fim') B.fimDoBaile();
+    const b = req.body || {};
+    if (b.acao === 'limpar') baile.limpar();
+    else if (b.acao === 'fim') baile.fimDoBaile();
     else if (b.acao === 'config') {
-      const c = {}; if (b.duracao !== undefined) c.duracao = num(b.duracao, 5, 180, 30); if (b.maximo !== undefined) c.maximo = num(b.maximo, 10, 150, 60); if (b.falar !== undefined) c.falar = !!b.falar;
-      const novo = B.config(c); CFG.atualizar({ baile: { duracao: novo.duracao, maximo: novo.maximo, falar: novo.falar } });
+      const c = {}; if (b.duracao !== undefined) c.duracao = num(b.duracao, 1, 60, 5); if (b.maximo !== undefined) c.maximo = num(b.maximo, 5, 80, 35);
+      const novo = baile.config(c); CFG.atualizar({ baile: { duracao: novo.duracao, maximo: novo.maximo } });
     }
     res.json(estado());
-  });
-
-  // botões de teste do quiz: alguém acerta / chute errado
-  app.post('/api/painel/quiz-teste', (req, res) => {
-    const b = req.body || {}, q = ctx.quiz; if (!q || !q.rodando) return res.json({ ok: false });
-    const resp = q.respostaAtual(); const texto = b.tipo === 'certo' && resp ? resp : 'acho que é batata';
-    ctx.sim({ type: 'chat', id: String(b.id || 'tester').slice(0, 30), name: String(b.name || 'Tester').slice(0, 30), text: texto });
-    res.json({ ok: true });
   });
 
   // ----- TikTok -----
@@ -116,17 +67,8 @@ module.exports = function painel(ctx) {
     setTimeout(() => res.json(estado()), 300);
   });
 
-  // ----- falas -----
-  app.post('/api/painel/falar', (req, res) => {
-    const b = req.body || {};
-    const ok = voz.manual(['palhaco', 'serpente', 'cobra', 'narrador'].includes(b.quem) ? b.quem : 'cobra', String(b.texto || ''));
-    res.json({ ok, erro: ok ? null : 'Escreva o que o personagem vai falar.' });
-  });
-  app.post('/api/painel/testar-voz', (req, res) => res.json({ ok: voz.testar(String((req.body || {}).quem || 'cobra')) }));
-
   // ----- eventos de teste -----
   app.post('/api/painel/teste', (req, res) => res.json({ ok: ctx.sim(req.body || {}) }));
-  app.post('/api/painel/zerar', (_req, res) => { ctx.zerarRanking(); res.json(estado()); });
 
   // ----- palavras proibidas -----
   app.get('/api/painel/palavras', (_req, res) => { let t = ''; try { t = fs.readFileSync(ARQ_PALAVRAS, 'utf8'); } catch {} res.json({ ok: true, texto: t }); });
@@ -135,28 +77,9 @@ module.exports = function painel(ctx) {
     try { fs.writeFileSync(ARQ_PALAVRAS, t); res.json({ ok: true }); } catch (e) { res.json({ ok: false, erro: e.message }); }
   });
 
-  // ----- cantorias (MP3 por presente) -----
-  const nomeArq = (n) => String(n || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9.-]+/g, '-').replace(/^-+|-+$/g, '');
-  app.get('/api/painel/cantorias', (_req, res) => {
-    let l = []; try { l = fs.readdirSync(CANT_DIR).filter((f) => /\.(mp3|ogg|wav|m4a)$/i.test(f)).map((f) => ({ nome: f, kb: Math.round(fs.statSync(path.join(CANT_DIR, f)).size / 1024) })); } catch {}
-    res.json({ ok: true, lista: l });
-  });
-  app.post('/api/painel/cantorias', express.raw({ type: () => true, limit: '20mb' }), (req, res) => {
-    const nome = nomeArq(req.query.nome);
-    if (!/^[a-z0-9-]+\.(mp3|ogg|wav|m4a)$/.test(nome)) return res.json({ ok: false, erro: 'Use um arquivo MP3, OGG, WAV ou M4A com o nome do presente (ex.: rosa.mp3).' });
-    if (!req.body || !req.body.length) return res.json({ ok: false, erro: 'Arquivo vazio.' });
-    try { fs.mkdirSync(CANT_DIR, { recursive: true }); fs.writeFileSync(path.join(CANT_DIR, nome), req.body); res.json({ ok: true, nome }); }
-    catch (e) { res.json({ ok: false, erro: e.message }); }
-  });
-  app.delete('/api/painel/cantorias', (req, res) => {
-    const nome = nomeArq(req.query.nome);
-    if (!/^[a-z0-9-]+\.(mp3|ogg|wav|m4a)$/.test(nome)) return res.json({ ok: false });
-    try { fs.unlinkSync(path.join(CANT_DIR, nome)); res.json({ ok: true }); } catch (e) { res.json({ ok: false, erro: e.message }); }
-  });
-
   // ----- atualização do sistema (pelo GitHub) -----
   const API = process.env.GITHUB_API || 'https://api.github.com';
-  const GH = (url, cfg) => fetch(url.replace('https://api.github.com', API), { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'cobrinha-da-live-atualizador',
+  const GH = (url, cfg) => fetch(url.replace('https://api.github.com', API), { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'baile-do-abismo-atualizador',
     ...(cfg.atualizacao.token ? { Authorization: 'Bearer ' + cfg.atualizacao.token } : {}) }, redirect: 'follow' });
   async function ultimaVersao() {
     const cfg = CFG.get();
@@ -172,6 +95,8 @@ module.exports = function painel(ctx) {
       res.json({ ok: true, ultima: v, instalado, temNova: !instalado || instalado !== v.sha });
     } catch (e) { res.json({ ok: false, erro: e.message === 'fetch failed' ? 'Sem internet ou o GitHub não respondeu. Tente de novo daqui a pouco.' : e.message }); }
   });
+  const ANTIGOS = ['iniciar-abismo.bat', 'iniciar-quiz.bat', 'iniciar-baile.bat', 'voz.js', 'voz.ps1', 'edge-token.js', 'CREDITOS.txt', 'public/index.html', 'public/abismo.html',
+    'public/quiz.html', 'public/quiz-motor.js', 'public/perguntas-quiz.js', 'public/musica-abismo.js', 'public/demo-local.js', 'public/falas.js', 'public/sounds'];
   let atualizando = false;
   app.post('/api/painel/atualizar', async (req, res) => {
     if (atualizando) return res.json({ ok: false, erro: 'Já estou atualizando.' });
@@ -193,9 +118,11 @@ module.exports = function painel(ctx) {
       const novo = path.join(tmp, pastas[0]);
       if (!fs.existsSync(path.join(novo, 'server.js')) || !fs.existsSync(path.join(novo, 'public'))) throw new Error('Esse repositório não parece ser o jogo.');
       const pkgAntes = fs.readFileSync(path.join(RAIZ, 'package.json'), 'utf8');
-      // mantém o que é seu: configurações, músicas das cantorias e a lista de palavras
-      const manter = (rel) => /^(privado|node_modules|\.git)(\/|\\|$)/.test(rel) || rel === 'palavras-proibidas.txt' || (/^(cantorias|baile-personagens|musicas-baile)[\/\\]/.test(rel) && !/LEIA-ME\.txt$/i.test(rel));
+      // mantém o que é seu: configurações, personagens, músicas e a lista de palavras
+      const manter = (rel) => /^(privado|node_modules|\.git)(\/|\\|$)/.test(rel) || rel === 'palavras-proibidas.txt' || (/^(baile-personagens|musicas-baile)[\/\\]/.test(rel) && !/LEIA-ME\.txt$/i.test(rel));
       fs.cpSync(novo, RAIZ, { recursive: true, force: true, filter: (src) => { const rel = path.relative(novo, src); return !rel || !manter(rel); } });
+      // apaga os arquivos dos jogos antigos (Cobrinha, Abismo e Quiz), que não fazem mais parte
+      for (const rel of ANTIGOS) { try { fs.rmSync(path.join(RAIZ, rel), { recursive: true, force: true }); } catch {} }
       CFG.atualizar({ atualizacao: { instalado: v.sha } });
       fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(zip, { force: true });
       const precisaNpm = fs.readFileSync(path.join(RAIZ, 'package.json'), 'utf8') !== pkgAntes;

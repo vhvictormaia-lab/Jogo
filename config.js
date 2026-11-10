@@ -1,5 +1,5 @@
 // Configurações salvas pelo painel (pasta "privado", que nunca vai para o GitHub).
-// Chave da OpenAI, token do GitHub e usuário ficam só neste computador.
+// Token do GitHub e usuário ficam só neste computador.
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -10,18 +10,8 @@ const ARQ_USUARIO = path.join(os.homedir(), '.tiktok-snake-user'); // o mesmo ar
 
 const PADRAO = {
   usuario: '',
-  modo: 'cobrinha',              // cobrinha | abismo | quiz | baile (muda as falas e as vozes)
-  openai: { chave: '', modelo: 'gpt-4.1-mini' },
-  vozes: {
-    cobra: 'pt-BR-FranciscaNeural', narrador: 'pt-BR-AntonioNeural',
-    palhaco: { voz: 'en-US-AndrewMultilingualNeural', tom: -4, vel: 6 },  // Andrew: rapaz jovem, brincalhão
-    serpente: { voz: 'en-US-AvaMultilingualNeural', tom: -8, vel: 2 },     // Ava: moça jovem, debochada
-  },
-  vozEspectador: true,                    // cada espectador lê o próprio comentário com uma voz só dele
-  musica: { ligada: true, volume: 22 },   // 0 a 100
-  falaSolta: { min: 20, max: 30 },        // segundos entre as falas sozinhas
-  quiz: { tempo: 30, cats: null, placar: 'dia' },
-  baile: { duracao: 30, maximo: 60, falar: false },  // Baile do Abismo: minutos de cada baile, máximo de pessoas na roda, palhaço falando (padrão: só música e dança)
+  musica: { ligada: true, volume: 40 },          // 0 a 100
+  baile: { duracao: 5, maximo: 35 },             // minutos de cada baile · pessoas na roda
   atualizacao: { repo: 'vhvictormaia-lab/Jogo', token: '', instalado: '' },
 };
 
@@ -36,16 +26,10 @@ function mesclar(base, novo) {
 
 let cfg = mesclar(PADRAO, {});
 try { cfg = mesclar(PADRAO, JSON.parse(fs.readFileSync(ARQ, 'utf8'))); } catch {}
-// quem ainda tem o tom antigo (mais lento e grave) passa para o novo, mais animado
-{ const v = cfg.vozes;
-  if (v.palhaco.tom === -14 && v.palhaco.vel === -6) { v.palhaco.tom = -8; v.palhaco.vel = 6; }
-  if (v.serpente.tom === -28 && v.serpente.vel === -14) { v.serpente.tom = -16; v.serpente.vel = 0; }
-  // uma vez só: troca as vozes padrão antigas (Antonio / Francisca) pelas novas (Andrew / Ava). Se depois você trocar no painel, fica a sua.
-  if (!cfg.vozesV2) {
-    if (v.palhaco.voz === 'pt-BR-AntonioNeural') Object.assign(v.palhaco, { voz: 'en-US-AndrewMultilingualNeural', tom: -4, vel: 6 });
-    if (v.serpente.voz === 'pt-BR-FranciscaNeural') Object.assign(v.serpente, { voz: 'en-US-AvaMultilingualNeural', tom: -8, vel: 2 });
-    cfg.vozesV2 = true; setTimeout(() => salvar(), 0);
-  } }
+// uma vez só: o baile passa a ter 5 minutos e 35 pessoas (se depois você mudar no painel, fica o seu)
+if (!cfg.baileV2) { cfg.baile.duracao = 5; cfg.baile.maximo = 35; cfg.musica.volume = Math.max(40, cfg.musica.volume || 0); cfg.baileV2 = true; setTimeout(() => salvar(), 0); }
+// limpa o que era dos jogos antigos
+for (const k of ['modo', 'openai', 'vozes', 'vozEspectador', 'falaSolta', 'quiz', 'vozesV2']) delete cfg[k];
 if (!cfg.usuario) { try { cfg.usuario = fs.readFileSync(ARQ_USUARIO, 'utf8').trim().replace(/^@/, ''); } catch {} }
 
 function salvar() {
@@ -56,7 +40,6 @@ function atualizar(parcial) { cfg = mesclar(cfg, parcial); salvar(); return cfg;
 // versão para mostrar no painel: esconde a chave e o token
 function publico() {
   const c = JSON.parse(JSON.stringify(cfg));
-  c.openai.temChave = !!cfg.openai.chave; c.openai.chave = cfg.openai.chave ? '••••' + cfg.openai.chave.slice(-4) : '';
   c.atualizacao.temToken = !!cfg.atualizacao.token; c.atualizacao.token = '';
   return c;
 }

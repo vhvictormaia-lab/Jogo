@@ -1,7 +1,7 @@
 {
-  "name": "tiktok-snake",
+  "name": "baile-do-abismo",
   "version": "1.0.0",
-  "description": "",
+  "description": "Baile do Abismo: jogo de TikTok LIVE onde quem comenta entra na roda de dança",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

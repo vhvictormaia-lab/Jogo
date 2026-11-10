@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Painel da Live</title>
+<title>Painel do Baile</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap">
 <style>
-  /* Painel de bastidores: escuro como o Abismo, cartões por área, resumo da live no topo */
+  /* Painel do Baile do Abismo: escuro, cartões por área, resumo da live no topo */
   :root{
     --fundo:#0d0716; --cartao:#170d24; --cartao2:#1f1230; --linha:#2f1f45; --texto:#f3ecff; --suave:#b7a6cf;
     --verde:#6cff6a; --rosa:#ff4f9a; --ouro:#ffd166; --azul:#7ad9ff; --perigo:#ff6b5b;
@@ -73,22 +73,26 @@
   #toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--texto);color:var(--fundo);padding:10px 18px;border-radius:30px;font-weight:900;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw}
   #toast.on{opacity:1}
   @media (prefers-reduced-motion:reduce){ #toast{transition:none} }
+  .casal{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+  .casal div{background:var(--cartao2);border:1px solid var(--linha);border-radius:14px;padding:8px 10px;display:flex;gap:8px;align-items:center;min-width:0}
+  .casal small{display:block;color:var(--suave);font-weight:800;font-size:12px}
+  .grande{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
 <header>
-  <h1>🎪 Painel da Live</h1>
+  <h1>💃 Painel do Baile</h1>
   <div class="estado" id="estado"><span class="bola"></span><span id="estado-t">carregando…</span></div>
 </header>
 
 <div class="resumo" aria-label="Resumo da live">
+  <div class="num"><b id="n-roda">0</b><span>na roda</span></div>
+  <div class="num"><b id="n-fila">0</b><span>na fila</span></div>
+  <div class="num"><b id="n-resta">5:00</b><span>fim do baile</span></div>
   <div class="num"><b id="n-esp">0</b><span>espectadores</span></div>
-  <div class="num"><b id="n-cur">0</b><span>curtidas</span></div>
   <div class="num"><b id="n-pre">0</b><span>presentes</span></div>
-  <div class="num"><b id="n-dia">0</b><span>diamantes</span></div>
-  <div class="num"><b id="n-seg">0</b><span>seguidores</span></div>
+  <div class="num"><b id="n-dia">0</b><span>moedas</span></div>
   <div class="num"><b id="n-com">0</b><span>comentários</span></div>
-  <div class="num"><b id="n-min">0</b><span>minutos</span></div>
 </div>
 
 <main>
@@ -98,63 +102,33 @@
     <div class="linha"><input type="text" id="usuario" class="cresce" placeholder="seu_usuario" autocomplete="off" aria-label="Usuário do TikTok"><button class="pri" id="b-salvar-usuario">Salvar</button></div>
     <div class="linha"><button class="pri" id="b-conectar">Conectar</button><button id="b-desconectar">Desconectar</button></div>
     <div class="aviso" id="aviso-tiktok"></div>
+    <p class="dica" style="margin-top:12px">No LIVE Studio, adicione uma fonte <b>Link</b> com este endereço (1080×1920):</p>
+    <div class="link"><code id="l-baile"></code><button data-copiar="l-baile">Copiar</button></div>
+    <div class="linha"><a href="/baile.html" target="_blank" rel="noopener"><button>Abrir o baile</button></a><a href="/baile.html?demo=1" target="_blank" rel="noopener"><button>Abrir com gente de mentira</button></a></div>
   </section>
 
   <section>
-    <h2>🎮 Jogo</h2>
-    <p class="dica">O modo muda as falas e as vozes. Copie o link do jogo para a fonte <b>Link</b> do LIVE Studio (1080×1920).</p>
-    <div class="seg" role="group" aria-label="Modo"><button id="m-cobrinha" aria-pressed="false">🐍 Cobrinha</button><button id="m-abismo" aria-pressed="false">🤡 Abismo</button><button id="m-quiz" aria-pressed="false">🧠 Quiz</button><button id="m-baile" aria-pressed="false">💃 Baile</button></div>
-    <div class="link"><small>Cobrinha</small><code id="l-cobrinha"></code><button data-copiar="l-cobrinha">Copiar</button></div>
-    <div class="link"><small>Cobrinha no Abismo</small><code id="l-cobrinhaAbismo"></code><button data-copiar="l-cobrinhaAbismo">Copiar</button></div>
-    <div class="link"><small>Abismo Live</small><code id="l-abismo"></code><button data-copiar="l-abismo">Copiar</button></div>
-    <div class="link"><small>Quiz do Abismo</small><code id="l-quiz"></code><button data-copiar="l-quiz">Copiar</button></div>
-    <div class="link"><small>Baile do Abismo</small><code id="l-baile"></code><button data-copiar="l-baile">Copiar</button></div>
-    <div class="linha"><a href="/?demo=1" target="_blank" rel="noopener"><button>Testar Cobrinha</button></a><a href="/abismo.html?demo=1" target="_blank" rel="noopener"><button>Testar Abismo</button></a><a href="/quiz.html" target="_blank" rel="noopener"><button>Abrir Quiz</button></a><a href="/baile.html" target="_blank" rel="noopener"><button>Abrir Baile</button></a></div>
-  </section>
-
-  <section id="sec-baile">
-    <h2>💃 Baile do Abismo</h2>
-    <p class="dica">Funciona com o modo <b>Baile</b> ligado. Quem comenta entra na roda. Rosa troca a roupa, Rosquinha (30+ moedas) toca na banda, presente de 100+ moedas vira noivos.
-      Personagens 3D: pasta <b>baile-personagens</b>. Músicas MP3: pasta <b>musicas-baile</b>.</p>
-    <div class="aviso" id="aviso-baile"></div>
-    <div class="faixa"><label for="b-duracao">Duração</label><input type="range" id="b-duracao" min="5" max="120" step="5" value="30"><output id="o-b-duracao">30 min</output></div>
-    <div class="faixa"><label for="b-maximo">Na roda</label><input type="range" id="b-maximo" min="10" max="150" step="5" value="60"><output id="o-b-maximo">60</output></div>
-    <label class="linha"><input type="checkbox" id="b-falar"> Palhaço DJ fala no baile (desligado = só música e dança)</label>
+    <h2>💃 Baile agora</h2>
+    <p class="dica">Comentou, entrou na roda. Lotou, vai pra fila do próximo baile. Quem mandar mais presente vira noivo ou noiva. Comentar <b>menina</b> ou <b>menino</b> troca o boneco.</p>
+    <div class="casal"><div><span class="ft" id="ft-noivo"></span><span class="tx"><small>🤵 Noivo</small><b id="nm-noivo">ninguém ainda</b></span></div><div><span class="ft" id="ft-noiva"></span><span class="tx"><small>👰 Noiva</small><b id="nm-noiva">ninguém ainda</b></span></div></div>
+    <div class="aviso" id="aviso-fila"></div>
+    <div class="faixa"><label for="b-duracao">Duração</label><input type="range" id="b-duracao" min="1" max="30" step="1" value="5"><output id="o-b-duracao">5 min</output></div>
+    <div class="faixa"><label for="b-maximo">Na roda</label><input type="range" id="b-maximo" min="5" max="80" step="1" value="35"><output id="o-b-maximo">35</output></div>
     <div class="linha"><button class="rosa" id="b-fim">🏁 Terminar baile agora</button><button id="b-limpar">♻ Esvaziar a roda</button></div>
-    <div class="linha" id="b-testes"><button data-bteste="chat">💬 Alguém comenta</button><button data-bteste="rosa">🌹 Rosa</button><button data-bteste="banda">🍩 Banda</button><button data-bteste="noivos">💍 Noivos</button></div>
-  </section>
-
-  <section id="sec-quiz">
-    <h2>🧠 Quiz do Abismo</h2>
-    <p class="dica">Funciona com o modo <b>Quiz</b> ligado. A galera escreve a resposta no chat. Rosa abre uma letra, Rosquinha (30+ moedas) dá pontos x2, presente de 100+ moedas libera a pergunta bônus x3.</p>
-    <div class="aviso" id="aviso-quiz"></div>
-    <div class="faixa"><label for="q-tempo">Tempo</label><input type="range" id="q-tempo" min="10" max="90" step="5" value="30"><output id="o-q-tempo">30s</output></div>
-    <div class="linha"><select id="q-placar" aria-label="Ranking"><option value="dia">Ranking de hoje</option><option value="semana">Ranking da semana</option><option value="geral">Ranking geral</option></select></div>
-    <div class="chips" id="q-cats"></div>
-    <div class="linha"><button class="pri" id="q-pular">⏭ Pular pergunta</button><button class="rosa" id="q-campeao">👑 Mostrar campeões</button><button id="q-esconder">Esconder</button></div>
-    <div class="linha"><button id="q-zerar">♻ Zerar ranking</button></div>
-    <div class="linha" id="q-testes"><button data-qteste="certo">✅ Alguém acerta</button><button data-qteste="chute">💬 Chute errado</button></div>
   </section>
 
   <section>
-    <h2>🎤 Fala manual</h2>
-    <p class="dica">Digite e o personagem fala na hora, passando na frente das outras falas.</p>
-    <div class="linha"><select id="f-quem" aria-label="Quem fala"><option value="palhaco">Palhaço do Abismo</option><option value="serpente">Serpente das Trevas</option><option value="cobra">Cobrinha</option><option value="narrador">Narrador</option></select></div>
-    <textarea id="f-texto" placeholder="Ex.: Boa noite, galera! Bora bater 10 mil curtidas?" aria-label="O que falar"></textarea>
-    <div class="linha"><button class="rosa" id="b-falar">Falar agora</button></div>
-    <div class="chips" id="f-prontas"></div>
-  </section>
-
-  <section>
-    <h2>🧪 Eventos de teste</h2>
-    <p class="dica">Simula a live sem estar ao vivo, para ver as reações no jogo.</p>
+    <h2>🧪 Testar sem estar ao vivo</h2>
+    <p class="dica">Cada botão finge uma pessoa diferente fazendo isso na live.</p>
     <div class="chips" id="testes"></div>
   </section>
 
   <section>
-    <h2>🏆 TOP 6</h2>
-    <ul class="lista" id="top"></ul>
-    <div class="linha"><button class="perigo" id="b-zerar">Zerar ranking</button></div>
+    <h2>🎵 Música</h2>
+    <p class="dica">Coloque seus MP3 na pasta <b>musicas-baile</b>. Sem MP3, o jogo toca as músicas dele.</p>
+    <div class="linha"><label><input type="checkbox" id="mus-ligada"> Música ligada</label></div>
+    <div class="faixa"><label for="mus-vol">Volume</label><input type="range" id="mus-vol" min="0" max="100"><output id="o-mus-vol"></output></div>
+    <div class="linha"><button class="pri" id="b-salvar-musica">Salvar</button></div>
   </section>
 
   <section>
@@ -163,62 +137,15 @@
   </section>
 
   <section>
-    <h2>🗣️ Vozes</h2>
-    <p class="dica">Tom e velocidade valem para a voz natural (precisa de internet). Clique em Testar para ouvir no jogo.</p>
-    <div class="vozbloco"><h3>Palhaço do Abismo</h3>
-      <div class="linha"><select id="v-palhaco" aria-label="Voz do palhaço"></select><button data-testar="palhaco">Testar</button></div>
-      <div class="faixa"><label for="v-palhaco-tom">Tom</label><input type="range" id="v-palhaco-tom" min="-50" max="50"><output id="o-palhaco-tom"></output></div>
-      <div class="faixa"><label for="v-palhaco-vel">Velocidade</label><input type="range" id="v-palhaco-vel" min="-40" max="40"><output id="o-palhaco-vel"></output></div></div>
-    <div class="vozbloco"><h3>Serpente das Trevas</h3>
-      <div class="linha"><select id="v-serpente" aria-label="Voz da serpente"></select><button data-testar="serpente">Testar</button></div>
-      <div class="faixa"><label for="v-serpente-tom">Tom</label><input type="range" id="v-serpente-tom" min="-50" max="50"><output id="o-serpente-tom"></output></div>
-      <div class="faixa"><label for="v-serpente-vel">Velocidade</label><input type="range" id="v-serpente-vel" min="-40" max="40"><output id="o-serpente-vel"></output></div></div>
-    <div class="vozbloco"><h3>Cobrinha e narrador</h3>
-      <div class="linha"><select id="v-cobra" aria-label="Voz da cobrinha"></select><button data-testar="cobra">Testar</button></div>
-      <div class="linha"><select id="v-narrador" aria-label="Voz do narrador"></select><button data-testar="narrador">Testar</button></div></div>
-    <div class="vozbloco"><label><input type="checkbox" id="v-espectador"> Voz de espectador: cada pessoa ganha uma voz própria e o comentário é lido "com a voz dela"</label></div>
-    <div class="linha"><button class="pri" id="b-salvar-vozes">Salvar vozes</button></div>
-  </section>
-
-  <section>
-    <h2>🤖 Inteligência artificial</h2>
-    <p class="dica">Opcional. Com a chave da OpenAI, os personagens entendem e respondem os comentários. Sem ela, usam frases prontas. A chave fica só neste computador.</p>
-    <div class="linha"><input type="password" id="ia-chave" class="cresce" placeholder="sk-..." autocomplete="off" aria-label="Chave da OpenAI"></div>
-    <div class="linha"><label for="ia-modelo">Modelo</label><select id="ia-modelo" style="width:auto"><option>gpt-4.1-mini</option><option>gpt-4.1-nano</option><option>gpt-4o-mini</option></select></div>
-    <div class="linha"><button class="pri" id="b-ia-salvar">Salvar</button><button class="perigo" id="b-ia-remover">Remover chave</button></div>
-    <div class="aviso" id="aviso-ia"></div>
-  </section>
-
-  <section>
-    <h2>🎵 Música e falas</h2>
-    <div class="linha"><label><input type="checkbox" id="mus-ligada"> Música de fundo ligada</label></div>
-    <div class="faixa"><label for="mus-vol">Volume</label><input type="range" id="mus-vol" min="0" max="100"><output id="o-mus-vol"></output></div>
-    <p class="dica" style="margin-top:12px">Quando ninguém interage, os personagens falam sozinhos a cada:</p>
-    <div class="faixa"><label for="fs-min">Mínimo</label><input type="range" id="fs-min" min="5" max="120"><output id="o-fs-min"></output></div>
-    <div class="faixa"><label for="fs-max">Máximo</label><input type="range" id="fs-max" min="5" max="180"><output id="o-fs-max"></output></div>
-    <div class="linha"><button class="pri" id="b-salvar-musica">Salvar</button></div>
-  </section>
-
-  <section>
-    <h2>🎶 Cantorias por presente</h2>
-    <p class="dica">Envie um MP3 seu: quando alguém mandar esse presente, ele toca no jogo. Use só músicas que você pode usar.</p>
-    <div class="linha"><select id="c-presente" aria-label="Presente"></select></div>
-    <div class="linha"><input type="file" id="c-arquivo" accept=".mp3,.ogg,.wav,.m4a,audio/*" aria-label="Arquivo de música"></div>
-    <div class="linha"><button class="pri" id="b-cantoria">Enviar</button></div>
-    <div class="aviso" id="aviso-cantoria"></div>
-    <ul class="lista" id="cantorias"></ul>
-  </section>
-
-  <section>
     <h2>🚫 Palavras proibidas</h2>
-    <p class="dica">Uma por linha. Comentários e nomes com essas palavras não são lidos. Os palavrões mais comuns, links e telefones já são bloqueados.</p>
+    <p class="dica">Uma por linha. Comentários e nomes com essas palavras não aparecem no baile. Os palavrões mais comuns, links e telefones já são bloqueados.</p>
     <textarea id="palavras" style="min-height:140px" aria-label="Palavras proibidas"></textarea>
     <div class="linha"><button class="pri" id="b-palavras">Salvar lista</button></div>
   </section>
 
   <section>
     <h2>⬆️ Atualizar sistema</h2>
-    <p class="dica">Baixa a versão mais nova do seu GitHub. Suas configurações, cantorias e palavras ficam guardadas. Se o repositório for privado, coloque um token do GitHub com permissão de leitura.</p>
+    <p class="dica">Baixa a versão mais nova do seu GitHub. Suas configurações, personagens, músicas e palavras ficam guardados.</p>
     <div class="linha"><label for="up-repo">Repositório</label><input type="text" id="up-repo" placeholder="usuario/Jogo" autocomplete="off"></div>
     <div class="linha"><input type="password" id="up-token" class="cresce" placeholder="token do GitHub (opcional)" autocomplete="off" aria-label="Token do GitHub"></div>
     <div class="linha"><button id="b-up-salvar">Salvar</button><button id="b-up-ver">Verificar</button><button class="pri" id="b-up-atualizar" disabled>Atualizar agora</button></div>
@@ -232,128 +159,59 @@ const $=id=>document.getElementById(id);
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('pt-BR');
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),2200); }
-async function api(url,corpo,metodo){ try{ const r=await fetch('/api/painel/'+url,{method:metodo||(corpo!==undefined?'POST':'GET'),headers:corpo instanceof Blob?{}:{'content-type':'application/json'},body:corpo instanceof Blob?corpo:(corpo!==undefined?JSON.stringify(corpo):undefined)}); return await r.json(); }catch(e){ return {ok:false,erro:'Não consegui falar com o jogo. Ele está aberto?'}; } }
+async function api(url,corpo,metodo){ try{ const r=await fetch('/api/painel/'+url,{method:metodo||(corpo!==undefined?'POST':'GET'),headers:{'content-type':'application/json'},body:corpo!==undefined?JSON.stringify(corpo):undefined}); return await r.json(); }catch(e){ return {ok:false,erro:'Não consegui falar com o jogo. Ele está aberto?'}; } }
 
-const VOZES=[
-  ['pt-BR-AntonioNeural','Antonio · homem adulto'],['pt-BR-FranciscaNeural','Francisca · mulher adulta'],['pt-BR-ThalitaMultilingualNeural','Thalita · moça jovem, animada'],
-  ['en-US-AndrewMultilingualNeural','Andrew · rapaz jovem, brincalhão'],['en-US-BrianMultilingualNeural','Brian · adulto descontraído'],
-  ['en-US-AvaMultilingualNeural','Ava · moça jovem, alegre'],['en-US-EmmaMultilingualNeural','Emma · mulher alegre'],
-  ['it-IT-GiuseppeMultilingualNeural','Giuseppe · homem grave, bravo'],['fr-FR-RemyMultilingualNeural','Rémy · homem sério'],
-  ['de-DE-FlorianMultilingualNeural','Florian · homem firme'],['de-DE-SeraphinaMultilingualNeural','Seraphina · mulher madura'],['fr-FR-VivienneMultilingualNeural','Vivienne · mulher doce'],
-  ['pt-PT-DuarteNeural','Duarte · Portugal'],['pt-PT-RaquelNeural','Raquel · Portugal']];
-for(const id of ['v-palhaco','v-serpente','v-cobra','v-narrador']) $(id).innerHTML=VOZES.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
-const PRESENTES=[['rosa','Rosa'],['tiktok','TikTok'],['coracao','Coração (Heart Me)'],['coracaozinho','Coraçãozinho (Finger Heart)'],['rosquinha','Rosquinha (Doughnut)'],['sorvete','Sorvete'],['perfume','Perfume'],['maos-de-coracao','Mãos de coração'],['galaxia','Galáxia'],['leao','Leão'],['universo','Universo'],['gg','GG (bomba)']];
-$('c-presente').innerHTML=PRESENTES.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
-const PRONTAS=['Boa noite, galera! Sejam bem-vindos ao abismo!','Bora bater 10 mil curtidas?','Segue o perfil que eu falo o seu nome!','Quem mandar uma rosa ganha uma dança!','Compartilha a live com os amigos!','Valeu demais por estarem aqui!'];
-$('f-prontas').innerHTML=PRONTAS.map(t=>`<button data-pronta="${esc(t)}">${esc(t)}</button>`).join('');
-const TESTES=[['🌹 Rosa',{type:'gift',giftName:'Rose',diamonds:1,count:3}],['🍩 Rosquinha',{type:'gift',giftName:'Doughnut',diamonds:30,count:1}],['🌌 Galáxia',{type:'gift',giftName:'Galaxy',diamonds:1000,count:1}],
-  ['💣 GG',{type:'gift',giftName:'GG',diamonds:1,count:3}],['➕ Seguir',{type:'follow'}],['🔁 Compartilhar',{type:'share'}],['❤️ Curtidas',{type:'like',likes:25}],['💬 Comentário',{type:'chat',text:'oi palhaço, canta uma música!'}],['👋 Entrou',{type:'join'}]];
-$('testes').innerHTML=TESTES.map(([n],i)=>`<button data-teste="${i}">${n}</button>`).join('');
-const NOMES=['Lisa','Marco','Juliana','Pedrinho','Carol','Rafa'];
+const TESTES=[['💬 Comentou',{type:'chat',text:'eu'}],['🙋‍♀️ "menina"',{type:'chat',text:'menina'}],['🙋‍♂️ "menino"',{type:'chat',text:'menino'}],['🌹 Rosa (troca roupa)',{type:'gift',giftName:'Rose',diamonds:1,count:1}],
+  ['🍩 Rosquinha (banda)',{type:'gift',giftName:'Doughnut',diamonds:30,count:1}],['🦁 Leão (presentão)',{type:'gift',giftName:'Lion',diamonds:29999,count:1}],['➕ Seguiu',{type:'follow'}],['🔁 Compartilhou',{type:'share'}],['❤️ Curtidas',{type:'like',likes:50}]];
+$('testes').innerHTML=TESTES.map(([n],i)=>`<button data-teste="${i}">${n}</button>`).join('')+'<button id="b-encher">👥 Encher a roda (40 pessoas)</button>';
+const NOMES=['Lisa','Marco','Juliana','Pedrinho','Carol','Rafa','Bruno','Ana','Gabi','Thiago','Mari','Caio','Duda','Léo','Yasmin','Enzo','Sofia','Davi','Helena','Kauã'];
+let seq=0; const pessoa=()=>{ const n=NOMES[Math.floor(Math.random()*NOMES.length)]+(++seq); return {id:n.toLowerCase(),name:n}; };
 
 let cfgCarregada=false;
 function preencherConfig(c){
   $('usuario').value=c.usuario||'';
-  marcarModo(c.modo);
-  for(const k of ['palhaco','serpente']){ $('v-'+k).value=c.vozes[k].voz; for(const q of ['tom','vel']){ $(`v-${k}-${q}`).value=c.vozes[k][q]; $(`o-${k}-${q}`).textContent=c.vozes[k][q]; } }
-  $('v-cobra').value=c.vozes.cobra; $('v-narrador').value=c.vozes.narrador; $('v-espectador').checked=c.vozEspectador!==false;
-  $('ia-modelo').value=c.openai.modelo; $('ia-chave').placeholder=c.openai.temChave?`chave salva (${c.openai.chave})`:'sk-...';
-  $('aviso-ia').textContent=c.openai.temChave?'IA ligada: os personagens respondem com IA.':'Sem chave: os personagens usam frases prontas.'; $('aviso-ia').className='aviso'+(c.openai.temChave?' ok':'');
   $('mus-ligada').checked=c.musica.ligada!==false; $('mus-vol').value=c.musica.volume; $('o-mus-vol').textContent=c.musica.volume;
-  $('fs-min').value=c.falaSolta.min; $('fs-max').value=c.falaSolta.max; $('o-fs-min').textContent=c.falaSolta.min+'s'; $('o-fs-max').textContent=c.falaSolta.max+'s';
   $('up-repo').value=c.atualizacao.repo; $('up-token').placeholder=c.atualizacao.temToken?'token salvo':'token do GitHub (opcional)';
 }
+const foto=(el,u)=>{ el.style.backgroundImage=u&&u.avatar?`url('${String(u.avatar).replace(/'/g,'%27')}')`:''; };
+let baileUI=false;
 function mostrar(e){
   if(!e||!e.ok) return;
   const t=e.tiktok||{}, el=$('estado');
   el.className='estado '+(t.connected?'on':t.error?'erro':t.username?'esperando':'');
   $('estado-t').textContent=t.connected?`AO VIVO · @${t.username}`:t.username?(t.error==='stream ended'?'live encerrada':`esperando a live de @${t.username}`):'sem usuário';
-  $('aviso-tiktok').textContent=t.connected?'Conectado: presentes, curtidas e comentários estão chegando no jogo.':(t.error&&t.error!=='stream ended'?'A live ainda não foi encontrada. Ela está no ar? O jogo tenta de novo sozinho.':'');
-  const s=e.stats; $('n-esp').textContent=fmt(s.espectadores); $('n-cur').textContent=fmt(s.curtidas); $('n-pre').textContent=fmt(s.presentes); $('n-dia').textContent=fmt(s.diamantes);
-  $('n-seg').textContent=fmt(s.seguidores); $('n-com').textContent=fmt(s.comentarios); $('n-min').textContent=fmt(s.minutos);
-  for(const k of ['cobrinha','cobrinhaAbismo','abismo','quiz','baile']) $('l-'+k).textContent=e.links[k];
-  mostrarQuiz(e.quiz,e.config.modo); mostrarBaile(e.baile,e.config.modo);
-  $('top').innerHTML=e.top.length?e.top.map((u,i)=>`<li><span class="pos">${i+1}</span><span class="ft" style="${u.avatar?`background-image:url('${esc(u.avatar)}')`:''}"></span><span class="tx"><b>${esc(u.name)}</b></span><span class="pts">${fmt(Math.round(u.pts))}</span></li>`).join(''):'<li class="vazio">Ninguém pontuou ainda.</li>';
+  $('aviso-tiktok').textContent=t.connected?'Conectado: comentários e presentes estão chegando no baile.':(t.error&&t.error!=='stream ended'?'A live ainda não foi encontrada. Ela está no ar? O jogo tenta de novo sozinho.':'');
+  const s=e.stats, b=e.baile;
+  $('n-roda').textContent=`${b.naRoda}/${b.maximo}`; $('n-fila').textContent=fmt(b.fila); $('n-resta').textContent=b.intervalo?'casamento':`${Math.floor(b.resta/60)}:${String(b.resta%60).padStart(2,'0')}`;
+  $('n-esp').textContent=fmt(s.espectadores); $('n-pre').textContent=fmt(s.presentes); $('n-dia').textContent=fmt(s.diamantes); $('n-com').textContent=fmt(s.comentarios);
+  $('l-baile').textContent=e.link;
+  for(const k of ['noivo','noiva']){ const u=b[k]; $('nm-'+k).textContent=u?`${u.name} · ${fmt(u.moedas)} moedas`:'ninguém ainda'; foto($('ft-'+k),u); }
+  $('aviso-fila').textContent=b.fila?`Na fila do próximo baile: ${b.proximos.join(', ')}${b.fila>b.proximos.length?` e mais ${b.fila-b.proximos.length}`:''}.`:'Ninguém na fila.';
+  if(!baileUI){ baileUI=true; $('b-duracao').value=b.duracao; $('o-b-duracao').textContent=b.duracao+' min'; $('b-maximo').value=b.maximo; $('o-b-maximo').textContent=b.maximo; }
   $('registro').innerHTML=e.registro.length?e.registro.map(r=>`<li><span class="ft" style="${r.foto?`background-image:url('${esc(r.foto)}')`:''}"></span><span class="tx"><b>${esc(r.nome)}</b><span>${esc(r.texto)}</span></span><span class="tag ${r.tipo}">${esc(r.tipo)}</span></li>`).join(''):'<li class="vazio">Os presentes, seguidores e comentários aparecem aqui.</li>';
   if(!cfgCarregada){ cfgCarregada=true; preencherConfig(e.config); }
 }
 async function atualizarEstado(){ mostrar(await api('estado')); }
 setInterval(atualizarEstado,2000); atualizarEstado();
 
-// ações
-$('b-salvar-usuario').onclick=async()=>{ const e=await api('config',{usuario:$('usuario').value}); mostrar(e); toast('Usuário salvo. Conectando…'); };
+$('b-salvar-usuario').onclick=async()=>{ mostrar(await api('config',{usuario:$('usuario').value})); toast('Usuário salvo. Conectando…'); };
 $('b-conectar').onclick=async()=>{ mostrar(await api('tiktok',{acao:'conectar'})); toast('Conectando à live…'); };
 $('b-desconectar').onclick=async()=>{ mostrar(await api('tiktok',{acao:'desconectar'})); toast('Desconectado.'); };
-function marcarModo(m){ for(const k of ['cobrinha','abismo','quiz','baile']) $('m-'+k).setAttribute('aria-pressed',String(k===(m||'cobrinha'))); }
-for(const m of ['cobrinha','abismo','quiz','baile']) $('m-'+m).onclick=async()=>{ const e=await api('config',{modo:m}); marcarModo(m); mostrar(e); toast(m==='abismo'?'Modo Abismo: palhaço e serpente falando.':m==='quiz'?'Modo Quiz ligado: abra o link do Quiz no LIVE Studio.':m==='baile'?'Modo Baile ligado: abra o link do Baile no LIVE Studio.':'Modo Cobrinha.'); };
-// ----- baile -----
-let baileUI=false;
-function mostrarBaile(b,modo){ if(!b) return; const on=modo==='baile';
-  $('aviso-baile').textContent=on?(b.rodando?`Baile rodando: ${b.na_roda} na roda. Coloque o link do Baile no LIVE Studio.`:'Ligando o baile…'):'O baile está parado. Clique em 💃 Baile lá em cima para ligar.'; $('aviso-baile').className='aviso'+(on?' ok':'');
-  if(baileUI) return; baileUI=true; $('b-duracao').value=b.duracao; $('o-b-duracao').textContent=b.duracao+' min'; $('b-maximo').value=b.maximo; $('o-b-maximo').textContent=b.maximo; $('b-falar').checked=!!b.falar; }
 $('b-duracao').oninput=e=>$('o-b-duracao').textContent=e.target.value+' min';
 $('b-maximo').oninput=e=>$('o-b-maximo').textContent=e.target.value;
-for(const id of ['b-duracao','b-maximo']) $(id).onchange=async()=>{ mostrar(await api('baile',{acao:'config',duracao:+$('b-duracao').value,maximo:+$('b-maximo').value})); toast('Salvo. O cronômetro recomeçou.'); };
-$('b-falar').onchange=async()=>{ mostrar(await api('baile',{acao:'config',falar:$('b-falar').checked})); toast($('b-falar').checked?'O palhaço vai falar no baile.':'Baile só com música e dança.'); };
-$('b-limpar').onclick=async()=>{ mostrar(await api('baile',{acao:'limpar'})); toast('Roda vazia.'); };
-$('b-fim').onclick=async()=>{ mostrar(await api('baile',{acao:'fim'})); toast('Fim do baile! Já começou outro.'); };
-document.addEventListener('click',async ev=>{ const b=ev.target.closest('[data-bteste]'); if(!b) return; const n=NOMES[Math.floor(Math.random()*NOMES.length)], id=n.toLowerCase();
-  const t=b.dataset.bteste, corpo=t==='chat'?{type:'chat',text:'eu'}:t==='rosa'?{type:'gift',giftName:'Rose',diamonds:1,count:1}:t==='banda'?{type:'gift',giftName:'Doughnut',diamonds:30,count:1}:{type:'gift',giftName:'Lion',diamonds:29999,count:1};
-  await api('teste',{...corpo,id,name:n}).catch(()=>{}); toast('Enviado.'); });
-// ----- quiz -----
-let quizPronto=false;
-function mostrarQuiz(q,modo){ if(!q) return; const on=modo==='quiz';
-  $('aviso-quiz').textContent=on?(q.rodando?'Quiz rodando. Coloque o link do Quiz no LIVE Studio.':'Ligando o quiz…'):'O quiz está parado. Clique em 🧠 Quiz lá em cima para ligar.'; $('aviso-quiz').className='aviso'+(on?' ok':'');
-  if(quizPronto) return; quizPronto=true;
-  $('q-tempo').value=q.tempo; $('o-q-tempo').textContent=q.tempo+'s'; $('q-placar').value=q.placar||'dia';
-  const ativas=q.cats&&q.cats.length?q.cats:q.categorias;
-  $('q-cats').innerHTML=q.categorias.map(c=>`<label class="chk"><input type="checkbox" data-qcat="${esc(c)}" ${ativas.includes(c)?'checked':''}> ${esc(c)}</label>`).join(''); }
-const quizCfg=()=>({acao:'config',tempo:+$('q-tempo').value,placar:$('q-placar').value,cats:[...document.querySelectorAll('[data-qcat]')].filter(i=>i.checked).map(i=>i.dataset.qcat)});
-$('q-tempo').oninput=e=>$('o-q-tempo').textContent=e.target.value+'s';
-$('q-tempo').onchange=async()=>{ mostrar(await api('quiz',quizCfg())); toast('Tempo salvo (vale a partir da próxima pergunta).'); };
-$('q-placar').onchange=async()=>{ mostrar(await api('quiz',quizCfg())); toast('Ranking trocado.'); };
-document.addEventListener('change',async ev=>{ if(ev.target.dataset&&ev.target.dataset.qcat!==undefined){ mostrar(await api('quiz',quizCfg())); toast('Categorias salvas.'); } });
-$('q-pular').onclick=async()=>{ mostrar(await api('quiz',{acao:'pular'})); };
-$('q-campeao').onclick=async()=>{ mostrar(await api('quiz',{acao:'campeao',placar:$('q-placar').value})); toast('Campeões na tela por 15 segundos.'); };
-$('q-esconder').onclick=async()=>{ mostrar(await api('quiz',{acao:'esconderCampeao'})); };
-let zerarArmado=0;
-$('q-zerar').onclick=async()=>{ if(Date.now()-zerarArmado>4000){ zerarArmado=Date.now(); $('q-zerar').textContent='Clique de novo para confirmar'; setTimeout(()=>$('q-zerar').textContent='♻ Zerar ranking',4000); return; }
-  zerarArmado=0; $('q-zerar').textContent='♻ Zerar ranking'; mostrar(await api('quiz',{acao:'zerar',placar:$('q-placar').value})); toast('Ranking zerado.'); };
-document.addEventListener('click',async ev=>{ const b=ev.target.closest('[data-qteste]'); if(!b) return; const n=NOMES[Math.floor(Math.random()*NOMES.length)];
-  const r=await api('quiz-teste',{tipo:b.dataset.qteste,id:n.toLowerCase(),name:n}); toast(r.ok?'Enviado.':'Ligue o modo Quiz primeiro.'); });
+$('b-duracao').onchange=async()=>{ mostrar(await api('baile',{acao:'config',duracao:+$('b-duracao').value})); toast('Salvo. O cronômetro recomeçou.'); };
+$('b-maximo').onchange=async()=>{ mostrar(await api('baile',{acao:'config',maximo:+$('b-maximo').value})); toast('Salvo.'); };
+$('b-limpar').onclick=async()=>{ mostrar(await api('baile',{acao:'limpar'})); toast('Roda e fila vazias.'); };
+$('b-fim').onclick=async()=>{ mostrar(await api('baile',{acao:'fim'})); toast('Fim do baile! Casamento e já começa outro.'); };
 document.addEventListener('click',async ev=>{ const b=ev.target.closest('button'); if(!b) return;
   if(b.dataset.copiar){ const t=$(b.dataset.copiar).textContent; try{ await navigator.clipboard.writeText(t); toast('Link copiado.'); }catch(e){ const r=document.createRange(); r.selectNodeContents($(b.dataset.copiar)); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Selecionado: copie com Ctrl+C.'); } }
-  if(b.dataset.pronta) $('f-texto').value=b.dataset.pronta;
-  if(b.dataset.teste!==undefined){ const [,ev2]=TESTES[+b.dataset.teste]; const n=NOMES[Math.floor(Math.random()*NOMES.length)]; await api('teste',{...ev2,id:n.toLowerCase(),name:n}); toast('Evento de teste enviado.'); }
-  if(b.dataset.testar){ await salvarVozes(true); await api('testar-voz',{quem:b.dataset.testar}); toast('Ouça no jogo aberto.'); }
+  if(b.dataset.teste!==undefined){ const [,ev2]=TESTES[+b.dataset.teste]; await api('teste',{...ev2,...pessoa()}); toast('Enviado.'); }
+  if(b.id==='b-encher'){ for(let i=0;i<40;i++) await api('teste',{type:'chat',text:'eu',...pessoa()}); toast('40 pessoas comentaram.'); }
 });
-$('b-falar').onclick=async()=>{ const r=await api('falar',{quem:$('f-quem').value,texto:$('f-texto').value}); if(r.ok){ toast('Falando no jogo.'); $('f-texto').value=''; } else toast(r.erro||'Não deu certo.'); };
-for(const k of ['palhaco','serpente']) for(const q of ['tom','vel']) $(`v-${k}-${q}`).oninput=e=>$(`o-${k}-${q}`).textContent=e.target.value;
-async function salvarVozes(quieto){ const v=k=>({voz:$('v-'+k).value,tom:+$(`v-${k}-tom`).value,vel:+$(`v-${k}-vel`).value});
-  await api('config',{vozEspectador:$('v-espectador').checked,vozes:{palhaco:v('palhaco'),serpente:v('serpente'),cobra:$('v-cobra').value,narrador:$('v-narrador').value}}); if(!quieto) toast('Vozes salvas.'); }
-$('b-salvar-vozes').onclick=()=>salvarVozes();
-$('b-ia-salvar').onclick=async()=>{ const chave=$('ia-chave').value.trim(); if(chave&&!chave.startsWith('sk-')){ toast('A chave da OpenAI começa com sk-'); return; }
-  const e=await api('config',{openai:{...(chave?{chave}:{}),modelo:$('ia-modelo').value}}); $('ia-chave').value=''; cfgCarregada=false; mostrar(e); toast('IA salva.'); };
-$('b-ia-remover').onclick=async()=>{ const e=await api('config',{openai:{remover:true}}); cfgCarregada=false; mostrar(e); toast('Chave removida.'); };
 $('mus-vol').oninput=e=>$('o-mus-vol').textContent=e.target.value;
-$('fs-min').oninput=e=>$('o-fs-min').textContent=e.target.value+'s'; $('fs-max').oninput=e=>$('o-fs-max').textContent=e.target.value+'s';
-$('b-salvar-musica').onclick=async()=>{ await api('config',{musica:{ligada:$('mus-ligada').checked,volume:+$('mus-vol').value},falaSolta:{min:+$('fs-min').value,max:+$('fs-max').value}}); toast('Música e falas salvas.'); };
-$('b-zerar').onclick=async()=>{ if(!$('b-zerar').dataset.conf){ $('b-zerar').dataset.conf=1; $('b-zerar').textContent='Clique de novo para zerar'; setTimeout(()=>{ delete $('b-zerar').dataset.conf; $('b-zerar').textContent='Zerar ranking'; },3000); return; }
-  delete $('b-zerar').dataset.conf; $('b-zerar').textContent='Zerar ranking'; mostrar(await api('zerar',{})); toast('Ranking zerado.'); };
-// cantorias
-async function listarCantorias(){ const r=await api('cantorias'); $('cantorias').innerHTML=(r.lista||[]).length?r.lista.map(c=>`<li><span class="tx"><b>${esc(c.nome)}</b><span>${fmt(c.kb)} KB</span></span><button class="perigo" data-apagar="${esc(c.nome)}">Apagar</button></li>`).join(''):'<li class="vazio">Nenhuma música enviada.</li>'; }
-listarCantorias();
-$('b-cantoria').onclick=async()=>{ const f=$('c-arquivo').files[0]; const av=$('aviso-cantoria');
-  if(!f){ av.textContent='Escolha um arquivo de música.'; av.className='aviso erro'; return; }
-  const ext=(f.name.match(/\.(mp3|ogg|wav|m4a)$/i)||[,'mp3'])[1].toLowerCase(); const lista=await api('cantorias'); const base=$('c-presente').value;
-  let nome=base+'.'+ext, n=2; while((lista.lista||[]).some(c=>c.nome===nome)) nome=`${base}-${n++}.${ext}`;
-  av.textContent='Enviando…'; av.className='aviso'; const r=await api('cantorias?nome='+encodeURIComponent(nome),f);
-  av.textContent=r.ok?`Pronto: ${r.nome}. Toca quando alguém mandar esse presente.`:(r.erro||'Não deu certo.'); av.className='aviso '+(r.ok?'ok':'erro'); $('c-arquivo').value=''; listarCantorias(); };
-document.addEventListener('click',async ev=>{ const b=ev.target.closest('[data-apagar]'); if(!b) return; await api('cantorias?nome='+encodeURIComponent(b.dataset.apagar),undefined,'DELETE'); listarCantorias(); toast('Música apagada.'); });
-// palavras
+$('b-salvar-musica').onclick=async()=>{ await api('config',{musica:{ligada:$('mus-ligada').checked,volume:+$('mus-vol').value}}); toast('Música salva.'); };
 api('palavras').then(r=>{ if(r.ok) $('palavras').value=r.texto; });
 $('b-palavras').onclick=async()=>{ const r=await api('palavras',{texto:$('palavras').value}); toast(r.ok?'Lista salva. Vale em até 10 segundos.':'Não consegui salvar.'); };
-// atualização
 $('b-up-salvar').onclick=async()=>{ const tok=$('up-token').value.trim(); const e=await api('config',{atualizacao:{repo:$('up-repo').value.trim(),...(tok?{token:tok}:{})}}); $('up-token').value=''; cfgCarregada=false; mostrar(e); toast('Salvo.'); };
 $('b-up-ver').onclick=async()=>{ const av=$('aviso-up'); av.textContent='Verificando…'; av.className='aviso'; const r=await api('atualizacao');
   if(!r.ok){ av.textContent=r.erro; av.className='aviso erro'; $('b-up-atualizar').disabled=true; return; }
