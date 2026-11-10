@@ -132,7 +132,9 @@
 import * as THREE from 'three';
 import { criarPalhaco, criarSerpente } from './personagens.js';
 import { criarMusicaBaile } from './musica-baile.js';
-import { criarDancarino, PASSOS, JUNTOS, SOLOS, poseVazia, poseAndar } from './dancarinos.js';
+import { PASSOS, JUNTOS, SOLOS, poseVazia } from './dancarinos.js';
+import { carregarCaveiras, criarCaveira } from './esqueletos.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const $=id=>document.getElementById(id);
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stage=$('stage');
@@ -283,17 +285,21 @@ const feixes=[]; for(const [cor,dx] of [[0xff3d8b,-2],[0x7a3cff,0],[0x5cff8a,2]]
   f.position.set(PALCO.x+dx,6.5,PALCO.z); cena.add(f); feixes.push(f); }
 
 // ================= dançarinos: palhaços e cobrinhas feitos no próprio jogo =================
+// caveiras (página de demonstração: os arquivos vêm embutidos em caveiras-dados.js)
+const gltfL=new GLTFLoader();
+const carregarGLB=url=>{ const nome=url.split('/').pop(); const b64=window.CAVEIRAS_B64&&window.CAVEIRAS_B64[nome];
+  if(b64){ const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); return new Promise((ok,erro)=>gltfL.parse(bin.buffer,'',ok,erro)); } return gltfL.loadAsync(url); };
+let CAV=null;
 async function carregarMusicas(){ try{ const r=await fetch('api/baile/arquivos',{cache:'no-store'}); if(r.ok){ const l=await r.json(); if(l.musicas) musica.playlist(l.musicas); } }catch(e){} }
 const DS=new Map(); // id -> dançarino
 let ordem=[]; // ids na ordem de chegada (define o lugar na roda)
 const ENTRADA=new THREE.Vector3(0,0,18.5);
 function lugar(i){ // anéis em volta do centro
   let anel=0, resto=i; while(true){ const r=3.8+anel*1.9; const cap=Math.floor(2*Math.PI*r/1.6); if(resto<cap){ const a=resto/cap*Math.PI*2+anel*.37; return { x:Math.cos(a)*r, z:Math.sin(a)*r*.92, a }; } resto-=cap; anel++; } }
-// palhaço ou cobrinha: fixo para cada pessoa; a roupa (cara, cabelo, cores...) muda com a semente
-const especie=id=>(hash('esp'+id)%100)<62?'palhaco':'cobra';
+// cada pessoa vira uma caveira: tipo, cor dos olhos, cor dos ossos e enfeite saem da "semente" (a Rosa troca)
 function vestir(d){
   if(d.boneco) d.grupo.remove(d.boneco.raiz);
-  d.boneco=criarDancarino(THREE,{semente:d.info.roupa||hash(d.id),sexo:d.info.sexo||'m',tipo:especie(d.id)});
+  d.boneco=criarCaveira(CAV,{semente:d.info.roupa||hash(d.id),sexo:d.info.sexo||'m'}); d.seq=null;
   d.grupo.add(d.boneco.raiz); d.alt=d.boneco.altura;
   if(d.noivo) d.boneco.setPar(d.noivo==='noivo'?'noivo':'noiva');
 }
@@ -323,21 +329,28 @@ const VOLTA=Math.PI*2, normAng=a=>((a%VOLTA)+VOLTA*1.5)%VOLTA-Math.PI;
 // a pose vai mudando suave de um passo para o outro
 const CHAVES=Object.keys(poseVazia());
 function suavizar(d,dt){ const k=Math.min(1,dt*14); for(const c of CHAVES) d.Ps[c]+=(d.P[c]-d.Ps[c])*k; }
-function fazer(d,passo,dur,inicio=bt){ for(const k of ['rx','ry','rz']) d.Ps[k]=normAng(d.Ps[k]); d.passo=passo; d.pIni=inicio; d.pDur=dur||PASSOS[passo].dur; }
-const SORTEIO=[['balanco',6],['requebra',3],['passinho',3],['bracos',2],['pula',2],['agacha',2],['gira',2],['robo',1],['bateCabeca',2],['aviaozinho',1],['polichinelo',2],['treme',1],['cambalhota',1],['deita',1],['estrela',1],['acena',1]];
+function fazer(d,passo,dur,inicio=bt){ for(const k of ['rx','ry','rz']) d.Ps[k]=normAng(d.Ps[k]); d.passo=passo; d.pIni=inicio;
+  if(CLIPES[passo]){ d.seq={lista:CLIPES[passo],i:0,fim:0}; tocarSeq(d); d.pDur=1e9; return; } d.seq=null; d.pDur=dur||PASSOS[passo].dur; }
+const CLIPES={ desmonta:['Death_C_Skeletons','Skeletons_Awaken_Standing'], comemora:['Cheer'], pulao:['Jump_Full_Long'], provoca:['Taunt_Longer'],
+  senta:['Sit_Floor_Down','Sit_Floor_Idle','Sit_Floor_StandUp'], deitaChao:['Lie_Down','Lie_Idle','Lie_StandUp'], chute:['Unarmed_Melee_Attack_Kick','Unarmed_Melee_Attack_Punch_A'],
+  magia:['Spellcast_Summon'], rodopio:['2H_Melee_Attack_Spinning','2H_Melee_Attack_Spinning'], esquiva:['Dodge_Left','Dodge_Right','Dodge_Left'], brota:['Spawn_Ground_Skeletons'] };
+const JUNTOS2=[...JUNTOS,'desmonta','comemora','pulao','senta','rodopio','chute','esquiva','desmonta'];
+const SOLOS2=[...SOLOS,'desmonta','magia','provoca','rodopio','pulao','brota'];
+function tocarSeq(d){ const nome=d.seq.lista[d.seq.i]; d.boneco.clip(nome,{loop:/Idle$/.test(nome),fade:.2}); d.seq.fim=relogio+(/Sit_Floor_Idle|Lie_Idle/.test(nome)?2.2:d.boneco.duracao(nome)); }
+const SORTEIO=[['balanco',6],['desmonta',1],['comemora',1],['pulao',1],['provoca',1],['senta',1],['rodopio',1],['chute',1],['magia',1],['esquiva',1],['requebra',3],['passinho',3],['bracos',2],['pula',2],['agacha',2],['gira',2],['robo',1],['bateCabeca',2],['aviaozinho',1],['polichinelo',2],['treme',1],['cambalhota',1],['deita',1],['estrela',1],['acena',1]];
 const SOMA=SORTEIO.reduce((s,x)=>s+x[1],0);
 function sortearPasso(){ let x=Math.random()*SOMA; for(const [p,w] of SORTEIO){ x-=w; if(x<=0) return p; } return 'balanco'; }
 function proximoPasso(d){ if(coreo.passo&&bt<coreo.ate) return fazer(d,coreo.passo,coreo.ate-bt);
-  d.olhar=null; const p=d.passo==='balanco'?sortearPasso():'balanco'; fazer(d,p,p==='balanco'?4+Math.floor(Math.random()*3)*2:PASSOS[p].dur*(PASSOS[p].dur<=4&&Math.random()<.5?2:1)); }
-const ACOES_P={sim:['pula',2],pular:['pula',4],acenar:['acena',4],festa:['pula',4]};
+  d.olhar=null; const p=d.passo==='balanco'?sortearPasso():'balanco'; fazer(d,p,p==='balanco'||CLIPES[p]?4+Math.floor(Math.random()*3)*2:PASSOS[p].dur*(PASSOS[p].dur<=4&&Math.random()<.5?2:1)); }
+const ACOES_P={sim:['comemora',4],pular:['pulao',4],acenar:['acena',4],festa:['pula',4]};
 function acao(d,nome){ const a=ACOES_P[nome]; if(!a||d.andando||d.trem) return; fazer(d,a[0],a[1]); }
 // o coreógrafo: de vez em quando a roda inteira faz o mesmo passo, uma dupla dança junto, um faz solo, ou a galera sai correndo em volta
 const coreo={passo:null,ate:0,proxJuntos:12,proxDupla:22,proxTrem:40,proxBanda:30};
-function todosJuntos(passo,batidas){ const dur=batidas||Math.max(8,PASSOS[passo].dur*(PASSOS[passo].dur<8?2:1)); const ini=Math.ceil(bt);
-  coreo.passo=passo; coreo.ate=ini+dur; for(const d of DS.values()) if(!d.andando&&!d.trem) fazer(d,passo,ini+dur-bt,ini); }
+function todosJuntos(passo,batidas){ const dur=CLIPES[passo]?8:(batidas||Math.max(8,PASSOS[passo].dur*(PASSOS[passo].dur<8?2:1))); const ini=Math.ceil(bt);
+  coreo.passo=CLIPES[passo]?null:passo; coreo.ate=ini+dur; for(const d of DS.values()) if(!d.andando&&!d.trem&&!d.noivo) fazer(d,passo,ini+dur-bt,CLIPES[passo]?bt:ini); }
 function dupla(){ const ds=[...DS.values()].filter(d=>!d.andando&&!d.trem&&!d.noivo); if(ds.length<2) return;
   const a=rndA(ds); let b=null, m=1e9; for(const x of ds){ if(x===a) continue; const q=x.grupo.position.distanceTo(a.grupo.position); if(q<m){ m=q; b=x; } }
-  if(!b) return; const passo=rndA(SOLOS), dur=8, ini=Math.ceil(bt);
+  if(!b) return; const passo=rndA(SOLOS2), dur=8, ini=Math.ceil(bt);
   for(const [x,y] of [[a,b],[b,a]]){ fazer(x,passo,ini+dur-bt,ini); x.olhar=y; }
   cam.par=[a,b]; plano('dupla',7,1); mostrarDestaqueTxt(`${avatar(a.info)}${esc(a.info.name)} <span class="e">&</span> ${avatar(b.info)}${esc(b.info.name)}`); }
 function trem(){ const ds=[...DS.values()].filter(d=>!d.andando&&!d.trem&&!d.noivo); if(ds.length<4) return;
@@ -350,7 +363,7 @@ let relogio=0;
 function coreografo(dt){
   if(intervalo||!DS.size) return;
   coreo.proxJuntos-=dt; coreo.proxDupla-=dt; coreo.proxTrem-=dt; coreo.proxBanda-=dt;
-  if(coreo.proxJuntos<=0){ coreo.proxJuntos=18+Math.random()*12; if(DS.size>=3){ todosJuntos(rndA(JUNTOS)); plano(rndA(['drone','roda','cima','baixo','giro']),7,1); } }
+  if(coreo.proxJuntos<=0){ coreo.proxJuntos=18+Math.random()*12; if(DS.size>=3){ todosJuntos(rndA(JUNTOS2)); plano(rndA(['drone','roda','cima','baixo','giro']),7,1); } }
   else if(coreo.proxDupla<=0){ coreo.proxDupla=24+Math.random()*14; dupla(); }
   else if(coreo.proxTrem<=0){ coreo.proxTrem=50+Math.random()*30; trem(); }
   else if(coreo.proxBanda<=0){ coreo.proxBanda=40+Math.random()*25; banda.dancar(8); plano('banda',8,1); }
@@ -373,7 +386,7 @@ function piscar(id){ const e=$(id); e.classList.remove('pisca'); void e.offsetWi
 // ================= câmera drone =================
 const cam={ pos:new THREE.Vector3(0,9,26), olha:new THREE.Vector3(0,1,0), alvoPos:new THREE.Vector3(0,9,26), alvoOlha:new THREE.Vector3(0,1,0), plano:'roda', ate:0, foco:null, t0:0, prioridade:0 };
 camera.position.copy(cam.pos);
-function focar(d,seg=6,prio=1){ if(!d||performance.now()<cam.ate&&prio<cam.prioridade) return; cam.plano='destaque'; cam.foco=d; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; cam.lado=Math.random()<.5?-1:1; mostrarDestaque(d); if(!d.andando&&!d.trem&&!(coreo.passo&&bt<coreo.ate)) fazer(d,rndA(SOLOS)); }
+function focar(d,seg=6,prio=1){ if(!d||performance.now()<cam.ate&&prio<cam.prioridade) return; cam.plano='destaque'; cam.foco=d; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; cam.lado=Math.random()<.5?-1:1; mostrarDestaque(d); if(!d.andando&&!d.trem&&!(coreo.passo&&bt<coreo.ate)) fazer(d,rndA(SOLOS2)); }
 function plano(nome,seg=7,prio=0){ if(performance.now()<cam.ate&&prio<cam.prioridade) return; cam.plano=nome; cam.foco=null; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; esconderDestaque(); }
 function mostrarDestaqueTxt(h){ $('destaque').firstElementChild.innerHTML=h; $('destaque').classList.add('on'); }
 function mostrarDestaque(d){ $('destaque').firstElementChild.innerHTML=`${avatar(d.info)}${esc(d.info.name)}`; $('destaque').classList.add('on'); }
@@ -401,8 +414,8 @@ function moverCamera(dt,t){
   else if(cam.plano==='banda'){ p.set(PALCO.x+2.4+Math.sin(k*.4)*1.2,5.0,PALCO.z+15-Math.min(k,8)*.3); o.set(PALCO.x-.2,2.7,PALCO.z+2); }
   else if(cam.plano==='dupla'&&cam.par&&cam.par.every(x=>DS.has(x.id))){ const [a,b]=cam.par; const ax=a.grupo.position, bx=b.grupo.position; const mx=(ax.x+bx.x)/2, mz=(ax.z+bx.z)/2;
     let nx=-(bx.z-ax.z), nz=bx.x-ax.x; const L=Math.hypot(nx,nz)||1; nx/=L; nz/=L; if(nx*mx+nz*mz<0){ nx=-nx; nz=-nz; } // de fora da roda
-    p.set(mx+nx*4.6+Math.sin(k*.5)*.6,2.3,mz+nz*4.6); o.set(mx,1.2,mz); }
-  else if(cam.plano==='trem'&&cam.trem&&cam.trem.trem){ const g=cam.trem.grupo.position; const a=Math.atan2(g.z,g.x); p.set(Math.cos(a+.5)*15.5,4.2,Math.sin(a+.5)*15.5); o.set(g.x,1,g.z); }
+    p.set(mx+nx*4.4+Math.sin(k*.5)*.6,2.9,mz+nz*4.4); o.set(mx,1.1,mz); }
+  else if(cam.plano==='trem'&&cam.trem&&cam.trem.trem){ const g=cam.trem.grupo.position; const a=Math.atan2(g.z,g.x); p.set(Math.cos(a+.42)*13.6,3.3,Math.sin(a+.42)*13.6); o.set(Math.cos(a-.12)*10.2,1.1,Math.sin(a-.12)*10.2); }
   else if(cam.plano==='altar'){ p.set(Math.sin(t*.2)*1.6,3,ARCO_Z+7); o.set(0,1.6,ARCO_Z+.8); }
   else if(cam.plano==='entrada'&&cam.foco&&DS.has(cam.foco.id)){ const g=cam.foco.grupo; const a=g.rotation.y+.5; p.set(g.position.x+Math.sin(a)*4.2,2.6,g.position.z+Math.cos(a)*4.2); o.set(g.position.x,1.3,g.position.z); }
   else if(cam.plano==='baixo'){ const a=k*.16+cam.t0*.001; p.set(Math.sin(a)*7.6,.7,Math.cos(a)*7.6); o.set(0,2.4,0); }
@@ -564,7 +577,7 @@ function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=
         const q=posTrem(d,relogio);
         if(q.k>TREM_T){ d.trem=null; }
         else { const f=Math.min(1,q.k/1); g.position.set(d.trem.de.x+(q.x-d.trem.de.x)*f,0,d.trem.de.z+(q.z-d.trem.de.z)*f); const r=Math.atan2(q.vx,q.vz); g.rotation.y=f<1?Math.atan2(q.x-d.trem.de.x,q.z-d.trem.de.z):r;
-          d.fasePe+=dt*15; poseAndar(d.fasePe,true,d.P); suavizar(d,dt); d.boneco.aplicar(d.Ps,bt); continue; }
+          d.boneco.clip('Running_A'); d.boneco.aplicar(null,dt,true); continue; }
       }
       // andar até o lugar
       tmpV.subVectors(d.alvo,g.position); tmpV.y=0; const dist=tmpV.length();
@@ -573,9 +586,13 @@ function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=
       else { const rumo=d.olhar&&DS.has(d.olhar.id)&&bt<d.pIni+d.pDur?Math.atan2(d.olhar.grupo.position.x-g.position.x,d.olhar.grupo.position.z-g.position.z):d.rumo;
         let dr=rumo-g.rotation.y; while(dr>Math.PI) dr-=2*Math.PI; while(dr<-Math.PI) dr+=2*Math.PI; g.rotation.y+=dr*Math.min(1,dt*4); }
       d.andando=andando;
-      if(andando){ d.fasePe+=dt*(d.vel>4?15:9); poseAndar(d.fasePe,d.vel>4,d.P); }
-      else { let b=bt-d.pIni; if(b>=d.pDur){ proximoPasso(d); b=bt-d.pIni; } poseVazia(d.P); if(b>=0) PASSOS[d.passo].f(b,d.P); else PASSOS.balanco.f(bt,d.P); }
-      suavizar(d,dt); d.boneco.aplicar(d.Ps,bt);
+      if(andando){ d.seq=null; d.boneco.clip(d.vel>4?'Running_A':'Walking_A'); d.boneco.aplicar(null,dt,true); continue; }
+      if(d.seq){ if(relogio>=d.seq.fim){ d.seq.i++; if(d.seq.i<d.seq.lista.length) tocarSeq(d); else { d.seq=null; proximoPasso(d); } }
+        if(d.seq){ d.boneco.aplicar(null,dt,true); continue; } }
+      d.boneco.clip('Idle');
+      let b=bt-d.pIni; if(b>=d.pDur){ proximoPasso(d); b=bt-d.pIni; if(d.seq){ d.boneco.aplicar(null,dt,true); continue; } }
+      poseVazia(d.P); if(b>=0) PASSOS[d.passo].f(b,d.P); else PASSOS.balanco.f(bt,d.P);
+      suavizar(d,dt); d.boneco.aplicar(d.Ps,dt);
     }
     // nomes e balões em cima das cabeças
     for(const d of DS.values()){
@@ -588,7 +605,7 @@ function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=
     diretor(); if(cam.plano!=='destaque'&&cam.plano!=='dupla') esconderDestaque();
     // no close, quem estiver colado na câmera some (não tampa a pessoa em destaque)
     // quem estiver colado na câmera some (não tampa a pessoa em destaque nem o altar)
-    for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=d===cam.foco||!!d.noivo||camera.position.distanceTo(tmpV)>(cam.plano==='altar'||cam.plano==='banda'?5:3); }
+    for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=d===cam.foco||!!d.noivo||(cam.plano==='dupla'&&cam.par&&cam.par.includes(d))||(cam.plano==='trem'&&!!d.trem)||camera.position.distanceTo(tmpV)>(cam.plano==='altar'||cam.plano==='banda'||cam.plano==='dupla'?5:3); }
   }
   moverCamera(dt,t);
   // vida no cenário
@@ -608,12 +625,13 @@ setInterval(()=>trocarChamada(false),5000); trocarChamada(true);
 // ================= começar =================
 (async()=>{
   await carregarMusicas();
+  try{ CAV=await carregarCaveiras(THREE,carregarGLB); }catch(e){ console.error(e); $('carregando').textContent='Não consegui carregar as caveiras 😢'; return; }
   $('carregando').hidden=true; pronto=true; mostrarMusica(0);
   if(snapshot) handle(snapshot); for(const m of handle.fila||[]) handle(m); handle.fila=[];
   let servidor=false; try{ const r=await fetch('api/status',{cache:'no-store'}); servidor=r.ok&&!!(await r.json()); }catch(e){}
   if(!servidor&&window.BaileMotor) ligarDemoLocal(); else { musica.ligar(); if(new URLSearchParams(location.search).get('demo')==='1') iniciarDemo(); }
 })();
-window.__baile={DS,handle,cena,camera,cam,focar,plano,musica,todosJuntos,dupla,trem,banda};
+window.__baile={renderer,DS,handle,cena,camera,cam,focar,plano,musica,todosJuntos,dupla,trem,banda};
 </script>
 </body>
 </html>

@@ -1,3 +1,0 @@
-Boneco de teste do Baile do Abismo (usado enquanto a pasta "baile-personagens" estiver vazia).
-RobotExpressive, modelo de Tomás Laulhé (Quaternius), licença CC0 1.0 (domínio público).
-Modificações de Don McCurdy. Fonte: exemplos do three.js (github.com/mrdoob/three.js).

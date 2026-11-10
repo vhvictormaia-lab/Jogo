@@ -4,21 +4,24 @@ Jogo para TikTok LIVE: quem comenta vira um boneco 3D dançando na roda, com fot
 
 ```
 BAILE DO ABISMO — jogo interativo para TikTok LIVE
-Quem comenta vira um boneco 3D dançando na roda, com a FOTO e o NOME em cima da cabeça.
+Quem comenta vira uma CAVEIRA 3D dançando na roda, com a FOTO e o NOME em cima da cabeça.
 
 COMO FUNCIONA
-- Comentou, entrou: o boneco chega pelo tapete vermelho e vai dançar na roda.
+- Comentou, entrou: a caveira chega pelo tapete vermelho e vai dançar na roda.
+- 4 tipos de caveira (simples, mago, encapuzada, guerreira), cada pessoa com olhos de uma cor, ossos de uma cor e um enfeite anos 80.
+- Baile doido: requebrar, agachar até o chão, passinho, robozinho, cambalhota, estrela, deitar, pular, se DESMONTAR e REMONTAR,
+  a roda inteira dançando junto, duplas dançando frente a frente, trenzinho correndo em volta da roda e a banda dançando.
 - Tela limpa: só os presentes, as fotos e os nomes (e o tempo que falta pro fim do baile).
 - A roda tem 35 lugares. LOTOU? Aparece "CONTINUE COMENTANDO PARA ENTRAR NO BAILE": quem comentar quando o próximo baile começar entra.
 - Cada baile dura 5 minutos. No fim tem o CASAMENTO no altar e já começa outro baile.
-- Comentar MENINA ou MENINO escolhe o tipo de boneco (o jogo tenta adivinhar pelo nome, mas a pessoa pode trocar).
+- Comentar MENINA ou MENINO escolhe o enfeite (menina: laço, flor, coroa; o jogo tenta adivinhar pelo nome).
 - Quem já está na roda e comenta: aparece um balãozinho com o comentário em cima da cabeça.
 - Sem fala: o baile é só música e dança. O Palhação é o DJ no palco e a Serpente fica no altar.
 - A câmera passeia sozinha como um drone: close com o nome grande, a roda de cima, de baixo, girando no meio,
   o palco, o altar e o tapete vermelho por onde a galera chega.
 
 PRESENTES
-  🌹 Até 29 moedas (Rosa e outros pequenos) = TROQUE DE ROUPA: outra roupa + cor nova + acessório anos 80
+  🌹 Até 29 moedas (Rosa e outros pequenos) = TROQUE DE ROUPA: outra caveira, outra cor e outro enfeite
   🍩 30 moedas ou mais (Rosquinha...) = TOQUE NA BANDA: a bandinha de palhaços (guitarra, saxofone, sanfona e bateria)
      faz um show no palco, com notas musicais voando; troca a música e todo mundo muda a dança
   💍 Todo presente soma moedas. Quem mais mandou no baile vira o NOIVO (bonecos de menino) ou a NOIVA (bonecas de menina):
@@ -40,14 +43,17 @@ PAINEL (http://localhost:3000/painel.html, só funciona no computador da live)
 - Botões de teste: comentário, "menina", "menino", rosa, rosquinha, presentão, seguir, compartilhar, curtidas, encher a roda.
 - Música (ligada e volume), palavras proibidas, lista do que está acontecendo e Atualizar sistema.
 
-PERSONAGENS, ROUPAS E MÚSICAS (pastas suas, a atualização nunca apaga)
-- baile-personagens: os bonecos 3D (Meshy) e, dentro de "dancas", as danças (Mixamo). Veja o LEIA-ME.txt de lá.
-  Enquanto estiver vazia, dança um robozinho de teste.
+MÚSICAS (pasta sua, a atualização nunca apaga)
 - musicas-baile: seus MP3. Sem MP3, tocam as músicas do próprio jogo (funk, forró, disco e pagode).
+
+CAVEIRAS
+- KayKit Character Pack: Skeletons, de Kay Lousberg (kaylousberg.com), licença CC0: pode usar à vontade, sem dar crédito.
+  Ficam em public/esqueletos (o caveira.glb guarda as animações).
 
 ARQUIVOS
 - server.js: conecta na live e roda o baile · painel.js: o painel · config.js: suas configurações (pasta "privado")
 - public/baile.html: a tela do baile · public/baile-motor.js: as regras · public/texto.js: filtro e nomes dos presentes
+- public/esqueletos.js: as caveiras · public/dancarinos.js: os passos de dança
 - public/personagens.js: o Palhação DJ e a Serpente · public/musica-baile.js: as músicas do jogo
 - palavras-proibidas.txt: comentários e nomes com essas palavras não aparecem
 ```

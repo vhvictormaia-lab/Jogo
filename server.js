@@ -52,21 +52,13 @@ Texto.setExtraProibido((t) => {
 const BaileMotor = require('./public/baile-motor.js');
 const baile = BaileMotor.criar({ texto: Texto, cfg: CFG.get().baile, emitir: (m) => broadcast(m) });
 baile.iniciar();
-// personagens 3D (Meshy / Mixamo) e músicas: ficam em pastas suas, que a atualização não apaga
-const PERS_DIR = path.join(__dirname, 'baile-personagens'), MUS_DIR = path.join(__dirname, 'musicas-baile');
-for (const d of [PERS_DIR, path.join(PERS_DIR, 'dancas'), MUS_DIR]) { try { fs.mkdirSync(d, { recursive: true }); } catch {} }
-app.use('/baile-personagens', express.static(PERS_DIR));
+// músicas do baile: pasta sua, que a atualização não apaga
+const MUS_DIR = path.join(__dirname, 'musicas-baile');
+try { fs.mkdirSync(MUS_DIR, { recursive: true }); } catch {}
 app.use('/musicas-baile', express.static(MUS_DIR));
 const listar = (dir, re) => { try { return fs.readdirSync(dir).filter((f) => re.test(f)).sort((a, b) => a.localeCompare(b, 'pt-BR')); } catch { return []; } };
 app.get('/api/baile/arquivos', (_req, res) => {
-  const enc = (pre, f) => pre + '/' + encodeURIComponent(f);
-  let credito = ''; try { credito = fs.readFileSync(path.join(PERS_DIR, 'credito.txt'), 'utf8').trim().slice(0, 160); } catch {}
-  res.json({
-    modelos: listar(PERS_DIR, /\.(glb|gltf|fbx)$/i).map((f) => enc('baile-personagens', f)),
-    dancas: listar(path.join(PERS_DIR, 'dancas'), /\.(glb|gltf|fbx)$/i).map((f) => enc('baile-personagens/dancas', f)),
-    musicas: listar(MUS_DIR, /\.(mp3|ogg|m4a|wav)$/i).map((f) => enc('musicas-baile', f)),
-    credito,
-  });
+  res.json({ musicas: listar(MUS_DIR, /\.(mp3|ogg|m4a|wav)$/i).map((f) => 'musicas-baile/' + encodeURIComponent(f)) });
 });
 
 // ---------- estatísticas e registro para o painel ----------

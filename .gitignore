@@ -2,11 +2,6 @@ node_modules/
 .DS_Store
 .claude/
 privado/
-# arquivos seus do Baile (só os LEIA-ME vão para o GitHub)
-baile-personagens/*
-!baile-personagens/LEIA-ME.txt
-!baile-personagens/dancas/
-baile-personagens/dancas/*
-!baile-personagens/dancas/.mantem
+# suas músicas do Baile (só o LEIA-ME vai para o GitHub)
 musicas-baile/*
 !musicas-baile/LEIA-ME.txt
