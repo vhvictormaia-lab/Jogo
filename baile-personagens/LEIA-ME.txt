@@ -1,0 +1,14 @@
+PERSONAGENS PRÓPRIOS DO BAILE DO ABISMO (Meshy + Mixamo)
+Enquanto esta pasta estiver vazia, quem dança são as caveiras.
+
+1. Crie o personagem no Meshy (precisa ter braços e pernas, de pé, braços abertos).
+2. Na Mixamo, envie o personagem (Upload Character), confira os pontos e baixe:
+   - o personagem: FBX, "With Skin"  -> coloque NESTA pasta
+   - as danças: FBX, "Without Skin" -> coloque na pasta "dancas" (samba.fbx, hip-hop.fbx, thriller.fbx...)
+   - uma caminhada (walking.fbx) e uma corrida (running.fbx) também vão em "dancas"
+   - opcional: idle.fbx (parado) e cheer.fbx (comemorando)
+   Marque "In Place" quando a Mixamo oferecer, para o boneco dançar sem sair do lugar.
+3. Nome do arquivo com "menina" ou "menino" diz quem pode virar noiva ou noivo (ex.: baratinha-menina.fbx).
+4. credito.txt (opcional): uma linha de crédito que aparece pequena no canto.
+   Personagens do plano grátis do Meshy pedem crédito (CC BY 4.0), ex.: Personagens 3D: Meshy (CC BY 4.0) · danças: Mixamo
+A atualização do sistema nunca apaga os seus arquivos desta pasta.

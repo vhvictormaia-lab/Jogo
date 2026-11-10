@@ -51,7 +51,8 @@ const OSSO_COR = [null, null, null, null, 0xd8ffd0, 0xffd8f0, 0xd8e4ff, 0xfff0b0
 const CORES = [0xff3d8b, 0x7a3cff, 0x2f7bff, 0x16b37a, 0xffb02e, 0x00e5ff, 0xb8ff2e, 0xffe600, 0xff6a00, 0xe23b4b, 0xffffff, 0x1c1c28];
 
 // enfeites na cabeça (anos 80 e de festa)
-function enfeite(tipo, cor) {
+export function enfeite(tipo, cor) {
+  if (!T) T = enfeite.THREE;
   const g = new T.Group(); const m = (c) => new T.MeshToonMaterial({ color: c });
   const M = (geo, mat, x = 0, y = 0, z = 0) => { const o = new T.Mesh(geo, mat); o.position.set(x, y, z); g.add(o); return o; };
   if (tipo === 'oculos') { const o = M(new T.BoxGeometry(0.78, 0.17, 0.05), m(cor), 0, 0.02, 0); for (let i = -2; i <= 2; i++) M(new T.BoxGeometry(0.76, 0.022, 0.06), m(0x111111), 0, 0.02 + i * 0.032, 0.01); g.userData.frente = true; }

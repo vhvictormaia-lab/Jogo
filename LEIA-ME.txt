@@ -41,6 +41,10 @@ PAINEL (http://localhost:3000/painel.html, só funciona no computador da live)
 MÚSICAS (pasta sua, a atualização nunca apaga)
 - musicas-baile: seus MP3. Sem MP3, tocam as músicas do próprio jogo (funk, forró, disco e pagode).
 
+PERSONAGENS PRÓPRIOS (Meshy + danças da Mixamo)
+- Coloque os bonecos na pasta baile-personagens e as danças em baile-personagens/dancas (veja o LEIA-ME de lá).
+  Com eles na pasta, o baile usa os seus personagens com as danças de verdade; sem eles, dançam as caveiras.
+
 CAVEIRAS
 - KayKit Character Pack: Skeletons, de Kay Lousberg (kaylousberg.com), licença CC0: pode usar à vontade, sem dar crédito.
   Ficam em public/esqueletos (o caveira.glb guarda as animações).

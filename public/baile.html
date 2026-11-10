@@ -137,8 +137,10 @@ import * as THREE from 'three';
 import { criarPalhaco, criarSerpente } from './personagens.js';
 import { criarMusicaBaile } from './musica-baile.js';
 import { PASSOS, JUNTOS, SOLOS, poseVazia, ginga } from './dancarinos.js';
-import { carregarCaveiras, criarCaveira } from './esqueletos.js';
+import { carregarCaveiras, criarCaveira, enfeite } from './esqueletos.js';
+import { carregarPersonagens3D, criarBoneco3D } from './personagens3d.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 const $=id=>document.getElementById(id);
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stage=$('stage');
@@ -293,9 +295,11 @@ const feixes=[]; for(const [cor,dx] of [[0xff3d8b,-2],[0x7a3cff,0],[0x5cff8a,2]]
 // caveiras (página de demonstração: os arquivos vêm embutidos em caveiras-dados.js)
 const gltfL=new GLTFLoader();
 const carregarGLB=url=>{ const nome=url.split('/').pop(); const b64=window.CAVEIRAS_B64&&window.CAVEIRAS_B64[nome];
-  if(b64){ const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); return new Promise((ok,erro)=>gltfL.parse(bin.buffer,'',ok,erro)); } return gltfL.loadAsync(url); };
-let CAV=null;
-async function carregarMusicas(){ try{ const r=await fetch('api/baile/arquivos',{cache:'no-store'}); if(r.ok){ const l=await r.json(); if(l.musicas) musica.playlist(l.musicas); } }catch(e){} }
+  if(b64){ const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); return new Promise((ok,erro)=>gltfL.parse(bin.buffer,'',ok,erro)); }
+  if(/\.fbx$/i.test(url)) return fbxL.loadAsync(url).then(o=>({scene:o,animations:o.animations||[]})); return gltfL.loadAsync(url); };
+const fbxL=new FBXLoader();
+let CAV=null, MIX=null, LISTA={};
+async function carregarMusicas(){ try{ const r=await fetch('api/baile/arquivos',{cache:'no-store'}); if(r.ok){ LISTA=await r.json(); if(LISTA.musicas) musica.playlist(LISTA.musicas); } }catch(e){} }
 const DS=new Map(); // id -> dançarino
 let ordem=[]; // ids na ordem de chegada (define o lugar na roda)
 const ENTRADA=new THREE.Vector3(0,0,18.5);
@@ -304,7 +308,7 @@ function lugar(i){ // anéis em volta do centro
 // cada pessoa vira uma caveira: tipo, cor dos olhos, cor dos ossos e enfeite saem da "semente" (a Rosa troca)
 function vestir(d){
   if(d.boneco) d.grupo.remove(d.boneco.raiz);
-  d.boneco=criarCaveira(CAV,{semente:d.info.roupa||hash(d.id),sexo:d.info.sexo||'m'}); d.seq=null;
+  d.boneco=MIX?criarBoneco3D(MIX,{semente:d.info.roupa||hash(d.id),sexo:d.info.sexo||'m',enfeite}):criarCaveira(CAV,{semente:d.info.roupa||hash(d.id),sexo:d.info.sexo||'m'}); d.seq=null; d.mixFim=0;
   d.grupo.add(d.boneco.raiz); d.alt=d.boneco.altura;
   if(d.noivo) d.boneco.setPar(d.noivo==='noivo'?'noivo':'noiva');
 }
@@ -347,18 +351,25 @@ function tocarSeq(d){ const nome=d.seq.lista[d.seq.i]; d.boneco.clip(nome,{loop:
 const SORTEIO=[['balanco',7],['desmonta',1],['comemora',1],['pulao',1],['provoca',1],['senta',1],['rodopio',1],['chute',1],['magia',1],['esquiva',1],['requebra',3],['passinho',3],['bracos',2],['pula',2],['agacha',2],['gira',2],['bateCabeca',2],['aviaozinho',1],['polichinelo',2],['treme',1],['cambalhota',1],['deita',1],['estrela',1],['acena',1]];
 const SOMA=SORTEIO.reduce((s,x)=>s+x[1],0);
 function sortearPasso(){ let x=Math.random()*SOMA; for(const [p,w] of SORTEIO){ x-=w; if(x<=0) return p; } return 'balanco'; }
+// ---------- personagens da Mixamo ----------
+function animarAndando(d,dt,correndo){ if(d.boneco.mixamo){ d.boneco.andar(correndo); d.mixAndando=true; d.boneco.atualizar(dt); } else { d.boneco.clip(correndo?'Running_A':'Walking_A'); d.boneco.aplicar(null,dt,true); } }
+function mixDancar(d,clip,inicio,seg){ if(!clip&&coreo.mixClip&&relogio<coreo.mixAte){ clip=coreo.mixClip; inicio=relogio-coreo.mixIni; seg=coreo.mixAte-relogio; }
+  d.boneco.dancar(clip,inicio!=null?{inicio}:{}); d.mixFim=relogio+(seg||9+Math.random()*9); }
 function proximoPasso(d){ if(coreo.passo&&bt<coreo.ate) return fazer(d,coreo.passo,coreo.ate-bt);
   d.olhar=null; const p=d.passo==='balanco'?sortearPasso():'balanco'; fazer(d,p,p==='balanco'||CLIPES[p]?4+Math.floor(Math.random()*3)*2:PASSOS[p].dur*(PASSOS[p].dur<=4&&Math.random()<.5?2:1)); }
 const ACOES_P={sim:['comemora',4],pular:['pulao',4],acenar:['acena',4],festa:['pula',4]};
-function acao(d,nome){ const a=ACOES_P[nome]; if(!a||d.andando||d.trem) return; fazer(d,a[0],a[1]); }
+function acao(d,nome){ const a=ACOES_P[nome]; if(!a||d.andando||d.trem) return; if(d.boneco.mixamo){ if(nome==='sim'||nome==='festa'){ d.boneco.comemorar(); d.mixFim=relogio+2.6; } return; } fazer(d,a[0],a[1]); }
 // o coreógrafo: de vez em quando a roda inteira faz o mesmo passo, uma dupla dança junto, um faz solo, ou a galera sai correndo em volta
 const coreo={passo:null,ate:0,proxJuntos:40,proxDupla:30,proxTrem:75,proxBanda:35};
-function todosJuntos(passo,batidas){ const dur=CLIPES[passo]?8:(batidas||Math.max(8,PASSOS[passo].dur*(PASSOS[passo].dur<8?2:1))); const ini=Math.ceil(bt);
+function todosJuntos(passo,batidas){
+  if(MIX){ const clip=MIX.dancas[Math.floor(Math.random()*MIX.dancas.length)]; coreo.mixClip=clip; coreo.mixIni=relogio; coreo.mixAte=relogio+12;
+    for(const d of DS.values()) if(!d.andando&&!d.trem&&!d.noivo) mixDancar(d,clip,0,12); return; } const dur=CLIPES[passo]?8:(batidas||Math.max(8,PASSOS[passo].dur*(PASSOS[passo].dur<8?2:1))); const ini=Math.ceil(bt);
   coreo.passo=CLIPES[passo]?null:passo; coreo.ate=ini+dur; for(const d of DS.values()) if(!d.andando&&!d.trem&&!d.noivo) fazer(d,passo,ini+dur-bt,CLIPES[passo]?bt:ini); }
 function dupla(){ const ds=[...DS.values()].filter(d=>!d.andando&&!d.trem&&!d.noivo); if(ds.length<2) return;
   const a=rndA(ds); let b=null, m=1e9; for(const x of ds){ if(x===a) continue; const q=x.grupo.position.distanceTo(a.grupo.position); if(q<m){ m=q; b=x; } }
   if(!b) return; const passo=rndA(SOLOS2), dur=8, ini=Math.ceil(bt);
-  for(const [x,y] of [[a,b],[b,a]]){ fazer(x,passo,ini+dur-bt,ini); x.olhar=y; }
+  const clipD=MIX?MIX.dancas[Math.floor(Math.random()*MIX.dancas.length)]:null;
+  for(const [x,y] of [[a,b],[b,a]]){ if(MIX) mixDancar(x,clipD,0,9); else fazer(x,passo,ini+dur-bt,ini); x.olhar=y; }
   cam.par=[a,b]; plano('dupla',7,1); mostrarDestaqueTxt(`${avatar(a.info)}${esc(a.info.name)} <span class="e">&</span> ${avatar(b.info)}${esc(b.info.name)}`); }
 function trem(){ const ds=[...DS.values()].filter(d=>!d.andando&&!d.trem&&!d.noivo); if(ds.length<4) return;
   const n=Math.min(9,Math.max(4,Math.floor(ds.length/3))); const lista=ds.sort(()=>Math.random()-.5).slice(0,n); const a0=Math.random()*VOLTA;
@@ -393,7 +404,7 @@ function piscar(id){ const e=$(id); e.classList.remove('pisca'); void e.offsetWi
 // ================= câmera drone =================
 const cam={ pos:new THREE.Vector3(0,9,26), olha:new THREE.Vector3(0,1,0), alvoPos:new THREE.Vector3(0,9,26), alvoOlha:new THREE.Vector3(0,1,0), plano:'roda', ate:0, foco:null, t0:0, prioridade:0 };
 camera.position.copy(cam.pos);
-function focar(d,seg=7,prio=1){ if(!d||performance.now()<cam.ate&&prio<cam.prioridade) return; cam.cortar=cam.plano!=='destaque'||cam.foco!==d; cam.plano='destaque'; cam.foco=d; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; cam.lado=Math.random()<.5?-1:1; mostrarDestaque(d); if(!d.andando&&!d.trem&&!(coreo.passo&&bt<coreo.ate)) fazer(d,rndA(SOLOS2)); }
+function focar(d,seg=7,prio=1){ if(!d||performance.now()<cam.ate&&prio<cam.prioridade) return; cam.cortar=cam.plano!=='destaque'||cam.foco!==d; cam.plano='destaque'; cam.foco=d; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; cam.lado=Math.random()<.5?-1:1; mostrarDestaque(d); if(!d.andando&&!d.trem&&!(coreo.passo&&bt<coreo.ate)&&!d.boneco.mixamo) fazer(d,rndA(SOLOS2)); }
 function plano(nome,seg=9,prio=0){ if(performance.now()<cam.ate&&prio<cam.prioridade) return; cam.cortar=cam.plano!==nome; cam.plano=nome; cam.foco=null; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; esconderDestaque(); }
 function mostrarDestaqueTxt(h){ $('destaque').firstElementChild.innerHTML=h; $('destaque').classList.add('on'); }
 function mostrarDestaque(d){ $('destaque').firstElementChild.innerHTML=`${avatar(d.info)}${esc(d.info.name)}`; $('destaque').classList.add('on'); }
@@ -586,7 +597,7 @@ function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=
         const q=posTrem(d,relogio);
         if(q.k>TREM_T){ d.trem=null; }
         else { const f=Math.min(1,q.k/1); g.position.set(d.trem.de.x+(q.x-d.trem.de.x)*f,0,d.trem.de.z+(q.z-d.trem.de.z)*f); const r=Math.atan2(q.vx,q.vz); g.rotation.y=f<1?Math.atan2(q.x-d.trem.de.x,q.z-d.trem.de.z):r;
-          d.boneco.clip('Running_A'); d.boneco.aplicar(null,dt,true); continue; }
+          animarAndando(d,dt,true); continue; }
       }
       // andar até o lugar
       tmpV.subVectors(d.alvo,g.position); tmpV.y=0; const dist=tmpV.length();
@@ -595,7 +606,8 @@ function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=
       else { const rumo=d.olhar&&DS.has(d.olhar.id)&&bt<d.pIni+d.pDur?Math.atan2(d.olhar.grupo.position.x-g.position.x,d.olhar.grupo.position.z-g.position.z):d.rumo;
         let dr=rumo-g.rotation.y; while(dr>Math.PI) dr-=2*Math.PI; while(dr<-Math.PI) dr+=2*Math.PI; g.rotation.y+=dr*Math.min(1,dt*4); }
       d.andando=andando;
-      if(andando){ d.seq=null; d.boneco.clip(d.vel>4?'Running_A':'Walking_A'); d.boneco.aplicar(null,dt,true); continue; }
+      if(andando){ d.seq=null; animarAndando(d,dt,d.vel>4); continue; }
+      if(d.boneco.mixamo){ if(d.mixAndando||relogio>=(d.mixFim||0)) mixDancar(d); d.mixAndando=false; d.boneco.atualizar(dt); continue; }
       if(d.seq){ if(relogio>=d.seq.fim){ d.seq.i++; if(d.seq.i<d.seq.lista.length) tocarSeq(d); else { d.seq=null; proximoPasso(d); } }
         if(d.seq){ d.boneco.aplicar(null,dt,true); continue; } }
       d.boneco.clip('Idle');
@@ -636,7 +648,11 @@ setInterval(()=>trocarChamada(false),5000); trocarChamada(true);
 // ================= começar =================
 (async()=>{
   await carregarMusicas();
-  try{ CAV=await carregarCaveiras(THREE,carregarGLB); }catch(e){ console.error(e); $('carregando').textContent='Não consegui carregar as caveiras 😢'; return; }
+  // personagens próprios (Meshy + danças da Mixamo) na pasta baile-personagens; sem eles, as caveiras
+  enfeite.THREE=THREE;
+  if(LISTA.modelos&&LISTA.modelos.length){ try{ MIX=await carregarPersonagens3D(THREE,LISTA,carregarGLB); }catch(e){ console.error(e); MIX=null; } }
+  if(MIX) $('credito').textContent=LISTA.credito||'Personagens 3D: Meshy (CC BY 4.0) · danças: Mixamo';
+  else { try{ CAV=await carregarCaveiras(THREE,carregarGLB); }catch(e){ console.error(e); $('carregando').textContent='Não consegui carregar os personagens 😢'; return; } }
   $('carregando').hidden=true; pronto=true; mostrarMusica(0);
   if(snapshot) handle(snapshot); for(const m of handle.fila||[]) handle(m); handle.fila=[];
   let servidor=false; try{ const r=await fetch('api/status',{cache:'no-store'}); servidor=r.ok&&!!(await r.json()); }catch(e){}

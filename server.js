@@ -52,13 +52,20 @@ Texto.setExtraProibido((t) => {
 const BaileMotor = require('./public/baile-motor.js');
 const baile = BaileMotor.criar({ texto: Texto, cfg: CFG.get().baile, emitir: (m) => broadcast(m) });
 baile.iniciar();
-// músicas do baile: pasta sua, que a atualização não apaga
-const MUS_DIR = path.join(__dirname, 'musicas-baile');
-try { fs.mkdirSync(MUS_DIR, { recursive: true }); } catch {}
+// músicas e personagens próprios (Meshy + Mixamo): pastas suas, que a atualização não apaga
+const MUS_DIR = path.join(__dirname, 'musicas-baile'), PERS_DIR = path.join(__dirname, 'baile-personagens');
+for (const d of [MUS_DIR, PERS_DIR, path.join(PERS_DIR, 'dancas')]) { try { fs.mkdirSync(d, { recursive: true }); } catch {} }
 app.use('/musicas-baile', express.static(MUS_DIR));
+app.use('/baile-personagens', express.static(PERS_DIR));
 const listar = (dir, re) => { try { return fs.readdirSync(dir).filter((f) => re.test(f)).sort((a, b) => a.localeCompare(b, 'pt-BR')); } catch { return []; } };
 app.get('/api/baile/arquivos', (_req, res) => {
-  res.json({ musicas: listar(MUS_DIR, /\.(mp3|ogg|m4a|wav)$/i).map((f) => 'musicas-baile/' + encodeURIComponent(f)) });
+  let credito = ''; try { credito = fs.readFileSync(path.join(PERS_DIR, 'credito.txt'), 'utf8').trim().slice(0, 160); } catch {}
+  res.json({
+    musicas: listar(MUS_DIR, /\.(mp3|ogg|m4a|wav)$/i).map((f) => 'musicas-baile/' + encodeURIComponent(f)),
+    modelos: listar(PERS_DIR, /\.(glb|gltf|fbx)$/i).map((f) => 'baile-personagens/' + encodeURIComponent(f)),
+    dancas: listar(path.join(PERS_DIR, 'dancas'), /\.(glb|gltf|fbx)$/i).map((f) => 'baile-personagens/dancas/' + encodeURIComponent(f)),
+    credito,
+  });
 });
 
 // ---------- estatísticas e registro para o painel ----------
