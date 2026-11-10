@@ -74,7 +74,14 @@ let edgeFalhas = 0, edgePausaAte = 0, edgeAvisou = false;
 const secMsGec = () => secMsGecV2(Date.now() / 1000 + edgeSkew);
 const xml = (t) => String(t).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 function carimbo() { return new Date().toUTCString().replace(/^(\w+), (\d+) (\w+) (\d+) ([\d:]+) GMT$/, '$1 $3 $2 $4 $5 GMT+0000 (Coordinated Universal Time)'); }
+const multiEstrangeira = (v) => /Multilingual/i.test(v) && !/^pt-/i.test(v);
+let semLang = false; // se a Microsoft não aceitar o <lang>, fala sem ele
 function synthNatural(text, voz = vozCobra(), pros = {}, tentativa = 0) {
+  if (multiEstrangeira(voz) && !semLang && tentativa === 0) // tenta com <lang>; se não vier áudio, tenta sem
+    return synthNatural_(text, voz, pros, 0, true).then((u) => u || synthNatural_(text, voz, pros, 0, false).then((u2) => { if (u2) semLang = true; return u2; }));
+  return synthNatural_(text, voz, pros, tentativa, false);
+}
+function synthNatural_(text, voz, pros, tentativa, forcarPt) {
   return new Promise((resolve) => {
     let WebSocket; try { WebSocket = require('ws'); } catch { return resolve(null); }
     const id = crypto.randomUUID().replace(/-/g, '');
@@ -95,7 +102,7 @@ function synthNatural(text, voz = vozCobra(), pros = {}, tentativa = 0) {
     ws.on('unexpected-response', (req, res) => {
       // 403 costuma ser relógio do PC fora da hora: ajusta pela hora do servidor e tenta mais uma vez
       const d = Date.parse(res.headers.date || ''); fim = true; clearTimeout(t); try { ws.terminate(); } catch {}
-      if (res.statusCode === 403 && d && tentativa === 0) { edgeSkew += (d - Date.now()) / 1000; return synthNatural(text, voz, pros, 1).then(resolve); }
+      if (res.statusCode === 403 && d && tentativa === 0) { edgeSkew += (d - Date.now()) / 1000; return synthNatural_(text, voz, pros, 1, forcarPt).then(resolve); }
       edgeMotivo = 'a Microsoft respondeu ' + res.statusCode; resolve(null);
     });
     ws.on('error', (e) => { edgeMotivo = e && e.code ? 'erro de conexão ' + e.code : 'erro de conexão'; acabar(false); });
@@ -105,7 +112,9 @@ function synthNatural(text, voz = vozCobra(), pros = {}, tentativa = 0) {
         + '{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}\r\n');
       ws.send(`X-RequestId:${id}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${carimbo()}Z\r\nPath:ssml\r\n\r\n`
         + `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='pt-BR'><voice name='${xml(voz)}'>`
-        + `<prosody pitch='${xml(pros.pitch || '+0Hz')}' rate='${xml(pros.rate || '+8%')}' volume='+0%'>${xml(text)}</prosody></voice></speak>`);
+        + `<prosody pitch='${xml(pros.pitch || '+0Hz')}' rate='${xml(pros.rate || '+8%')}' volume='+0%'>`
+        // vozes multilíngues de outros países (Andrew, Ava...): pede para falar em português do Brasil
+        + (forcarPt ? `<lang xml:lang='pt-BR'>${xml(text)}</lang>` : xml(text)) + `</prosody></voice></speak>`);
     });
     ws.on('message', (data, isBinary) => {
       if (isBinary) {

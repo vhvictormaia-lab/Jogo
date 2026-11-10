@@ -221,7 +221,13 @@ const fmt=n=>Number(n||0).toLocaleString('pt-BR');
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),2200); }
 async function api(url,corpo,metodo){ try{ const r=await fetch('/api/painel/'+url,{method:metodo||(corpo!==undefined?'POST':'GET'),headers:corpo instanceof Blob?{}:{'content-type':'application/json'},body:corpo instanceof Blob?corpo:(corpo!==undefined?JSON.stringify(corpo):undefined)}); return await r.json(); }catch(e){ return {ok:false,erro:'Não consegui falar com o jogo. Ele está aberto?'}; } }
 
-const VOZES=[['pt-BR-FranciscaNeural','Francisca (feminina)'],['pt-BR-AntonioNeural','Antonio (masculina)'],['pt-BR-ThalitaMultilingualNeural','Thalita (feminina, jovem)'],['pt-PT-DuarteNeural','Duarte (Portugal)'],['pt-PT-RaquelNeural','Raquel (Portugal)']];
+const VOZES=[
+  ['pt-BR-AntonioNeural','Antonio · homem adulto'],['pt-BR-FranciscaNeural','Francisca · mulher adulta'],['pt-BR-ThalitaMultilingualNeural','Thalita · moça jovem, animada'],
+  ['en-US-AndrewMultilingualNeural','Andrew · rapaz jovem, brincalhão'],['en-US-BrianMultilingualNeural','Brian · adulto descontraído'],
+  ['en-US-AvaMultilingualNeural','Ava · moça jovem, alegre'],['en-US-EmmaMultilingualNeural','Emma · mulher alegre'],
+  ['it-IT-GiuseppeMultilingualNeural','Giuseppe · homem grave, bravo'],['fr-FR-RemyMultilingualNeural','Rémy · homem sério'],
+  ['de-DE-FlorianMultilingualNeural','Florian · homem firme'],['de-DE-SeraphinaMultilingualNeural','Seraphina · mulher madura'],['fr-FR-VivienneMultilingualNeural','Vivienne · mulher doce'],
+  ['pt-PT-DuarteNeural','Duarte · Portugal'],['pt-PT-RaquelNeural','Raquel · Portugal']];
 for(const id of ['v-palhaco','v-serpente','v-cobra','v-narrador']) $(id).innerHTML=VOZES.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
 const PRESENTES=[['rosa','Rosa'],['tiktok','TikTok'],['coracao','Coração (Heart Me)'],['coracaozinho','Coraçãozinho (Finger Heart)'],['rosquinha','Rosquinha (Doughnut)'],['sorvete','Sorvete'],['perfume','Perfume'],['maos-de-coracao','Mãos de coração'],['galaxia','Galáxia'],['leao','Leão'],['universo','Universo'],['gg','GG (bomba)']];
 $('c-presente').innerHTML=PRESENTES.map(([v,n])=>`<option value="${v}">${n}</option>`).join('');
