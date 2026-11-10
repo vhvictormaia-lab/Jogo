@@ -30,7 +30,7 @@ function prepararModelo(r, url) {
     const mats = (Array.isArray(o.material) ? o.material : [o.material]).map((m) => {
       if (!m) return m; const map = m.map || null;
       if (map) { map.colorSpace = T.SRGBColorSpace; map.anisotropy = 4; map.needsUpdate = true; }
-      const n = new T.MeshStandardMaterial({ map, color: map ? 0xffffff : (m.color || 0xffffff), roughness: 0.75, metalness: 0, skinning: true });
+      const n = new T.MeshStandardMaterial({ map, color: map ? 0xffffff : (m.color || 0xffffff), roughness: 0.75, metalness: 0 });
       n.name = m.name; m.dispose && m.dispose(); return n;
     });
     o.material = Array.isArray(o.material) ? mats : mats[0];
@@ -60,7 +60,7 @@ export async function carregarPersonagens3D(THREE, lista, carregar) {
     for (const u of lista.texturas || []) {
       const n = nomeArq(u).toLowerCase();
       if (n !== base && !n.startsWith(base + '-') && !n.startsWith(base + '_')) continue;
-      try { const t = await tl.loadAsync(u); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; m.texturas.push(t); } catch (e) { console.warn('roupa não carregou', u, e); }
+      try { const t = await tl.loadAsync(lista.resolver ? lista.resolver(u) : u); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; m.texturas.push(t); } catch (e) { console.warn('roupa não carregou', u, e); }
     }
   }
   const todos = [];
