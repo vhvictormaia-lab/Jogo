@@ -103,12 +103,24 @@
   <section>
     <h2>🎮 Jogo</h2>
     <p class="dica">O modo muda as falas e as vozes. Copie o link do jogo para a fonte <b>Link</b> do LIVE Studio (1080×1920).</p>
-    <div class="seg" role="group" aria-label="Modo"><button id="m-cobrinha" aria-pressed="false">🐍 Cobrinha</button><button id="m-abismo" aria-pressed="false">🤡 Abismo</button><button id="m-quiz" aria-pressed="false">🧠 Quiz</button></div>
+    <div class="seg" role="group" aria-label="Modo"><button id="m-cobrinha" aria-pressed="false">🐍 Cobrinha</button><button id="m-abismo" aria-pressed="false">🤡 Abismo</button><button id="m-quiz" aria-pressed="false">🧠 Quiz</button><button id="m-baile" aria-pressed="false">💃 Baile</button></div>
     <div class="link"><small>Cobrinha</small><code id="l-cobrinha"></code><button data-copiar="l-cobrinha">Copiar</button></div>
     <div class="link"><small>Cobrinha no Abismo</small><code id="l-cobrinhaAbismo"></code><button data-copiar="l-cobrinhaAbismo">Copiar</button></div>
     <div class="link"><small>Abismo Live</small><code id="l-abismo"></code><button data-copiar="l-abismo">Copiar</button></div>
     <div class="link"><small>Quiz do Abismo</small><code id="l-quiz"></code><button data-copiar="l-quiz">Copiar</button></div>
-    <div class="linha"><a href="/?demo=1" target="_blank" rel="noopener"><button>Testar Cobrinha</button></a><a href="/abismo.html?demo=1" target="_blank" rel="noopener"><button>Testar Abismo</button></a><a href="/quiz.html" target="_blank" rel="noopener"><button>Abrir Quiz</button></a></div>
+    <div class="link"><small>Baile do Abismo</small><code id="l-baile"></code><button data-copiar="l-baile">Copiar</button></div>
+    <div class="linha"><a href="/?demo=1" target="_blank" rel="noopener"><button>Testar Cobrinha</button></a><a href="/abismo.html?demo=1" target="_blank" rel="noopener"><button>Testar Abismo</button></a><a href="/quiz.html" target="_blank" rel="noopener"><button>Abrir Quiz</button></a><a href="/baile.html" target="_blank" rel="noopener"><button>Abrir Baile</button></a></div>
+  </section>
+
+  <section id="sec-baile">
+    <h2>💃 Baile do Abismo</h2>
+    <p class="dica">Funciona com o modo <b>Baile</b> ligado. Quem comenta entra na roda. Rosa troca a roupa, Rosquinha (30+ moedas) toca na banda, presente de 100+ moedas vira noivos.
+      Personagens 3D: pasta <b>baile-personagens</b>. Músicas MP3: pasta <b>musicas-baile</b>.</p>
+    <div class="aviso" id="aviso-baile"></div>
+    <div class="faixa"><label for="b-duracao">Duração</label><input type="range" id="b-duracao" min="5" max="120" step="5" value="30"><output id="o-b-duracao">30 min</output></div>
+    <div class="faixa"><label for="b-maximo">Na roda</label><input type="range" id="b-maximo" min="10" max="150" step="5" value="60"><output id="o-b-maximo">60</output></div>
+    <div class="linha"><button class="rosa" id="b-fim">🏁 Terminar baile agora</button><button id="b-limpar">♻ Esvaziar a roda</button></div>
+    <div class="linha" id="b-testes"><button data-bteste="chat">💬 Alguém comenta</button><button data-bteste="rosa">🌹 Rosa</button><button data-bteste="banda">🍩 Banda</button><button data-bteste="noivos">💍 Noivos</button></div>
   </section>
 
   <section id="sec-quiz">
@@ -258,8 +270,8 @@ function mostrar(e){
   $('aviso-tiktok').textContent=t.connected?'Conectado: presentes, curtidas e comentários estão chegando no jogo.':(t.error&&t.error!=='stream ended'?'A live ainda não foi encontrada. Ela está no ar? O jogo tenta de novo sozinho.':'');
   const s=e.stats; $('n-esp').textContent=fmt(s.espectadores); $('n-cur').textContent=fmt(s.curtidas); $('n-pre').textContent=fmt(s.presentes); $('n-dia').textContent=fmt(s.diamantes);
   $('n-seg').textContent=fmt(s.seguidores); $('n-com').textContent=fmt(s.comentarios); $('n-min').textContent=fmt(s.minutos);
-  for(const k of ['cobrinha','cobrinhaAbismo','abismo','quiz']) $('l-'+k).textContent=e.links[k];
-  mostrarQuiz(e.quiz,e.config.modo);
+  for(const k of ['cobrinha','cobrinhaAbismo','abismo','quiz','baile']) $('l-'+k).textContent=e.links[k];
+  mostrarQuiz(e.quiz,e.config.modo); mostrarBaile(e.baile,e.config.modo);
   $('top').innerHTML=e.top.length?e.top.map((u,i)=>`<li><span class="pos">${i+1}</span><span class="ft" style="${u.avatar?`background-image:url('${esc(u.avatar)}')`:''}"></span><span class="tx"><b>${esc(u.name)}</b></span><span class="pts">${fmt(Math.round(u.pts))}</span></li>`).join(''):'<li class="vazio">Ninguém pontuou ainda.</li>';
   $('registro').innerHTML=e.registro.length?e.registro.map(r=>`<li><span class="ft" style="${r.foto?`background-image:url('${esc(r.foto)}')`:''}"></span><span class="tx"><b>${esc(r.nome)}</b><span>${esc(r.texto)}</span></span><span class="tag ${r.tipo}">${esc(r.tipo)}</span></li>`).join(''):'<li class="vazio">Os presentes, seguidores e comentários aparecem aqui.</li>';
   if(!cfgCarregada){ cfgCarregada=true; preencherConfig(e.config); }
@@ -271,8 +283,21 @@ setInterval(atualizarEstado,2000); atualizarEstado();
 $('b-salvar-usuario').onclick=async()=>{ const e=await api('config',{usuario:$('usuario').value}); mostrar(e); toast('Usuário salvo. Conectando…'); };
 $('b-conectar').onclick=async()=>{ mostrar(await api('tiktok',{acao:'conectar'})); toast('Conectando à live…'); };
 $('b-desconectar').onclick=async()=>{ mostrar(await api('tiktok',{acao:'desconectar'})); toast('Desconectado.'); };
-function marcarModo(m){ for(const k of ['cobrinha','abismo','quiz']) $('m-'+k).setAttribute('aria-pressed',String(k===(m||'cobrinha'))); }
-for(const m of ['cobrinha','abismo','quiz']) $('m-'+m).onclick=async()=>{ const e=await api('config',{modo:m}); marcarModo(m); mostrar(e); toast(m==='abismo'?'Modo Abismo: palhaço e serpente falando.':m==='quiz'?'Modo Quiz ligado: abra o link do Quiz no LIVE Studio.':'Modo Cobrinha.'); };
+function marcarModo(m){ for(const k of ['cobrinha','abismo','quiz','baile']) $('m-'+k).setAttribute('aria-pressed',String(k===(m||'cobrinha'))); }
+for(const m of ['cobrinha','abismo','quiz','baile']) $('m-'+m).onclick=async()=>{ const e=await api('config',{modo:m}); marcarModo(m); mostrar(e); toast(m==='abismo'?'Modo Abismo: palhaço e serpente falando.':m==='quiz'?'Modo Quiz ligado: abra o link do Quiz no LIVE Studio.':m==='baile'?'Modo Baile ligado: abra o link do Baile no LIVE Studio.':'Modo Cobrinha.'); };
+// ----- baile -----
+let baileUI=false;
+function mostrarBaile(b,modo){ if(!b) return; const on=modo==='baile';
+  $('aviso-baile').textContent=on?(b.rodando?`Baile rodando: ${b.na_roda} na roda. Coloque o link do Baile no LIVE Studio.`:'Ligando o baile…'):'O baile está parado. Clique em 💃 Baile lá em cima para ligar.'; $('aviso-baile').className='aviso'+(on?' ok':'');
+  if(baileUI) return; baileUI=true; $('b-duracao').value=b.duracao; $('o-b-duracao').textContent=b.duracao+' min'; $('b-maximo').value=b.maximo; $('o-b-maximo').textContent=b.maximo; }
+$('b-duracao').oninput=e=>$('o-b-duracao').textContent=e.target.value+' min';
+$('b-maximo').oninput=e=>$('o-b-maximo').textContent=e.target.value;
+for(const id of ['b-duracao','b-maximo']) $(id).onchange=async()=>{ mostrar(await api('baile',{acao:'config',duracao:+$('b-duracao').value,maximo:+$('b-maximo').value})); toast('Salvo. O cronômetro recomeçou.'); };
+$('b-limpar').onclick=async()=>{ mostrar(await api('baile',{acao:'limpar'})); toast('Roda vazia.'); };
+$('b-fim').onclick=async()=>{ mostrar(await api('baile',{acao:'fim'})); toast('Fim do baile! Já começou outro.'); };
+document.addEventListener('click',async ev=>{ const b=ev.target.closest('[data-bteste]'); if(!b) return; const n=NOMES[Math.floor(Math.random()*NOMES.length)], id=n.toLowerCase();
+  const t=b.dataset.bteste, corpo=t==='chat'?{type:'chat',text:'eu'}:t==='rosa'?{type:'gift',giftName:'Rose',diamonds:1,count:1}:t==='banda'?{type:'gift',giftName:'Doughnut',diamonds:30,count:1}:{type:'gift',giftName:'Lion',diamonds:29999,count:1};
+  await api('teste',{...corpo,id,name:n}).catch(()=>{}); toast('Enviado.'); });
 // ----- quiz -----
 let quizPronto=false;
 function mostrarQuiz(q,modo){ if(!q) return; const on=modo==='quiz';

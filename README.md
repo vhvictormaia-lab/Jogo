@@ -13,7 +13,7 @@ PAINEL DE CONTROLE (novo)
 Ao abrir o atalho, o painel abre sozinho no navegador: http://localhost:3000/painel.html
 - Resumo da live: espectadores, curtidas, presentes, diamantes, seguidores, comentários e tempo.
 - Conectar e desconectar da live, trocar o usuário do TikTok.
-- Escolher o modo (Cobrinha, Abismo ou Quiz) e copiar os links para o LIVE Studio.
+- Escolher o modo (Cobrinha, Abismo, Quiz ou Baile) e copiar os links para o LIVE Studio.
 - Fala manual: você digita e o palhaço, a serpente, a cobrinha ou o narrador falam na hora.
 - Eventos de teste (rosa, galáxia, GG, seguir, compartilhar, curtidas, comentário, entrou).
 - TOP 6 com botão de zerar, e a lista do que está acontecendo na live.
@@ -69,6 +69,24 @@ Como usar: abra o atalho "Quiz do Abismo" (ou iniciar-quiz.bat) e no LIVE Studio
 No painel (http://localhost:3000/painel.html), cartão "Quiz do Abismo": tempo por pergunta, categorias, pular pergunta,
 mostrar campeões, zerar ranking e botões de teste. Também dá para trocar para o modo 🧠 Quiz no cartão "Jogo".
 Teclas para testar na tela do quiz: A alguém acerta, C chute errado, G rosa, D rosquinha, B presentão, F seguir, J entrar.
+
+BAILE DO ABISMO (quem comenta entra na roda)
+Igual aos bailes que fazem sucesso no TikTok: cada pessoa que comenta vira um personagem 3D dançando na roda,
+com a FOTO e o NOME em cima da cabeça. A câmera passeia sozinha (close com o nome grande, roda de cima, palco).
+- O Palhaço do Abismo é o DJ no palco e a Serpente das Trevas fica no altar. Eles anunciam quem entra e quem manda presente.
+- Quem fala no chat já estando na roda: aparece um balãozinho com o comentário em cima da cabeça.
+- PRESENTES:
+    🌹 Rosa (e presentes pequenos) = TROQUE DE ROUPA: cor nova + acessório (cartola, coroa, laço, óculos...)
+    🍩 Rosquinha (30 moedas ou mais) = TOQUE NA BANDA: troca a música e todo mundo muda a dança
+    🦁 Presente de 100 moedas ou mais = VIRE NOIVOS: quem mandou e a última pessoa que comentou vão para o altar
+    Quem mais manda presente no baile vira o REI DO BAILE (coroa). A cada 500 curtidas: festa com confete.
+- Cronômetro: cada baile dura 30 minutos (muda no painel). No fim aparece o rei do baile e começa outro (a roda esvazia).
+- PERSONAGENS: coloque os seus (feitos na Meshy, com danças da Mixamo) na pasta baile-personagens (veja o LEIA-ME de lá).
+  Enquanto ela estiver vazia, dança um robozinho de teste.
+- MÚSICAS: coloque MP3 na pasta musicas-baile. Sem MP3, tocam as músicas do jogo (funk, forró, disco e pagode).
+Como usar: abra o atalho "Baile do Abismo" (ou iniciar-baile.bat) e no LIVE Studio use a fonte Link:
+  http://localtest.me:3000/baile.html
+Teclas para testar na tela do baile: C alguém comenta, G rosa, D rosquinha, B noivos, F seguir, S compartilhar, L curtidas.
 
 NOVIDADES (versão 2)
 - TOP 6 DA LIVE fixo no alto da tela, com foto, nome e pontos de cada pessoa.

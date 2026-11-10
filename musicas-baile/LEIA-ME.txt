@@ -1,0 +1,6 @@
+MÚSICAS DO BAILE DO ABISMO
+Coloque aqui arquivos .mp3 (ou .ogg / .m4a / .wav). Eles tocam um depois do outro, em ordem alfabética.
+O presente "Toque na banda" (30 moedas ou mais) pula para a próxima música e todo mundo muda a dança.
+Se esta pasta estiver vazia, tocam as músicas do próprio jogo (funk, forró, disco e pagode, sem direitos autorais).
+Cuidado: música famosa tem direitos autorais e o TikTok pode silenciar a live ou dar advertência.
+A atualização do sistema nunca apaga os seus arquivos desta pasta.

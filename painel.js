@@ -24,7 +24,8 @@ module.exports = function painel(ctx) {
     return {
       ok: true, config: CFG.publico(), tiktok: ctx.tiktok(), stats: { ...stats, minutos: Math.floor((Date.now() - stats.inicio) / 60000) },
       top: top6(), registro: registro.slice(-40).reverse(),
-      links: { cobrinha: `http://localtest.me:${PORT}/`, cobrinhaAbismo: `http://localtest.me:${PORT}/?tema=abismo`, abismo: `http://localtest.me:${PORT}/abismo.html`, quiz: `http://localtest.me:${PORT}/quiz.html` },
+      links: { cobrinha: `http://localtest.me:${PORT}/`, cobrinhaAbismo: `http://localtest.me:${PORT}/?tema=abismo`, abismo: `http://localtest.me:${PORT}/abismo.html`, quiz: `http://localtest.me:${PORT}/quiz.html`, baile: `http://localtest.me:${PORT}/baile.html` },
+      baile: ctx.baile ? { rodando: ctx.baile.rodando, na_roda: ctx.baile.tamanho, ...ctx.baile.estado().cfg } : null,
       quiz: ctx.quiz ? { rodando: ctx.quiz.rodando, ...ctx.quiz.estado().cfg, categorias: ctx.quiz.estado().categorias } : null,
     };
   }
@@ -37,7 +38,7 @@ module.exports = function painel(ctx) {
       const u = b.usuario.trim().replace(/^@/, '').replace(/[^A-Za-z0-9._]/g, '').slice(0, 40);
       if (u !== atual.usuario) { novo.usuario = u; }
     }
-    if (['abismo', 'cobrinha', 'quiz'].includes(b.modo)) novo.modo = b.modo;
+    if (['abismo', 'cobrinha', 'quiz', 'baile'].includes(b.modo)) novo.modo = b.modo;
     if (b.openai) {
       novo.openai = {};
       if (b.openai.remover) novo.openai.chave = '';
@@ -65,7 +66,7 @@ module.exports = function painel(ctx) {
       else if (typeof b.atualizacao.token === 'string' && b.atualizacao.token.trim().length > 10) novo.atualizacao.token = b.atualizacao.token.trim();
     }
     CFG.atualizar(novo);
-    if (novo.modo) { voz.setModo(novo.modo); ctx.ligarQuiz && ctx.ligarQuiz(); }
+    if (novo.modo) { voz.setModo(novo.modo); ctx.ligarQuiz && ctx.ligarQuiz(); ctx.ligarBaile && ctx.ligarBaile(); }
     if (novo.musica) broadcast({ type: 'config', musica: CFG.get().musica });
     if (novo.usuario !== undefined) { ctx.trocarUsuario(novo.usuario); ctx.conectar(); }
     res.json(estado());
@@ -85,6 +86,18 @@ module.exports = function painel(ctx) {
       if (Array.isArray(b.cats)) c.cats = b.cats.filter((x) => typeof x === 'string').slice(0, 30);
       if (modo) c.placar = modo;
       const novo = q.config(c); CFG.atualizar({ quiz: { tempo: novo.tempo, cats: novo.cats, placar: novo.placar } });
+    }
+    res.json(estado());
+  });
+
+  // ----- Baile do Abismo -----
+  app.post('/api/painel/baile', (req, res) => {
+    const b = req.body || {}, B = ctx.baile; if (!B) return res.status(400).json({ ok: false });
+    if (b.acao === 'limpar') B.limpar();
+    else if (b.acao === 'fim') B.fimDoBaile();
+    else if (b.acao === 'config') {
+      const c = {}; if (b.duracao !== undefined) c.duracao = num(b.duracao, 5, 180, 30); if (b.maximo !== undefined) c.maximo = num(b.maximo, 10, 150, 60);
+      const novo = B.config(c); CFG.atualizar({ baile: { duracao: novo.duracao, maximo: novo.maximo } });
     }
     res.json(estado());
   });
@@ -181,7 +194,7 @@ module.exports = function painel(ctx) {
       if (!fs.existsSync(path.join(novo, 'server.js')) || !fs.existsSync(path.join(novo, 'public'))) throw new Error('Esse repositório não parece ser o jogo.');
       const pkgAntes = fs.readFileSync(path.join(RAIZ, 'package.json'), 'utf8');
       // mantém o que é seu: configurações, músicas das cantorias e a lista de palavras
-      const manter = (rel) => /^(privado|node_modules|\.git)(\/|\\|$)/.test(rel) || rel === 'palavras-proibidas.txt' || (/^cantorias[\/\\]/.test(rel) && !/LEIA-ME\.txt$/i.test(rel));
+      const manter = (rel) => /^(privado|node_modules|\.git)(\/|\\|$)/.test(rel) || rel === 'palavras-proibidas.txt' || (/^(cantorias|baile-personagens|musicas-baile)[\/\\]/.test(rel) && !/LEIA-ME\.txt$/i.test(rel));
       fs.cpSync(novo, RAIZ, { recursive: true, force: true, filter: (src) => { const rel = path.relative(novo, src); return !rel || !manter(rel); } });
       CFG.atualizar({ atualizacao: { instalado: v.sha } });
       fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(zip, { force: true });

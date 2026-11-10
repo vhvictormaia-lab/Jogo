@@ -220,7 +220,7 @@ async function respostaIA(texto, n, persona) {
 // ---------------- fila de falas ----------------
 // prioridade: 3 presente/bomba, 2 seguidor, 1 comentário/entrada, 0 fala solta
 function criarVoz(broadcast, modoInicial = 'cobrinha') {
-  let modo = modoInicial; let ABISMO = modo === 'abismo' || modo === 'quiz'; let QUIZ = modo === 'quiz';
+  let modo = modoInicial; let ABISMO = ['abismo', 'quiz', 'baile'].includes(modo); let QUIZ = modo === 'quiz' || modo === 'baile';
   // no modo quiz quem decide as falas é o motor do quiz (quiz-motor.js); as automáticas ficam desligadas
   const fila = []; let falando = false, ultimaFala = Date.now(), seq = 0, atual = 0;
   const cooldownChat = new Map();
@@ -275,7 +275,7 @@ function criarVoz(broadcast, modoInicial = 'cobrinha') {
 
   return {
     fim,
-    setModo(m) { modo = ['abismo', 'quiz'].includes(m) ? m : 'cobrinha'; ABISMO = modo !== 'cobrinha'; QUIZ = modo === 'quiz'; },
+    setModo(m) { modo = ['abismo', 'quiz', 'baile'].includes(m) ? m : 'cobrinha'; ABISMO = modo !== 'cobrinha'; QUIZ = modo === 'quiz' || modo === 'baile'; },
     // falas do Quiz do Abismo: partes [{ quem: 'palhaco'|'serpente', texto, acao }]
     quiz(partes, o = {}) {
       const ok = (partes || []).map((p) => ({ ...p, texto: limparFala(p.texto).slice(0, 220) })).filter((p) => p.texto && !proibido(p.texto));

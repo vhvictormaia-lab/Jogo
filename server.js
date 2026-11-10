@@ -84,7 +84,7 @@ function broadcast(msg) {
   for (const c of wss.clients) if (c.readyState === 1) c.send(s);
 }
 // MODO=abismo (iniciar-abismo.bat) ou o modo escolhido no painel: Palhaço do Abismo + Serpente das Trevas em /abismo.html
-if (process.env.MODO) { const m = process.env.MODO.toLowerCase(); CFG.atualizar({ modo: ['abismo', 'quiz'].includes(m) ? m : 'cobrinha' }); }
+if (process.env.MODO) { const m = process.env.MODO.toLowerCase(); CFG.atualizar({ modo: ['abismo', 'quiz', 'baile'].includes(m) ? m : 'cobrinha' }); }
 voz = criarVoz(broadcast, CFG.get().modo);
 
 // ---------- Quiz do Abismo (quiz.html): o motor roda aqui, a tela só mostra ----------
@@ -101,6 +101,29 @@ const quiz = QuizMotor.criar({
 function ligarQuiz() { if (CFG.get().modo === 'quiz') { if (!quiz.rodando) { quiz.iniciar(); console.log('🧠 Quiz do Abismo ligado: http://localhost:' + PORT + '/quiz.html'); } } else if (quiz.rodando) quiz.parar(); }
 setTimeout(ligarQuiz, 500);
 const noQuiz = () => quiz.rodando;
+
+// ---------- Baile do Abismo (baile.html): quem comenta entra na roda ----------
+const BaileMotor = require('./public/baile-motor.js');
+const baile = BaileMotor.criar({ falas: require('./public/falas.js'), cfg: CFG.get().baile, emitir: (m) => broadcast(m), falar: (partes, o) => voz.quiz(partes, o) });
+function ligarBaile() { if (CFG.get().modo === 'baile') { if (!baile.rodando) { baile.iniciar(); console.log('💃 Baile do Abismo ligado: http://localhost:' + PORT + '/baile.html'); } } else if (baile.rodando) baile.parar(); }
+setTimeout(ligarBaile, 500);
+const noBaile = () => baile.rodando;
+// personagens 3D (Meshy / Mixamo) e músicas do baile: ficam em pastas suas, que a atualização não apaga
+const PERS_DIR = path.join(__dirname, 'baile-personagens'), MUS_DIR = path.join(__dirname, 'musicas-baile');
+for (const d of [PERS_DIR, path.join(PERS_DIR, 'dancas'), MUS_DIR]) { try { fs.mkdirSync(d, { recursive: true }); } catch {} }
+app.use('/baile-personagens', express.static(PERS_DIR));
+app.use('/musicas-baile', express.static(MUS_DIR));
+const listar = (dir, re) => { try { return fs.readdirSync(dir).filter((f) => re.test(f)).sort((a, b) => a.localeCompare(b, 'pt-BR')); } catch { return []; } };
+app.get('/api/baile/arquivos', (_req, res) => {
+  const enc = (pre, f) => pre + '/' + encodeURIComponent(f);
+  let credito = ''; try { credito = fs.readFileSync(path.join(PERS_DIR, 'credito.txt'), 'utf8').trim().slice(0, 160); } catch {}
+  res.json({
+    modelos: listar(PERS_DIR, /\.(glb|gltf|fbx)$/i).map((f) => enc('baile-personagens', f)),
+    dancas: listar(path.join(PERS_DIR, 'dancas'), /\.(glb|gltf|fbx)$/i).map((f) => enc('baile-personagens/dancas', f)),
+    musicas: listar(MUS_DIR, /\.(mp3|ogg|m4a|wav)$/i).map((f) => enc('musicas-baile', f)),
+    credito,
+  });
+});
 
 // ---------- estatísticas e registro para o painel ----------
 const stats = { espectadores: 0, curtidas: 0, presentes: 0, diamantes: 0, seguidores: 0, compartilhamentos: 0, comentarios: 0, entradas: 0, inicio: Date.now() };
@@ -155,6 +178,7 @@ function handleGift(user, giftName, diamonds, count) {
   addCoins(user, coins);
   somar(user, coins * PTS.diamante);
   if (noQuiz()) quiz.presente(user, giftName, Math.max(1, diamonds), count);
+  if (noBaile()) baile.presente(user, giftName, Math.max(1, diamonds), count);
   const bomba = BOMB_GIFTS.includes(String(giftName).toLowerCase());
   voz.presente(user, giftName, count, Math.max(1, diamonds), bomba);
   if (bomba) {
@@ -175,7 +199,7 @@ function handleFollow(user) {
   stats.seguidores++; registrar('seguiu', user, 'seguiu');
   broadcast({ type: 'follow', user, apples: APPLES_PER_FOLLOW });
   somar(user, PTS.seguir);
-  voz.seguiu(user); if (noQuiz()) quiz.seguiu(user);
+  voz.seguiu(user); if (noQuiz()) quiz.seguiu(user); if (noBaile()) baile.seguiu(user);
   chatSay(CHAT.followMsg.replace('{name}', user.id).replace('{nickname}', user.name));
 }
 function handleLike(user, likes) {
@@ -184,12 +208,14 @@ function handleLike(user, likes) {
   somar(user, likes * PTS.curtida);
   likesTotal += likes; voz.curtidas(likesTotal);
   if (noQuiz()) quiz.curtidas(user, likes);
+  if (noBaile()) baile.curtidas(user, likes);
 }
 function handleChat(user, text) {
   stats.comentarios++; registrar('comentario', user, text);
   broadcast({ type: 'chat', user, text });
   if (Date.now() - (chatPtsAt.get(user.id) || 0) > 10000) { chatPtsAt.set(user.id, Date.now()); somar(user, PTS.comentario); }
   if (noQuiz()) quiz.chat(user, text);
+  if (noBaile()) baile.chat(user, text);
   voz.comentario(user, text);
 }
 const sharePtsAt = new Map();
@@ -197,12 +223,12 @@ function handleShare(user) {
   stats.compartilhamentos++; registrar('compartilhou', user, 'compartilhou a live');
   broadcast({ type: 'share', user });
   if (Date.now() - (sharePtsAt.get(user.id) || 0) > 60000) { sharePtsAt.set(user.id, Date.now()); somar(user, PTS.compartilhar); }
-  voz.compartilhou(user); if (noQuiz()) quiz.compartilhou(user);
+  voz.compartilhou(user); if (noQuiz()) quiz.compartilhou(user); if (noBaile()) baile.compartilhou(user);
 }
 function handleJoin(user) {
   stats.entradas++;
   broadcast({ type: 'join', user });
-  voz.entrou(user); if (noQuiz()) quiz.entrou(user);
+  voz.entrou(user); if (noQuiz()) quiz.entrou(user); if (noBaile()) baile.entrou(user);
 }
 
 const perf = new Map(); // latest frame stats reported by each game page
@@ -219,6 +245,7 @@ wss.on('connection', (ws, req) => {
       config: { applesPerDiamond: APPLES_PER_DIAMOND, applesPerFollow: APPLES_PER_FOLLOW, bombGifts: BOMB_GIFTS },
       musica: CFG.get().musica,
       quiz: quiz.estado(),
+      baile: baile.estado(),
     })
   );
 });
@@ -342,7 +369,7 @@ require('./painel')({ app, express, CFG, stats, registro, top6, voz, broadcast, 
   tiktok: () => tiktokStatus, conectar: () => connectTikTok(), desconectar: () => pararTikTok(),
   trocarUsuario: (u) => { USERNAME = u; tiktokStatus = { connected: false, username: u, error: null }; },
   zerarRanking: () => { pontos.clear(); supporters.clear(); broadcast({ type: 'rank', top: [] }); },
-  sim: (b) => simular(b), quiz, ligarQuiz });
+  sim: (b) => simular(b), quiz, ligarQuiz, baile, ligarBaile });
 
 server.listen(PORT, () => {
   console.log(`🐍 Jogo: http://localhost:${PORT}  (no LIVE Studio use http://localtest.me:${PORT}, 1080x1920)`);
