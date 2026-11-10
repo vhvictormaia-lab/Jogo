@@ -193,7 +193,10 @@ const feixes=[]; for(const [cor,dx] of [[0xff3d8b,-2],[0x7a3cff,0],[0x5cff8a,2]]
 // ================= personagens (modelos 3D prontos, com esqueleto) =================
 const MOD=[]; let DANCAS=[], ANDAR=null, ACOES={};
 const gltf=new GLTFLoader(), fbx=new FBXLoader();
-const carregar=(url)=>new Promise((ok,erro)=>{ (/\.fbx$/i.test(url)?fbx:gltf).load(url,r=>ok(r),undefined,erro); });
+const carregar=(url)=>new Promise((ok,erro)=>{
+  // página de demonstração: o boneco de teste vem embutido num script (robo-teste.js)
+  if(/RobotExpressive\.glb$/.test(url)&&window.ROBO_TESTE_B64){ const bin=Uint8Array.from(atob(window.ROBO_TESTE_B64),c=>c.charCodeAt(0)); return gltf.parse(bin.buffer,'',r=>ok(r),erro); }
+  (/\.fbx$/i.test(url)?fbx:gltf).load(url,r=>ok(r),undefined,erro); });
 function prepararModelo(r){ const raizM=r.scene||r; const clips=r.animations||[];
   raizM.traverse(o=>{ if(o.isMesh){ o.frustumCulled=false; o.castShadow=false; } });
   raizM.updateMatrixWorld(true);
