@@ -34,13 +34,27 @@ export const PASSOS = {
   acena: { dur: 4, f(b, P) { P.dX = -2.7; P.dZ = 0.3 + 0.35 * s(3 * PI * b); P.dC = 0.3; P.eX = -0.3; P.cz = 0.2; P.ag = 0.1 * abs(s(PI * b)); P.onda = 0.3; } },
 };
 // passos que todo mundo consegue fazer junto (o "coreógrafo" do baile escolhe um e a roda inteira faz)
-export const JUNTOS = ['pula', 'agacha', 'requebra', 'passinho', 'bracos', 'gira', 'polichinelo', 'bateCabeca', 'aviaozinho', 'robo', 'treme', 'cambalhota', 'deita'];
+export const JUNTOS = ['pula', 'agacha', 'requebra', 'passinho', 'bracos', 'gira', 'polichinelo', 'bateCabeca', 'aviaozinho', 'treme', 'cambalhota', 'deita'];
 // passos de destaque (solo / dupla)
-export const SOLOS = ['cambalhota', 'estrela', 'deita', 'agacha', 'gira', 'treme', 'requebra', 'robo'];
+export const SOLOS = ['cambalhota', 'estrela', 'deita', 'agacha', 'gira', 'treme', 'requebra'];
 // andar e correr (fase em radianos, avança com o tempo)
 export function poseAndar(fase, correndo, P) {
   poseVazia(P); const o = s(fase), a = correndo ? 1.1 : 0.55;
   P.qE = -a * o; P.qD = a * o; P.jE = (correndo ? 1.3 : 0.6) * Math.max(0, -o) + 0.1; P.jD = (correndo ? 1.3 : 0.6) * Math.max(0, o) + 0.1;
   P.eX = a * 0.9 * o; P.dX = -a * 0.9 * o; P.eC = P.dC = correndo ? 1.5 : 0.4; P.y = (correndo ? 0.14 : 0.05) * abs(o); P.tx = correndo ? 0.25 : 0.05; P.onda = correndo ? 0.5 : 0.25;
   return P;
+}
+
+// GINGA: o "molho" por cima de qualquer passo, para não ficar robótico.
+// Joelho dobra na batida, quadril desenha um 8, ombro vai para o lado contrário, cabeça e braços vêm atrasados.
+// k = quanto de ginga (cada caveira tem a sua), fase = atraso próprio (ninguém fica igualzinho ao vizinho)
+export function ginga(b, P, k = 1, fase = 0) {
+  const t = b + fase, o = s(PI * t), d = s(PI * t - 0.55), pulso = Math.pow(abs(s(PI * t)), 0.6), pulsoAtras = Math.pow(abs(s(PI * t - 0.4)), 0.6);
+  P.ag += 0.11 * k * (1 - pulso);
+  P.pz += 0.13 * k * o; P.py += 0.09 * k * s(PI * t + 1.2);
+  P.tz -= 0.08 * k * o; P.ty += 0.07 * k * d; P.tx += 0.04 * k * (1 - pulso);
+  P.cx += 0.12 * k * (1 - pulsoAtras); P.cz += 0.1 * k * d; P.cy += 0.06 * k * s(PI * t * 0.5);
+  P.eX += 0.2 * k * d; P.dX -= 0.2 * k * d; P.eC += 0.25 * k * abs(d); P.dC += 0.25 * k * abs(o);
+  P.eZ += 0.06 * k * (1 - pulso); P.dZ += 0.06 * k * (1 - pulso);
+  P.onda += 0.1 * k;
 }

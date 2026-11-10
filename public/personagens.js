@@ -236,7 +236,7 @@ function montarAnimacao(THREE, raiz, corpo, P, tipo) {
     if (tipo === 'serpente') st.trilha = st.trilha.map((_, i) => new THREE.Vector3(x - Math.sin(rumo) * i * 0.05, 0, z - Math.cos(rumo) * i * 0.05));
   }
   function acao(nome, dur) {
-    const D = { acenar: 2.2, rir: 2.6, dancar: 4.5, voar: 6, girar: 2, cantar: 7, susto: 2.2, comemorar: 3, pular: 1.4, bote: 1.4, sibilar: 2 };
+    const D = { dj: 4, scratch: 4, rebola: 4, balanca: 4, acenar: 2.2, rir: 2.6, dancar: 4.5, voar: 6, girar: 2, cantar: 7, susto: 2.2, comemorar: 3, pular: 1.4, bote: 1.4, sibilar: 2 };
     st.acao = nome; st.tAcao = 0; st.durAcao = dur || D[nome] || 2;
   }
   const ocupado = () => !!st.acao;
@@ -265,11 +265,23 @@ function montarAnimacao(THREE, raiz, corpo, P, tipo) {
     const a = st.acao, k = st.durAcao ? st.tAcao / st.durAcao : 0, s = Math.sin, c = Math.cos;
     // pose base
     let y = 0, incl = 0, giro = 0, pe = s(t * 9) * 0.6 * mov, bE = -s(t * 9) * 0.5 * mov + 0.1, bD = s(t * 9) * 0.5 * mov - 0.1, cE = -0.3, cD = -0.3,
-      cabRx = s(t * 1.3) * 0.05, cabRz = s(t * 0.9) * 0.06, cabRy = st.olhar, aberturaExtra = 0;
+      cabRx = s(t * 1.3) * 0.05, cabRz = s(t * 0.9) * 0.06, cabRy = st.olhar, aberturaExtra = 0, zE = -0.25, zD = 0.25, xc = 0, rz = 0;
+    // no ritmo da música: "bat" conta as batidas; o corpo sobe entre as batidas e afunda nelas (ginga)
+    const PI = Math.PI, bat = t * (st.bps || 2), pul = Math.pow(Math.abs(s(PI * bat)), 0.6), pulA = Math.pow(Math.abs(s(PI * bat - 0.45)), 0.6), meio = s(PI * bat / 2);
     y += Math.abs(s(t * 9)) * 0.12 * mov + s(t * 2) * 0.03; // passos e respiração
     if (a === 'acenar') { bD = -2.6 + s(t * 10) * 0.25; cD = -0.4 + s(t * 10) * 0.5; cabRz = 0.15; }
     else if (a === 'rir') { incl = -0.25 + s(t * 22) * 0.06; cabRx = -0.45 + s(t * 22) * 0.12; bE = 0.6; bD = -0.6; cE = -1.9; cD = -1.9; y += Math.abs(s(t * 22)) * 0.1; aberturaExtra = 0.6 + Math.abs(s(t * 22)) * 0.4; }
-    else if (a === 'dancar') { const b = t * 7; y += Math.abs(s(b)) * 0.35; giro = s(b * 0.5) * 0.6; incl = s(b) * 0.15; pe = s(b) * 0.7; bE = -2.2 + s(b) * 0.6; bD = -2.2 - s(b) * 0.6; cE = -0.6; cD = -0.6; cabRz = s(b) * 0.25; }
+    else if (a === 'dancar') { y += 0.22 * pul; xc = 0.16 * meio; giro = 0.3 * meio; incl = 0.08 * (1 - pul); rz = 0.1 * meio; pe = 0.45 * meio;
+      bE = -1.1 + 0.7 * s(PI * bat - 0.5); bD = -1.1 - 0.7 * s(PI * bat - 0.5); cE = cD = -1.2; cabRx = 0.16 * (1 - pulA); cabRz = 0.18 * s(PI * bat / 2 - 0.3); }
+    else if (a === 'dj') { // mão no fone e a outra socando o ar na batida
+      const soco = Math.max(0, s(2 * PI * bat)); y += 0.14 * pul; xc = 0.1 * meio; incl = 0.07 * (1 - pul); rz = 0.06 * meio;
+      bE = -2.75; cE = -2.4; zE = -0.55; bD = -2.3 - 0.55 * soco; cD = -0.5 + 0.3 * soco; zD = 0.35; cabRx = 0.24 * (1 - pulA) - 0.05; cabRz = 0.12 * meio; pe = 0.15 * meio; }
+    else if (a === 'scratch') { // arranhando o disco
+      y += 0.1 * pul; incl = 0.18; bE = -1.0; cE = -1.1; bD = -1.1; cD = -1.0; zD = 0.25 + 0.45 * s(4 * PI * bat); zE = -0.3; cabRx = 0.3 * (1 - pulA); cabRz = 0.1 * meio; xc = 0.06 * meio; }
+    else if (a === 'rebola') { // mão na cintura e rebolando
+      rz = 0.22 * s(PI * bat); giro = 0.35 * s(PI * bat + PI / 2); bE = bD = 0.2; zE = -0.95; zD = 0.95; cE = cD = -2.3; y += 0.08 * pul; pe = 0.2 * s(PI * bat); cabRz = -0.15 * s(PI * bat); xc = 0.12 * s(PI * bat); }
+    else if (a === 'balanca') { // braços pra cima balançando
+      bE = bD = -2.85; zE = -0.3 + 0.45 * meio; zD = 0.3 + 0.45 * meio; cE = cD = -0.3; rz = -0.12 * meio; y += 0.12 * pul; cabRz = 0.2 * meio; xc = -0.1 * meio; }
     else if (a === 'voar') { const sub = ease(k / 0.25) * (1 - ease((k - 0.75) / 0.25)); st.voo = sub; y += sub * 6 + s(t * 2) * 0.3 * sub; bD = -2.9; cD = -0.2; bE = 0.5 + s(t * 6) * 0.3; pe = s(t * 5) * 0.5; incl = s(t * 1.5) * 0.12 * sub; }
     else if (a === 'girar') { giro = ease(k) * Math.PI * 4; y += s(k * Math.PI) * 1.2; bE = -1.4; bD = -1.4; }
     else if (a === 'cantar') { const b = t * 5.2; y += Math.abs(s(b)) * 0.15; bE = -1.2 + s(b) * 0.3; bD = -2.4; cD = -0.9; cabRx = -0.2; cabRz = s(b) * 0.15; incl = s(b * 0.5) * 0.08; }
@@ -277,11 +289,16 @@ function montarAnimacao(THREE, raiz, corpo, P, tipo) {
     else if (a === 'comemorar' || a === 'pular') { const b = (t * 6) % Math.PI; y += s(b) * (a === 'pular' ? 1.4 : 0.9); bE = -2.8; bD = -2.8; cE = -0.2; cD = -0.2; pe = 0.3; }
     if (a !== 'voar') st.voo = suave(st.voo, 0, dt * 3);
     P.baloes.visible = a === 'voar' || st.voo > 0.02;
-    corpo.position.y = y; corpo.rotation.x = incl; corpo.rotation.y = giro;
-    P.pernaE.rotation.x = pe; P.pernaD.rotation.x = -pe;
-    P.ombroE.rotation.x = bE; P.ombroD.rotation.x = bD; P.ombroE.rotation.z = -0.25; P.ombroD.rotation.z = 0.25;
-    P.cotoveloE.rotation.x = cE; P.cotoveloD.rotation.x = cD;
-    P.cabeca.rotation.set(cabRx, cabRy, cabRz);
+    // tudo muda suave de um movimento para o outro (sem trancos)
+    const sm = st.sm || (st.sm = { y, incl, giro, pe, bE, bD, cE, cD, zE, zD, xc, rz, cabRx, cabRz }), kk = Math.min(1, dt * 12);
+    if (a !== 'girar' && Math.abs(sm.giro) > PI) sm.giro = ((sm.giro % (2 * PI)) + 3 * PI) % (2 * PI) - PI;
+    const alvo = { y, incl, giro, pe, bE, bD, cE, cD, zE, zD, xc, rz, cabRx, cabRz };
+    for (const kx in alvo) sm[kx] = (kx === 'giro' && a === 'girar') || (kx === 'y' && (a === 'voar' || a === 'pular' || a === 'comemorar')) ? alvo[kx] : sm[kx] + (alvo[kx] - sm[kx]) * kk;
+    corpo.position.y = sm.y; corpo.position.x = sm.xc; corpo.rotation.x = sm.incl; corpo.rotation.y = sm.giro; corpo.rotation.z = sm.rz;
+    P.pernaE.rotation.x = sm.pe; P.pernaD.rotation.x = -sm.pe;
+    P.ombroE.rotation.x = sm.bE; P.ombroD.rotation.x = sm.bD; P.ombroE.rotation.z = sm.zE; P.ombroD.rotation.z = sm.zD;
+    P.cotoveloE.rotation.x = sm.cE; P.cotoveloD.rotation.x = sm.cD;
+    P.cabeca.rotation.set(sm.cabRx, cabRy, sm.cabRz);
     P.chapeu.position.y = 1.5 + (a === 'susto' ? 0.5 * Math.max(0, 1 - Math.abs(k - 0.4) * 3) : 0) + (a === 'rir' ? Math.abs(s(t * 22)) * 0.08 : 0);
     P.cabelo.scale.setScalar(1 + (a === 'susto' ? 0.25 : 0) + Math.abs(s(t * 3)) * 0.02);
     // boca: fala + ações
@@ -345,5 +362,5 @@ function montarAnimacao(THREE, raiz, corpo, P, tipo) {
   const cabecaMundo = (v = new THREE.Vector3()) => (tipo === 'palhaco' ? P.cabeca.getWorldPosition(v).add(new THREE.Vector3(0, 2.2, 0)) : P.cabeca.getWorldPosition(v).add(new THREE.Vector3(0, 1.4, 0)));
   const defFase = (f) => { st.fase = f; };
   const encarar = (v) => { st.encarar = v ? v.clone() : null; if (v) st.alvo = null; };
-  return { raiz, atualizar, andarPara, posicionar, acao, ocupado, falar, cabecaMundo, defFase, encarar, estado: st, tipo, partes: P };
+  return { raiz, atualizar, andarPara, posicionar, acao, ocupado, falar, cabecaMundo, defFase, encarar, estado: st, tipo, partes: P, ritmo: (bps) => { st.bps = bps; } };
 }
