@@ -120,7 +120,10 @@ function synthNatural(text, voz = vozCobra(), pros = {}, tentativa = 0) {
   });
 }
 
+// tira o "Ssss..." da serpente e as letras esticadas antes de falar: a voz lia isso como um chiado
+const semChiado = (t) => String(t || '').replace(/(^|[\s.,!?…])s{3,}[.…!]*(?=\s|$)/gi, '$1').replace(/s{3,}/gi, 's').replace(/\s{2,}/g, ' ').replace(/^[\s.,…]+/, '').trim();
 async function synth(text, voz = vozCobra(), pros = {}) {
+  text = semChiado(text) || text;
   // tenta a voz natural; se falhar 3 vezes seguidas, descansa 5 minutos e usa a do Windows
   if (Date.now() >= edgePausaAte) {
     const url = await synthNatural(text, voz, pros);

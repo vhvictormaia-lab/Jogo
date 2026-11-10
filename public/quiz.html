@@ -289,7 +289,8 @@ const SFX={
 
 // ---------- voz (vem do servidor com o tom sombrio; no modo demonstração usa a voz do aparelho) ----------
 let acFala=null, analisador=null, efeito=null; const buf=new Uint8Array(256);
-const SOMBRIO={palhaco:{vel:.88,eco:.32,rev:.45},serpente:{vel:.8,eco:.4,rev:.6},espectador:{vel:1,eco:.1,rev:.15}};
+// voz limpa: o tom grave já vem pronto do servidor (painel > Vozes); sem câmera lenta, eco ou reverberação, que davam chiado
+const SOMBRIO={palhaco:{vel:1,eco:0,rev:0},serpente:{vel:1,eco:0,rev:0},espectador:{vel:1,eco:0,rev:0}};
 function montarEfeitos(){ const ac=acFala; analisador=ac.createAnalyser(); analisador.fftSize=512; analisador.connect(ac.destination);
   efeito=ac.createGain(); const seco=ac.createGain(); efeito.connect(seco); seco.connect(analisador);
   const at=ac.createDelay(1); at.delayTime.value=.19; const volta=ac.createGain(); volta.gain.value=.32; const ecoG=ac.createGain(); ecoG.gain.value=.35;
@@ -320,8 +321,8 @@ function proximaFala(){ const m=falaQ.shift(); if(!m) return; falaAtual=m; m._t=
   parte(); }
 function falarNavegador(texto,quem,fim,m){ m.analisa=false; m.simula=true;
   try{ const ss=window.speechSynthesis; const vs=ss?ss.getVoices().filter(v=>/^pt/i.test(v.lang)):[]; if(!ss||!vs.length) return setTimeout(fim,900+texto.length*55);
-    const u=new SpeechSynthesisUtterance(texto.replace(/s{3,}/gi,'ss')); u.lang='pt-BR'; u.voice=vs.find(v=>/BR/i.test(v.lang))||vs[0];
-    u.pitch=quem==='serpente'?.1:.35; u.rate=quem==='serpente'?.85:.95; let ok=false; u.onend=()=>{ ok=true; fim(); }; u.onerror=()=>{ if(!ok) setTimeout(fim,600); };
+    const u=new SpeechSynthesisUtterance(texto.replace(/(^|\s)s{3,}[.…!]*/gi,'$1').replace(/s{3,}/gi,'s')); u.lang='pt-BR'; u.voice=vs.find(v=>/BR/i.test(v.lang))||vs[0];
+    u.pitch=quem==='serpente'?.7:.8; u.rate=1; let ok=false; u.onend=()=>{ ok=true; fim(); }; u.onerror=()=>{ if(!ok) setTimeout(fim,600); };
     ss.speak(u); setTimeout(()=>{ if(!ok&&!ss.speaking) fim(); },900+texto.length*90); }catch(e){ setTimeout(fim,1500); } }
 
 // ---------- LED (letreiro) ----------
