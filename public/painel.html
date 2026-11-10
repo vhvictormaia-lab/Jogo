@@ -119,6 +119,7 @@
     <div class="aviso" id="aviso-baile"></div>
     <div class="faixa"><label for="b-duracao">Duração</label><input type="range" id="b-duracao" min="5" max="120" step="5" value="30"><output id="o-b-duracao">30 min</output></div>
     <div class="faixa"><label for="b-maximo">Na roda</label><input type="range" id="b-maximo" min="10" max="150" step="5" value="60"><output id="o-b-maximo">60</output></div>
+    <label class="linha"><input type="checkbox" id="b-falar"> Palhaço DJ fala no baile (desligado = só música e dança)</label>
     <div class="linha"><button class="rosa" id="b-fim">🏁 Terminar baile agora</button><button id="b-limpar">♻ Esvaziar a roda</button></div>
     <div class="linha" id="b-testes"><button data-bteste="chat">💬 Alguém comenta</button><button data-bteste="rosa">🌹 Rosa</button><button data-bteste="banda">🍩 Banda</button><button data-bteste="noivos">💍 Noivos</button></div>
   </section>
@@ -289,10 +290,11 @@ for(const m of ['cobrinha','abismo','quiz','baile']) $('m-'+m).onclick=async()=>
 let baileUI=false;
 function mostrarBaile(b,modo){ if(!b) return; const on=modo==='baile';
   $('aviso-baile').textContent=on?(b.rodando?`Baile rodando: ${b.na_roda} na roda. Coloque o link do Baile no LIVE Studio.`:'Ligando o baile…'):'O baile está parado. Clique em 💃 Baile lá em cima para ligar.'; $('aviso-baile').className='aviso'+(on?' ok':'');
-  if(baileUI) return; baileUI=true; $('b-duracao').value=b.duracao; $('o-b-duracao').textContent=b.duracao+' min'; $('b-maximo').value=b.maximo; $('o-b-maximo').textContent=b.maximo; }
+  if(baileUI) return; baileUI=true; $('b-duracao').value=b.duracao; $('o-b-duracao').textContent=b.duracao+' min'; $('b-maximo').value=b.maximo; $('o-b-maximo').textContent=b.maximo; $('b-falar').checked=!!b.falar; }
 $('b-duracao').oninput=e=>$('o-b-duracao').textContent=e.target.value+' min';
 $('b-maximo').oninput=e=>$('o-b-maximo').textContent=e.target.value;
 for(const id of ['b-duracao','b-maximo']) $(id).onchange=async()=>{ mostrar(await api('baile',{acao:'config',duracao:+$('b-duracao').value,maximo:+$('b-maximo').value})); toast('Salvo. O cronômetro recomeçou.'); };
+$('b-falar').onchange=async()=>{ mostrar(await api('baile',{acao:'config',falar:$('b-falar').checked})); toast($('b-falar').checked?'O palhaço vai falar no baile.':'Baile só com música e dança.'); };
 $('b-limpar').onclick=async()=>{ mostrar(await api('baile',{acao:'limpar'})); toast('Roda vazia.'); };
 $('b-fim').onclick=async()=>{ mostrar(await api('baile',{acao:'fim'})); toast('Fim do baile! Já começou outro.'); };
 document.addEventListener('click',async ev=>{ const b=ev.target.closest('[data-bteste]'); if(!b) return; const n=NOMES[Math.floor(Math.random()*NOMES.length)], id=n.toLowerCase();

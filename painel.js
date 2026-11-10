@@ -96,8 +96,8 @@ module.exports = function painel(ctx) {
     if (b.acao === 'limpar') B.limpar();
     else if (b.acao === 'fim') B.fimDoBaile();
     else if (b.acao === 'config') {
-      const c = {}; if (b.duracao !== undefined) c.duracao = num(b.duracao, 5, 180, 30); if (b.maximo !== undefined) c.maximo = num(b.maximo, 10, 150, 60);
-      const novo = B.config(c); CFG.atualizar({ baile: { duracao: novo.duracao, maximo: novo.maximo } });
+      const c = {}; if (b.duracao !== undefined) c.duracao = num(b.duracao, 5, 180, 30); if (b.maximo !== undefined) c.maximo = num(b.maximo, 10, 150, 60); if (b.falar !== undefined) c.falar = !!b.falar;
+      const novo = B.config(c); CFG.atualizar({ baile: { duracao: novo.duracao, maximo: novo.maximo, falar: novo.falar } });
     }
     res.json(estado());
   });

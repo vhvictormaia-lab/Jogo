@@ -21,7 +21,7 @@ const PADRAO = {
   musica: { ligada: true, volume: 22 },   // 0 a 100
   falaSolta: { min: 20, max: 30 },        // segundos entre as falas sozinhas
   quiz: { tempo: 30, cats: null, placar: 'dia' },
-  baile: { duracao: 30, maximo: 60 },                // Baile do Abismo: minutos de cada baile, máximo de pessoas na roda // Quiz do Abismo: segundos por pergunta, categorias (null = todas), ranking mostrado
+  baile: { duracao: 30, maximo: 60, falar: false },  // Baile do Abismo: minutos de cada baile, máximo de pessoas na roda, palhaço falando (padrão: só música e dança)
   atualizacao: { repo: 'vhvictormaia-lab/Jogo', token: '', instalado: '' },
 };
 

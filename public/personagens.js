@@ -345,5 +345,5 @@ function montarAnimacao(THREE, raiz, corpo, P, tipo) {
   const cabecaMundo = (v = new THREE.Vector3()) => (tipo === 'palhaco' ? P.cabeca.getWorldPosition(v).add(new THREE.Vector3(0, 2.2, 0)) : P.cabeca.getWorldPosition(v).add(new THREE.Vector3(0, 1.4, 0)));
   const defFase = (f) => { st.fase = f; };
   const encarar = (v) => { st.encarar = v ? v.clone() : null; if (v) st.alvo = null; };
-  return { raiz, atualizar, andarPara, posicionar, acao, ocupado, falar, cabecaMundo, defFase, encarar, estado: st, tipo };
+  return { raiz, atualizar, andarPara, posicionar, acao, ocupado, falar, cabecaMundo, defFase, encarar, estado: st, tipo, partes: P };
 }

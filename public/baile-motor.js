@@ -34,9 +34,9 @@
   function criar(opc) {
     const F = opc.falas;
     const emitir = (m) => { try { opc.emitir({ type: 'baile', ...m }); } catch (e) {} };
-    const falar = (partes, extra = {}) => { try { opc.falar && opc.falar(partes, extra); } catch (e) {} };
+    const falar = (partes, extra = {}) => { if (!cfg.falar) return; try { opc.falar && opc.falar(partes, extra); } catch (e) {} }; // baile: por padrão só música e dança
     const agora = opc.agora || (() => Date.now());
-    const cfg = Object.assign({ maximo: 80, duracao: 30, noivosSeg: 50 }, opc.cfg || {});
+    const cfg = Object.assign({ maximo: 80, duracao: 30, noivosSeg: 50, falar: false }, opc.cfg || {});
     const nome = (u) => (F ? F.nomeFalado(u) : String(u.name || 'amigo'));
     const pres = (g, n) => { if (!F) return { art: 'o', nome: g }; const p = F.presente(g); return n > 1 ? F.plural(p) : p; };
     const roda = new Map();   // id -> dançarino
@@ -141,6 +141,7 @@
     function parar() { clearInterval(timer); timer = null; }
     function config(c = {}) {
       if (c.duracao) { cfg.duracao = Math.max(5, Math.min(180, Number(c.duracao) || 30)); fimEm = agora() + cfg.duracao * 60000; avisouFim = false; emitir({ ev: 'tempo', resta: cfg.duracao * 60 }); }
+      if (c.falar !== undefined) cfg.falar = !!c.falar;
       if (c.maximo) cfg.maximo = Math.max(10, Math.min(150, Number(c.maximo) || 80));
       return { ...cfg };
     }
