@@ -14,8 +14,8 @@ const PADRAO = {
   openai: { chave: '', modelo: 'gpt-4.1-mini' },
   vozes: {
     cobra: 'pt-BR-FranciscaNeural', narrador: 'pt-BR-AntonioNeural',
-    palhaco: { voz: 'pt-BR-AntonioNeural', tom: -14, vel: -6 },
-    serpente: { voz: 'pt-BR-FranciscaNeural', tom: -28, vel: -14 },
+    palhaco: { voz: 'pt-BR-AntonioNeural', tom: -8, vel: 6 },     // mais animado (antes: -14 / -6)
+    serpente: { voz: 'pt-BR-FranciscaNeural', tom: -16, vel: 0 },  // antes: -28 / -14
   },
   vozEspectador: true,                    // cada espectador lê o próprio comentário com uma voz só dele
   musica: { ligada: true, volume: 22 },   // 0 a 100
@@ -35,6 +35,10 @@ function mesclar(base, novo) {
 
 let cfg = mesclar(PADRAO, {});
 try { cfg = mesclar(PADRAO, JSON.parse(fs.readFileSync(ARQ, 'utf8'))); } catch {}
+// quem ainda tem o tom antigo (mais lento e grave) passa para o novo, mais animado
+{ const v = cfg.vozes;
+  if (v.palhaco.tom === -14 && v.palhaco.vel === -6) { v.palhaco.tom = -8; v.palhaco.vel = 6; }
+  if (v.serpente.tom === -28 && v.serpente.vel === -14) { v.serpente.tom = -16; v.serpente.vel = 0; } }
 if (!cfg.usuario) { try { cfg.usuario = fs.readFileSync(ARQ_USUARIO, 'utf8').trim().replace(/^@/, ''); } catch {} }
 
 function salvar() {

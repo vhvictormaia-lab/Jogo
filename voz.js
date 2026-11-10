@@ -66,15 +66,12 @@ function vozesAbismo() {
     serpente: { voz: (process.env.VOZ_SERPENTE || v.serpente.voz).trim(), pitch: process.env.TOM_SERPENTE || hz(v.serpente.tom), rate: pc(v.serpente.vel) },
   };
 }
-const EDGE_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4';
-const EDGE_VER = '130.0.2849.68';
+// código de acesso novo da Microsoft (v2, de 2026) — ver edge-token.js
+const { secMsGecV2, VERSAO: EDGE_VER, TOKEN: EDGE_TOKEN } = require('./edge-token');
+let edgeMotivo = '';
 let edgeSkew = 0;            // diferença de relógio com o servidor da Microsoft (segundos)
 let edgeFalhas = 0, edgePausaAte = 0, edgeAvisou = false;
-function secMsGec() {
-  let s = BigInt(Math.floor(Date.now() / 1000 + edgeSkew)) + 11644473600n;
-  s -= s % 300n;
-  return crypto.createHash('sha256').update((s * 10000000n).toString() + EDGE_TOKEN, 'ascii').digest('hex').toUpperCase();
-}
+const secMsGec = () => secMsGecV2(Date.now() / 1000 + edgeSkew);
 const xml = (t) => String(t).replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 function carimbo() { return new Date().toUTCString().replace(/^(\w+), (\d+) (\w+) (\d+) ([\d:]+) GMT$/, '$1 $3 $2 $4 $5 GMT+0000 (Coordinated Universal Time)'); }
 function synthNatural(text, voz = vozCobra(), pros = {}, tentativa = 0) {
@@ -82,11 +79,11 @@ function synthNatural(text, voz = vozCobra(), pros = {}, tentativa = 0) {
     let WebSocket; try { WebSocket = require('ws'); } catch { return resolve(null); }
     const id = crypto.randomUUID().replace(/-/g, '');
     const url = (process.env.VOZ_TESTE_URL || 'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1')
-      + `?TrustedClientToken=${EDGE_TOKEN}&ConnectionId=${id}&Sec-MS-GEC=${secMsGec()}&Sec-MS-GEC-Version=1-${EDGE_VER}`;
+      + `?TrustedClientToken=${EDGE_TOKEN}&ConnectionId=${id}&Sec-MS-GEC=${secMsGec()}&Sec-MS-GEC-Version=2-${EDGE_VER}`;
     const ws = new WebSocket(url, { headers: {
       'Pragma': 'no-cache', 'Cache-Control': 'no-cache', 'Origin': 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
       'User-Agent': `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${EDGE_VER.split('.')[0]}.0.0.0 Safari/537.36 Edg/${EDGE_VER.split('.')[0]}.0.0.0`,
-      'Accept-Encoding': 'gzip, deflate, br', 'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br, zstd', 'Accept-Language': 'en-US,en;q=0.9',
       'Cookie': 'muid=' + crypto.randomBytes(16).toString('hex').toUpperCase() + ';',
     } });
     const partes = []; let fim = false;
@@ -99,9 +96,9 @@ function synthNatural(text, voz = vozCobra(), pros = {}, tentativa = 0) {
       // 403 costuma ser relógio do PC fora da hora: ajusta pela hora do servidor e tenta mais uma vez
       const d = Date.parse(res.headers.date || ''); fim = true; clearTimeout(t); try { ws.terminate(); } catch {}
       if (res.statusCode === 403 && d && tentativa === 0) { edgeSkew += (d - Date.now()) / 1000; return synthNatural(text, voz, pros, 1).then(resolve); }
-      resolve(null);
+      edgeMotivo = 'a Microsoft respondeu ' + res.statusCode; resolve(null);
     });
-    ws.on('error', () => acabar(false));
+    ws.on('error', (e) => { edgeMotivo = e && e.code ? 'erro de conexão ' + e.code : 'erro de conexão'; acabar(false); });
     ws.on('close', () => acabar(partes.length > 0));
     ws.on('open', () => {
       ws.send(`X-Timestamp:${carimbo()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n`
@@ -132,7 +129,7 @@ async function synth(text, voz = vozCobra(), pros = {}) {
       edgeFalhas = 0; return url;
     }
     if (++edgeFalhas >= 3) { edgePausaAte = Date.now() + 5 * 60000; edgeFalhas = 0; edgeAvisou = false;
-      console.log('ℹ️  Voz natural indisponível agora (sem internet?). Usando a voz do Windows por 5 minutos.'); }
+      console.log('ℹ️  Voz natural indisponível agora (' + (edgeMotivo || 'sem resposta') + '). Usando a voz do Windows (robótica) por 5 minutos.'); }
   }
   return synthWindows(text);
 }
