@@ -95,7 +95,7 @@ module.exports = function painel(ctx) {
       res.json({ ok: true, ultima: v, instalado, temNova: !instalado || instalado !== v.sha });
     } catch (e) { res.json({ ok: false, erro: e.message === 'fetch failed' ? 'Sem internet ou o GitHub não respondeu. Tente de novo daqui a pouco.' : e.message }); }
   });
-  const ANTIGOS = ['iniciar-abismo.bat', 'iniciar-quiz.bat', 'iniciar-baile.bat', 'voz.js', 'voz.ps1', 'edge-token.js', 'CREDITOS.txt', 'public/index.html', 'public/abismo.html',
+  const ANTIGOS = ['iniciar-abismo.bat', 'iniciar-quiz.bat', 'voz.js', 'voz.ps1', 'edge-token.js', 'CREDITOS.txt', 'public/index.html', 'public/abismo.html',
     'public/quiz.html', 'public/quiz-motor.js', 'public/perguntas-quiz.js', 'public/musica-abismo.js', 'public/demo-local.js', 'public/falas.js', 'public/sounds'];
   let atualizando = false;
   app.post('/api/painel/atualizar', async (req, res) => {
