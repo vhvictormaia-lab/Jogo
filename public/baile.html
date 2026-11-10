@@ -199,13 +199,78 @@ const PALCO={x:-10.5,z:-9};
   const mesa=new THREE.Mesh(new THREE.BoxGeometry(2.4,1,1),toon(0x111018)); mesa.position.set(PALCO.x,1.5,PALCO.z+1); cena.add(mesa);
   for(const dx of [-3,3]){ const cx=new THREE.Mesh(new THREE.BoxGeometry(1.3,2.6,1.1),toon(0x15121c)); cx.position.set(PALCO.x+dx,2.3,PALCO.z); cena.add(cx);
     for(const dy of [-.5,.55]){ const al=new THREE.Mesh(new THREE.CircleGeometry(.42,20),toon(0x3a3248)); al.position.set(PALCO.x+dx,2.3+dy,PALCO.z+.56); cena.add(al); } } }
-const dj=criarPalhaco(THREE,{terror:true}); dj.posicionar(PALCO.x,PALCO.z-.6,0.5); dj.raiz.position.y=1.0; dj.raiz.scale.setScalar(1.55); cena.add(dj.raiz);
+const dj=criarPalhaco(THREE,{terror:true}); dj.posicionar(PALCO.x,PALCO.z-.6,0.5); dj.estado.pos.y=1.0; /* em cima do palco */ dj.raiz.scale.setScalar(1.55); cena.add(dj.raiz);
 { // fone de DJ anos 80
   const cab=dj.partes&&dj.partes.cabeca; if(cab){ const g=new THREE.Group(); g.position.y=.8; const m=c=>new THREE.MeshToonMaterial({color:c});
     const arco=new THREE.Mesh(new THREE.TorusGeometry(1.08,.08,8,24,Math.PI),m(0x1c1c28)); g.add(arco);
     for(const l of [-1,1]){ const c=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.26,18),m(0xff3d8b)); c.rotation.z=Math.PI/2; c.position.x=1.08*l; g.add(c);
       const a=new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,.27,18),m(0x00e5ff)); a.rotation.z=Math.PI/2; a.position.x=1.12*l; g.add(a); }
     cab.add(g); } }
+// ================= a banda (palhaços tocando: guitarra, saxofone, sanfona e bateria) =================
+// Toca o tempo todo de leve; no presente "Toque na banda" faz o show: tocam com força, pulam e saem notas musicais.
+const banda=(()=>{
+  const m=c=>new THREE.MeshToonMaterial({color:c}); const ouro=m(0xffc83d), madeira=m(0x8a3b1e), preto=m(0x15101c), branco=m(0xf4f0ff), vermelho=m(0xe0233a), cromo=m(0xc9ccd6);
+  const mesh=(geo,mat,x=0,y=0,z=0)=>{ const o=new THREE.Mesh(geo,mat); o.position.set(x,y,z); return o; };
+  // tablado na frente do palco
+  const tab=mesh(new THREE.BoxGeometry(6.6,.7,2.2),toon(0x3a1f4f),PALCO.x,.35,PALCO.z+3.2); cena.add(tab);
+  const borda=mesh(new THREE.BoxGeometry(6.7,.12,.12),m(0xff3d8b),PALCO.x,.72,PALCO.z+4.3); cena.add(borda);
+  const Y=.7, RUMO=.95;
+  const mus=[];
+  function musico(tipo,dx,dz,cores){ const P0=criarPalhaco(THREE,{terror:true,roupa:cores,cabelo:cores[2]}); P0.posicionar(PALCO.x+dx,PALCO.z+dz,RUMO); P0.estado.pos.y=Y; P0.raiz.scale.setScalar(.58); cena.add(P0.raiz);
+    const P=P0.partes, inst=new THREE.Group(); const x={tipo,P0,P,inst,fase:Math.random()*6};
+    if(tipo==='guitarra'){ // guitarra vermelha na diagonal
+      inst.add(mesh(new THREE.SphereGeometry(.55,16,12),vermelho,0,-.25,0)).scale.set(1,1,.35); inst.children[0].scale.set(1,1.05,.35);
+      inst.add(mesh(new THREE.SphereGeometry(.42,16,12),vermelho,0,.35,0)); inst.children[1].scale.set(1,1,.35);
+      inst.add(mesh(new THREE.CylinderGeometry(.1,.1,.06,12),preto,0,-.1,.2)).rotation.x=Math.PI/2;
+      inst.add(mesh(new THREE.BoxGeometry(.16,1.7,.08),madeira,0,1.3,0)); inst.add(mesh(new THREE.BoxGeometry(.26,.34,.1),preto,0,2.2,0));
+      inst.position.set(.05,.5,1.0); inst.rotation.z=-1.05; inst.scale.setScalar(1.35); P.tronco.add(inst); }
+    else if(tipo==='sax'){ // saxofone dourado da boca até a cintura
+      const tubo=mesh(new THREE.CylinderGeometry(.09,.16,1.45,12),ouro,0,0,0); inst.add(tubo);
+      const curva=mesh(new THREE.TorusGeometry(.22,.13,8,14,Math.PI),ouro,.22,-.72,0); curva.rotation.z=Math.PI; inst.add(curva);
+      const sino=mesh(new THREE.ConeGeometry(.32,.55,16,1,true),ouro,.44,-.4,0); sino.material=ouro; sino.rotation.z=Math.PI; inst.add(sino);
+      for(let k=0;k<4;k++) inst.add(mesh(new THREE.SphereGeometry(.06,8,6),cromo,-.1,.4-k*.25,.1));
+      inst.position.set(.1,1.45,1.0); inst.rotation.set(.35,0,-.18); P.tronco.add(inst); }
+    else if(tipo==='sanfona'){ // sanfona: duas pontas e o fole que abre e fecha
+      const fole=new THREE.Group(); for(let k=0;k<7;k++) fole.add(mesh(new THREE.BoxGeometry(.13,.95,.62),k%2?branco:vermelho,(k-3)*.13,0,0)); inst.add(fole); x.fole=fole;
+      const e=mesh(new THREE.BoxGeometry(.32,1.05,.7),madeira,-.62,0,0), d=mesh(new THREE.BoxGeometry(.32,1.05,.7),madeira,.62,0,0); inst.add(e,d); x.pontas=[e,d];
+      for(let k=0;k<5;k++) d.add(mesh(new THREE.BoxGeometry(.06,.12,.05),branco,.17,.35-k*.17,.2));
+      inst.position.set(0,.7,1.0); P.tronco.add(inst); }
+    else if(tipo==='bateria'){ // bateria no chão, baquetas nas mãos
+      const k=new THREE.Group(); const bumbo=mesh(new THREE.CylinderGeometry(.62,.62,.5,20),vermelho,0,.62,0); bumbo.rotation.x=Math.PI/2; k.add(bumbo);
+      const pele=mesh(new THREE.CircleGeometry(.55,20),branco,0,.62,.26); k.add(pele);
+      for(const [px,r] of [[-.45,.3],[.45,.3]]){ const t2=mesh(new THREE.CylinderGeometry(r,r,.28,16),vermelho,px,1.35,-.05); k.add(t2); k.add(mesh(new THREE.CylinderGeometry(r*.95,r*.95,.02,16),branco,px,1.5,-.05)); }
+      for(const px of [-1,1]){ k.add(mesh(new THREE.CylinderGeometry(.025,.025,1.6,6),cromo,px*.95,.8,-.2)); const pr=mesh(new THREE.CylinderGeometry(.42,.42,.03,20),ouro,px*.95,1.62,-.2); pr.rotation.x=.25; k.add(pr); x.pratos=(x.pratos||[]).concat(pr); }
+      k.position.set(PALCO.x+dx+Math.sin(RUMO)*.95,Y,PALCO.z+dz+Math.cos(RUMO)*.95); k.rotation.y=RUMO; k.scale.setScalar(.75); cena.add(k); x.kit=k;
+      for(const mao of [P.maoE,P.maoD]){ const b=mesh(new THREE.CylinderGeometry(.06,.04,1.5,6),madeira,0,-.2,.6); b.rotation.x=1.3; mao.add(b); } }
+    mus.push(x); return x; }
+  musico('guitarra',-2.6,3.0,['#ff3d8b','#2a0b2f',0x55e07a]);
+  musico('sax',-.9,3.4,['#ffc83d','#3a1a00',0xff7a2a]);
+  musico('sanfona',.85,3.4,['#00c2d1','#0b2a3a',0xff3d8b]);
+  musico('bateria',2.55,2.6,['#7a3cff','#1c0d2b',0xffe600]);
+  // luz e notas musicais do show
+  const luz=new THREE.PointLight(0xffc83d,0,14,1.6); luz.position.set(PALCO.x,4,PALCO.z+5); cena.add(luz);
+  const tex=(()=>{ const c=document.createElement('canvas'); c.width=c.height=64; const g=c.getContext('2d'); g.font='bold 54px serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillStyle='#fff'; g.shadowColor='#ff3d8b'; g.shadowBlur=8; g.fillText('♪',32,34); return new THREE.CanvasTexture(c); })();
+  const notas=[]; let showAte=0, proxNota=0;
+  function nota(x){ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,color:[0xffffff,0xffc83d,0xff9ec7,0x5cff8a][Math.floor(Math.random()*4)],transparent:true,depthWrite:false}));
+    x.P0.raiz.getWorldPosition(sp.position); sp.position.y+=2.6; sp.position.x+=(Math.random()-.5)*.6; sp.scale.setScalar(.6+Math.random()*.4); cena.add(sp); notas.push({sp,v:.9+Math.random()*.8,vida:2.2,dx:(Math.random()-.5)*.8}); }
+  const s=Math.sin, abs=Math.abs;
+  function atualizar(dt,t){ const agora=performance.now(); const show=agora<showAte; const f=show?1:.45, vel=show?1:.6;
+    luz.intensity+=((show?40+abs(s(t*8))*30:0)-luz.intensity)*Math.min(1,dt*6);
+    if(show&&agora>proxNota){ proxNota=agora+160; nota(mus[Math.floor(Math.random()*mus.length)]); }
+    for(const x of mus){ const {P0,P}=x; P0.atualizar(dt,t); const b=t*vel+x.fase;
+      P0.raiz.position.y=Y+(show?abs(s(b*7))*.35:abs(s(b*5))*.05); P.tronco.rotation.z=s(b*3.5)*.08*f;
+      if(x.tipo==='guitarra'){ P.ombroD.rotation.x=-.75+s(b*22)*.28*f; P.cotoveloD.rotation.x=-1.25; P.ombroD.rotation.z=.35;
+        P.ombroE.rotation.x=-1.35; P.ombroE.rotation.z=-1.0; P.cotoveloE.rotation.x=-.5+s(b*4)*.1; P.cabeca.rotation.x=show?.25+s(b*7)*.2:.1; }
+      else if(x.tipo==='sax'){ P.ombroE.rotation.x=P.ombroD.rotation.x=-1.05+s(b*6)*.06*f; P.cotoveloE.rotation.x=P.cotoveloD.rotation.x=-1.5; P.ombroE.rotation.z=-.15; P.ombroD.rotation.z=.15;
+        P.cabeca.rotation.x=-.2-(show?abs(s(b*2))*.2:0); P.tronco.rotation.x=show?-.15-abs(s(b*2))*.15:0; }
+      else if(x.tipo==='sanfona'){ const ab=(s(b*(show?5:3))+1)/2; x.fole.scale.x=1+ab*.8*f+.1; x.pontas[0].position.x=-.62-ab*.5*f; x.pontas[1].position.x=.62+ab*.5*f;
+        P.ombroE.rotation.x=P.ombroD.rotation.x=-.95; P.cotoveloE.rotation.x=P.cotoveloD.rotation.x=-1.1; P.ombroE.rotation.z=-.3-ab*.5*f; P.ombroD.rotation.z=.3+ab*.5*f; P.cabeca.rotation.z=s(b*2.5)*.15; }
+      else if(x.tipo==='bateria'){ const hE=abs(s(b*(show?14:8))), hD=abs(s(b*(show?14:8)+1.57)); P.ombroE.rotation.x=-1.25+hE*.55*f; P.ombroD.rotation.x=-1.25+hD*.55*f;
+        P.cotoveloE.rotation.x=P.cotoveloD.rotation.x=-.9; P.ombroE.rotation.z=-.3; P.ombroD.rotation.z=.3; P.cabeca.rotation.x=.15+s(b*7)*.12*f;
+        x.pratos.forEach((pr,i)=>pr.rotation.z=s(b*(show?18:9)+i)*.12*f); } }
+    for(let i=notas.length-1;i>=0;i--){ const n=notas[i]; n.vida-=dt; n.sp.position.y+=n.v*dt; n.sp.position.x+=n.dx*dt; n.sp.material.opacity=Math.min(1,n.vida); if(n.vida<=0){ cena.remove(n.sp); n.sp.material.dispose(); notas.splice(i,1); } } }
+  return { atualizar, show(seg=10){ showAte=performance.now()+seg*1000; }, centro:new THREE.Vector3(PALCO.x,1.6,PALCO.z+3.2) };
+})();
 const serpente=criarSerpente(THREE); serpente.posicionar(4.2,ARCO_Z-.6,-0.9); serpente.raiz.scale.setScalar(.8); cena.add(serpente.raiz);
 // holofotes coloridos do palco
 const feixes=[]; for(const [cor,dx] of [[0xff3d8b,-2],[0x7a3cff,0],[0x5cff8a,2]]){ const f=new THREE.Mesh(new THREE.ConeGeometry(2.2,12,20,1,true),new THREE.MeshBasicMaterial({color:cor,transparent:true,opacity:.13,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
@@ -372,10 +437,11 @@ function diretor(){ // escolhe o próximo ângulo sozinho, como um drone filmand
   if(chegadaQ.length>3&&r<.5) return plano('tapete',6);
   if(ds.length&&r<.38){ const recentes=ds.sort((a,b)=>(b.info.ultimo||0)-(a.info.ultimo||0)).slice(0,8); return focar(rndA(recentes),6,0); }
   if((casal.noivo||casal.noiva)&&r<.46) return plano('altar',6);
-  const planos=[['roda',8,14],['drone',9,12],['baixo',7,10],['giro',7,8],['cima',6,7],['palco',5,7],['tapete',5,4]];
+  const planos=[['roda',8,14],['drone',9,12],['baixo',7,10],['giro',7,8],['cima',6,7],['palco',5,5],['banda',6,5],['tapete',5,4]];
   let x=Math.random()*planos.reduce((s,p)=>s+p[2],0); for(const [n,seg,peso] of planos){ x-=peso; if(x<=0) return plano(n,seg); }
 }
 const tmpV=new THREE.Vector3();
+const RUMO_B=.95;
 function moverCamera(dt,t){
   const p=cam.alvoPos, o=cam.alvoOlha; const k=(performance.now()-cam.t0)/1000;
   if(cam.plano==='destaque'&&cam.foco&&DS.has(cam.foco.id)){ const g=cam.foco.grupo;
@@ -384,6 +450,7 @@ function moverCamera(dt,t){
     const dist=cam.foco.noivo?5:4.6; p.set(g.position.x+Math.sin(a)*dist,2.9,g.position.z+Math.cos(a)*dist); o.set(g.position.x,1.3,g.position.z); }
   else if(cam.plano==='cima'){ p.set(Math.sin(t*.05)*2,30,6+Math.cos(t*.05)*2); o.set(0,0,-.5); }
   else if(cam.plano==='palco'){ p.set(PALCO.x+5.5,5.2,PALCO.z+12); o.set(PALCO.x,3.6,PALCO.z); }
+  else if(cam.plano==='banda'){ p.set(PALCO.x+2.4+Math.sin(k*.4)*1.2,5.0,PALCO.z+15-Math.min(k,8)*.3); o.set(PALCO.x-.2,2.7,PALCO.z+2); }
   else if(cam.plano==='altar'){ p.set(Math.sin(t*.2)*1.6,3,ARCO_Z+7); o.set(0,1.6,ARCO_Z+.8); }
   else if(cam.plano==='entrada'&&cam.foco&&DS.has(cam.foco.id)){ const g=cam.foco.grupo; const a=g.rotation.y+.5; p.set(g.position.x+Math.sin(a)*4.2,2.6,g.position.z+Math.cos(a)*4.2); o.set(g.position.x,1.3,g.position.z); }
   else if(cam.plano==='baixo'){ const a=k*.16+cam.t0*.001; p.set(Math.sin(a)*7.6,.7,Math.cos(a)*7.6); o.set(0,2.4,0); }
@@ -422,7 +489,7 @@ placa('noivo',null); placa('noiva',null);
 function virarPar(d,tipo,anunciar=true){
   d.noivo=tipo==='noivo'?'noivo':'veu'; atualizarTag(d); colocarAcessorio(d,d.noivo,0xffffff);
   d.alvo.set(tipo==='noivo'?-.8:.8,0,ARCO_Z+1.7); d.rumo=0; d.vel=7; // corre pro altar
-  if(anunciar){ banner(`${tipo==='noivo'?'🤵 NOVO NOIVO!':'👰 NOVA NOIVA!'}<small>${esc(d.info.name)}</small>`); plano('altar',6,3); confete(90); serpente.acao('comemorar',2.4);
+  if(anunciar){ banner(`${tipo==='noivo'?'🤵 NOVO NOIVO!':'👰 NOVA NOIVA!'}<small>${esc(d.info.name)}</small>`); plano('altar',6,2); confete(90); serpente.acao('comemorar',2.4);
     setTimeout(()=>{ if(DS.has(d.id)){ coracoesEm(d,12); acao(d,'sim',2); } },2600); }
 }
 function largarPar(id){ const d=DS.get(id); if(!d||!d.noivo) return; d.noivo=null; atualizarTag(d); aplicarRoupa(d); reposicionar(); }
@@ -453,7 +520,7 @@ function onBaile(m){
     case 'presente': if(m.coins<30||!m.naRoda) feed(m.user,`<b>${esc(m.user.name)}</b> mandou ${esc(window.Texto?window.Texto.presente(m.giftName).nome.toUpperCase():m.giftName)}${m.naRoda&&m.coins<30?' e trocou de roupa!':'!'}`);
       if(m.naRoda) musica.vinheta([72,76,79,84]); break;
     case 'banda': musicaIdx=m.musica; musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎸 TOQUE NA BANDA!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> tocou na banda!`);
-      for(const d of DS.values()) if(!d.andando&&!d.noivo) { d.atual=null; tocarDanca(d); } dj.acao('comemorar',2); plano('palco',4,2); confete(60); break;
+      for(const d of DS.values()) if(!d.andando&&!d.noivo) { d.atual=null; tocarDanca(d); } dj.acao('comemorar',2); banda.show(10); plano('banda',9,3); confete(60); break;
     case 'noivos': definirCasal(m.noivo,m.noiva,true); break;
     case 'placar': placa('noivo',m.noivo); placa('noiva',m.noiva); break;
     case 'seguiu': { const d=DS.get(m.id); if(d){ coracoesEm(d,10); acao(d,'pular'); } break; }
@@ -566,11 +633,11 @@ function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=
     diretor(); if(cam.plano!=='destaque') esconderDestaque();
     // no close, quem estiver colado na câmera some (não tampa a pessoa em destaque)
     // quem estiver colado na câmera some (não tampa a pessoa em destaque nem o altar)
-    for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=d===cam.foco||!!d.noivo||camera.position.distanceTo(tmpV)>(cam.plano==='altar'?5:3); }
+    for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=d===cam.foco||!!d.noivo||camera.position.distanceTo(tmpV)>(cam.plano==='altar'||cam.plano==='banda'?5:3); }
   }
   moverCamera(dt,t);
   // vida no cenário
-  dj.atualizar(dt,t); serpente.atualizar(dt,t); if(!dj.ocupado()) dj.acao(Math.random()<.8?'dancar':rndA(['comemorar','rir','acenar']),2); // o DJ não para
+  dj.atualizar(dt,t); serpente.atualizar(dt,t); banda.atualizar(dt,t); if(!dj.ocupado()) dj.acao(Math.random()<.8?'dancar':rndA(['comemorar','rir','acenar']),2); // o DJ não para
   feixes.forEach((f,i)=>{ f.rotation.z=Math.sin(t*1.3+i*2)*.5; f.rotation.x=Math.cos(t*1.1+i)*.3; });
   const b=musica.batida(); luzRosa.intensity=30+Math.pow(1-b.fase,3)*40; luzRoxa.intensity=22+Math.pow(1-((b.fase+.5)%1),3)*30;
   for(let i=particulas.length-1;i>=0;i--){ const q=particulas[i]; q.vida-=dt; q.v.y-=9*dt; q.m.position.addScaledVector(q.v,dt); q.m.rotation.x+=dt*6; if(q.vida<=0){ cena.remove(q.m); q.m.geometry.dispose(); particulas.splice(i,1); } }
