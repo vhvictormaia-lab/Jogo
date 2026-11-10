@@ -5,9 +5,11 @@
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 let T = null;
 
-const ehAndar = (n) => /walk|andar|caminh/i.test(n), ehCorrer = (n) => /run|corr/i.test(n);
-const ehParado = (n) => /idle|parad|respir|breath|standing/i.test(n);
-const ehComemora = (n) => /cheer|victory|clap|comemor|palma|happy/i.test(n);
+// nome com "dance/dança/samba..." é sempre dança (ex.: "Dancing Running Man" não é a corrida)
+const ehDanca = (n) => /danc|dança|samba|thriller|hip ?hop|salsa|rumba|macarena|twist|gangnam|funk/i.test(n);
+const ehAndar = (n) => !ehDanca(n) && /walk|andar|caminh/i.test(n), ehCorrer = (n) => !ehDanca(n) && /run|corr/i.test(n);
+const ehParado = (n) => !ehDanca(n) && /idle|parad|respir|breath|standing/i.test(n);
+const ehComemora = (n) => !ehDanca(n) && /cheer|victory|clap|comemor|palma/i.test(n);
 const sexoArq = (u) => { const n = decodeURIComponent(u.split('/').pop()).toLowerCase(); return /menina|femin|mulher|garota|noiva|girl|female|woman/.test(n) ? 'f' : /menino|mascul|homem|garoto|noivo|boy|male|\bman\b/.test(n) ? 'm' : null; };
 const nomeArq = (u) => decodeURIComponent(u.split('/').pop()).replace(/\.\w+$/, '');
 
@@ -20,7 +22,20 @@ function noLugar(clip) {
   return clip;
 }
 function prepararModelo(r, url) {
-  const cena = r.scene || r; cena.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; } }); cena.updateMatrixWorld(true);
+  const cena = r.scene || r;
+  // o FBX da Mixamo vem com material brilhante (Phong) e a textura sem a cor certa (fica lavado/rosado):
+  // troca por material fosco e marca a textura como sRGB, igual ao que se vê no site
+  cena.traverse((o) => {
+    if (!o.isMesh) return; o.frustumCulled = false;
+    const mats = (Array.isArray(o.material) ? o.material : [o.material]).map((m) => {
+      if (!m) return m; const map = m.map || null;
+      if (map) { map.colorSpace = T.SRGBColorSpace; map.anisotropy = 4; map.needsUpdate = true; }
+      const n = new T.MeshStandardMaterial({ map, color: map ? 0xffffff : (m.color || 0xffffff), roughness: 0.75, metalness: 0, skinning: true });
+      n.name = m.name; m.dispose && m.dispose(); return n;
+    });
+    o.material = Array.isArray(o.material) ? mats : mats[0];
+  });
+  cena.updateMatrixWorld(true);
   // altura pelo esqueleto (a caixa da malha engana em bonecos com ossos escalados, comuns no FBX da Mixamo)
   let minY = Infinity, maxY = -Infinity; const v = new T.Vector3();
   cena.traverse((o) => { if (o.isBone) { o.getWorldPosition(v); minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y); } });
@@ -37,8 +52,20 @@ export async function carregarPersonagens3D(THREE, lista, carregar) {
   const lib = { modelos: [], dancas: [], andar: null, correr: null, parado: null, comemora: null, credito: lista.credito || '' };
   for (const u of lista.modelos || []) { try { lib.modelos.push(prepararModelo(await carregar(u), u)); } catch (e) { console.warn('personagem não carregou', u, e); } }
   if (!lib.modelos.length) return null;
+  // roupas (texturas) de cada boneco: arquivos de imagem que começam com o nome dele
+  const tl = new T.TextureLoader();
+  for (const m of lib.modelos) {
+    m.texturas = [];
+    const base = m.nome.toLowerCase();
+    for (const u of lista.texturas || []) {
+      const n = nomeArq(u).toLowerCase();
+      if (n !== base && !n.startsWith(base + '-') && !n.startsWith(base + '_')) continue;
+      try { const t = await tl.loadAsync(u); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; m.texturas.push(t); } catch (e) { console.warn('roupa não carregou', u, e); }
+    }
+  }
   const todos = [];
-  for (const m of lib.modelos) for (const c of m.clips) todos.push(c);
+  // o boneco baixado "With Skin" traz um clipe parado em T ("mixamo.com"/"Take 001"): esse não é dança
+  for (const m of lib.modelos) for (const c of m.clips) if (c.name && !/mixamo\.com|Take 0|^Armature|tpose|t-pose/i.test(c.name)) todos.push(c);
   for (const u of lista.dancas || []) {
     try { const r = await carregar(u); for (const c of r.animations || []) { if (!c.name || /mixamo\.com|Take 001|^Armature/i.test(c.name)) c.name = nomeArq(u); todos.push(c); } }
     catch (e) { console.warn('dança não carregou', u, e); }
@@ -70,6 +97,12 @@ export function criarBoneco3D(lib, { semente = 1, sexo = 'm', enfeite = null } =
   const M = lista[(semente >>> 0) % lista.length];
   const obj = SkeletonUtils.clone(M.cena); obj.scale.setScalar(M.escala); obj.position.y = M.baseY;
   const raiz = new T.Group(); raiz.add(obj);
+  // roupa: cada pessoa ganha uma das cores (a Rosa sorteia outra)
+  if (M.texturas && M.texturas.length) {
+    let hh = Math.imul((semente >>> 0) ^ 0x9e3779b9, 0x85ebca6b); hh ^= hh >>> 13; hh = Math.imul(hh, 0xc2b2ae35); hh ^= hh >>> 16;
+    const tex = M.texturas[(hh >>> 0) % M.texturas.length];
+    obj.traverse((o) => { if (o.isMesh) { const um = (m) => { const c = m.clone(); c.map = tex; c.needsUpdate = true; return c; }; o.material = Array.isArray(o.material) ? o.material.map(um) : um(o.material); } });
+  }
   let cabeca = null; if (M.cabeca) obj.traverse((o) => { if (!cabeca && o.name === M.cabeca) cabeca = o; });
   const mixer = new T.AnimationMixer(obj);
   let atual = null, clipAtual = null;

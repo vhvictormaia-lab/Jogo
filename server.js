@@ -64,6 +64,8 @@ app.get('/api/baile/arquivos', (_req, res) => {
     musicas: listar(MUS_DIR, /\.(mp3|ogg|m4a|wav)$/i).map((f) => 'musicas-baile/' + encodeURIComponent(f)),
     modelos: listar(PERS_DIR, /\.(glb|gltf|fbx)$/i).map((f) => 'baile-personagens/' + encodeURIComponent(f)),
     dancas: listar(path.join(PERS_DIR, 'dancas'), /\.(glb|gltf|fbx)$/i).map((f) => 'baile-personagens/dancas/' + encodeURIComponent(f)),
+    // roupas: imagens com o mesmo nome do boneco (palhacinho-menino.jpg, palhacinho-menino-azul.jpg...) trocam a cor da roupa
+    texturas: listar(PERS_DIR, /\.(jpe?g|png|webp)$/i).map((f) => 'baile-personagens/' + encodeURIComponent(f)),
     credito,
   });
 });
