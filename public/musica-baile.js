@@ -77,9 +77,10 @@ export function criarMusicaBaile({ falando = () => false } = {}) {
   ];
   let cantoria = false;
   function agenda() {
+    if (audio && !audio.__mixer) { const v = vol(); audio.volume = Math.max(0, Math.min(1, falando() ? v * 0.35 : v)); const ag = performance.now(); if (audio.paused && !audio.ended && ag - (audio.__tentou || 0) > 2000) { audio.__tentou = ag; audio.play().catch(() => {}); } }
     if (!ok || ac.state !== 'running') return;
     duck.gain.setTargetAtTime(falando() ? 0.35 : 1, ac.currentTime, 0.15);
-    if (audio) { audio.volume = 1; return; }
+    if (audio) { if (audio.__mixer) audio.volume = 1; return; }
     const E = ESTILOS[estilo], col = 60 / (E.bpm + energia * 8) / 4;
     if (proxT < ac.currentTime) proxT = ac.currentTime + 0.05;
     while (proxT < ac.currentTime + 0.2) { E.toca(passo % 64, proxT, col); proxT += col; passo++; }
@@ -97,20 +98,22 @@ export function criarMusicaBaile({ falando = () => false } = {}) {
     const n = ((i % lista.length) + lista.length) % lista.length;
     if (!mesmoSeIgual && audio && n === faixa && !audio.ended) return; // já está tocando esta
     pararMp3(); faixa = n;
-    const a = new Audio(lista[faixa]); a.crossOrigin = 'anonymous'; audio = a;
-    try { fonteAudio = ac.createMediaElementSource(a); fonteAudio.connect(duck); } catch (e) {}
+    const a = new Audio(lista[faixa]); audio = a;
+    // só passa pelo mixer do jogo se ele estiver rodando; senão toca direto (antes: mixer parado = música muda)
+    if (ac && ac.state === 'running') { try { a.crossOrigin = 'anonymous'; fonteAudio = ac.createMediaElementSource(a); fonteAudio.connect(duck); a.__mixer = true; } catch (e) {} }
+    if (!a.__mixer) a.volume = vol();
     a.onended = () => { if (audio === a) tocarMp3(faixa + 1); };
     a.onerror = () => { if (audio !== a) return; pararMp3(); lista.splice(faixa, 1); if (lista.length) tocarMp3(faixa); };
-    a.play().catch(() => {});
+    a.play().catch(() => { setTimeout(() => { if (audio === a && a.paused) a.play().catch(() => {}); }, 1500); });
   }
   return {
     config(m) { if (!m) return; cfg = m; if (out) out.gain.value = vol(); },
-    ligar() { if (!init()) return; if (ac.state === 'suspended') ac.resume().catch(() => {}); if (!this._tenta) this._tenta = setInterval(() => { if (ac.state === 'suspended') ac.resume().catch(() => {}); }, 2000); if (rodando) return; rodando = true; setInterval(agenda, 25); if (lista.length && !audio) tocarMp3(0); },
+    ligar() { init(); if (ac && ac.state === 'suspended') ac.resume().catch(() => {}); if (ac && !this._tenta) this._tenta = setInterval(() => { if (ac.state === 'suspended') ac.resume().catch(() => {}); }, 2000); if (rodando) { if (audio && audio.paused && !audio.ended) audio.play().catch(() => {}); return; } rodando = true; setInterval(agenda, 25); if (lista.length && !audio) tocarMp3(0); },
     // lista de MP3 (urls); vazia = músicas do jogo
-    playlist(urls) { lista = (urls || []).slice(); if (ok && lista.length && !audio) tocarMp3(0); },
+    playlist(urls) { lista = (urls || []).slice(); if (rodando && lista.length && !audio) tocarMp3(0); },
     // "toque na banda": próxima música (MP3 ou estilo do jogo)
-    tocar(i) { if (lista.length && ok) tocarMp3(i, false); else { estilo = ((i % ESTILOS.length) + ESTILOS.length) % ESTILOS.length; passo = 0; } },
-    proxima() { if (lista.length && ok) tocarMp3(faixa + 1); else { estilo = (estilo + 1) % ESTILOS.length; passo = 0; } },
+    tocar(i) { if (lista.length && rodando) tocarMp3(i, false); else { estilo = ((i % ESTILOS.length) + ESTILOS.length) % ESTILOS.length; passo = 0; } },
+    proxima() { if (lista.length && rodando) tocarMp3(faixa + 1); else { estilo = (estilo + 1) % ESTILOS.length; passo = 0; } },
     get tocando() { return !!ac && ac.state === 'running' && !(cfg && cfg.ligada === false); },
     get estilo() { return lista.length ? 'mp3' : ESTILOS[estilo].nome; },
     esquentar(x) { energia = Math.min(1, energia + x); },
