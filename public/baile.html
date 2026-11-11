@@ -28,6 +28,9 @@
   .pp.pisca{animation:piscaP 1.2s ease-out} @keyframes piscaP{0%{background:rgba(255,61,139,.6);transform:scale(1.06)}}
   /* nomes em cima das cabeças */
   #tags{position:absolute;inset:0;z-index:3;pointer-events:none}
+  #djtag{position:absolute;left:0;top:0;z-index:4;pointer-events:none;display:none;align-items:center;gap:14px;padding:10px 26px 10px 10px;border-radius:999px;background:linear-gradient(135deg,#ffcc33,#ff3d8b);color:#1b0d2b;font:900 40px Nunito,sans-serif;white-space:nowrap;transform-origin:50% 100%;box-shadow:0 6px 24px rgba(0,0,0,.45);border:4px solid #fff}
+  #djtag img,#djtag .av{width:84px;height:84px;border-radius:50%;object-fit:cover;flex:none;border:3px solid #fff;display:grid;place-items:center;font:900 40px Nunito,sans-serif;background:linear-gradient(135deg,var(--rosa),var(--roxo));color:#fff}
+  #djtag small{display:block;font-size:24px;letter-spacing:2px;opacity:.85;line-height:1}
   .tag{position:absolute;left:0;top:0;display:flex;align-items:center;gap:6px;padding:3px 12px 3px 3px;border-radius:30px;background:rgba(30,10,45,.78);border:2px solid rgba(255,255,255,.35);font:900 32px Nunito,sans-serif;white-space:nowrap;transform-origin:50% 100%;will-change:transform;text-shadow:0 2px 4px rgba(0,0,0,.6)}
   .tag img,.tag .av{width:56px;height:56px;border-radius:50%;object-fit:cover;flex:none}
   .tag .av{display:grid;place-items:center;font:900 28px Nunito,sans-serif;background:linear-gradient(135deg,var(--rosa),var(--roxo))}
@@ -104,11 +107,12 @@
 <div id="stage">
   <canvas id="cena" width="1080" height="1920"></canvas>
   <div id="tags"></div>
+  <div id="djtag"></div>
   <div id="titulo" class="lil"><span class="ic">💃</span>BAILE DO ABISMO</div>
   <div id="painelP">
     <div id="tempo" class="lil">30:00</div>
     <div class="pp" id="ppRoupa"><div class="i">💬</div><span>Comente ou<br>compartilhe</span></div>
-    <div class="pp" id="ppBanda"><div class="i">🍩<b>30</b></div><span>Toque na<br>banda</span></div>
+    <div class="pp" id="ppBanda"><div class="i">🍩<b>30</b></div><span>Rosquinha:<br>vira o DJ</span></div>
     <div class="pp" id="ppNoivos"><div class="i">🎁</div><span>Presente: mais<br>tempo na tela</span></div>
   </div>
   <div id="casal">
@@ -364,7 +368,7 @@ function proximoPasso(d){ if(coreo.passo&&bt<coreo.ate) return fazer(d,coreo.pas
 const ACOES_P={sim:['comemora',4],pular:['pulao',4],acenar:['acena',4],festa:['pula',4]};
 function acao(d,nome){ const a=ACOES_P[nome]; if(!a||d.andando||d.trem) return; if(d.boneco.mixamo){ if(nome==='sim'||nome==='festa'){ d.boneco.comemorar(); d.mixFim=relogio+2.6; } return; } fazer(d,a[0],a[1]); }
 // o coreógrafo: de vez em quando a roda inteira faz o mesmo passo, uma dupla dança junto, um faz solo, ou a galera sai correndo em volta
-const coreo={passo:null,ate:0,proxJuntos:40,proxDupla:30,proxTrem:75,proxBanda:35};
+const coreo={passo:null,ate:0,proxJuntos:40,proxDupla:30,proxTrem:75,proxBanda:15};
 function todosJuntos(passo,batidas){
   if(MIX){ const clip=MIX.dancas[Math.floor(Math.random()*MIX.dancas.length)]; coreo.mixClip=clip; coreo.mixIni=relogio; coreo.mixAte=relogio+12;
     for(const d of DS.values()) if(!d.andando&&!d.trem&&!d.noivo) mixDancar(d,clip,0,12); return; } const dur=CLIPES[passo]?8:(batidas||Math.max(8,PASSOS[passo].dur*(PASSOS[passo].dur<8?2:1))); const ini=Math.ceil(bt);
@@ -388,7 +392,7 @@ function coreografo(dt){
   if(coreo.proxJuntos<=0){ coreo.proxJuntos=45+Math.random()*30; if(DS.size>=3){ todosJuntos(rndA(JUNTOS2)); plano(rndA(['drone','roda','cima','roda']),8,1); } }
   else if(coreo.proxDupla<=0){ coreo.proxDupla=35+Math.random()*20; dupla(); }
   else if(coreo.proxTrem<=0){ coreo.proxTrem=90+Math.random()*40; trem(); }
-  else if(coreo.proxBanda<=0){ coreo.proxBanda=40+Math.random()*25; banda.dancar(8); plano('banda',8,1); }
+  else if(coreo.proxBanda<=0){ coreo.proxBanda=18+Math.random()*12; banda.dancar(10); if(Math.random()<.5) plano('banda',8,1); }
 }
 // ---------- bolhas de fala, corações, estouros ----------
 function balao2(d,texto){ if(!d.bal){ d.bal=document.createElement('div'); d.bal.className='bal'; $('tags').appendChild(d.bal); } d.bal.textContent=texto; d.balAte=performance.now()+3800; }
@@ -454,6 +458,15 @@ const vt=new THREE.Vector3();
 const frustum=new THREE.Frustum(), mPV=new THREE.Matrix4(), esfera=new THREE.Sphere(new THREE.Vector3(),1.8);
 function atualizarFrustum(){ camera.updateMatrixWorld(); mPV.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse); frustum.setFromProjectionMatrix(mPV); }
 function naTela(d){ esfera.center.set(d.grupo.position.x,1.1,d.grupo.position.z); return frustum.intersectsSphere(esfera); }
+// quem manda rosquinha (30+ moedas) vira o DJ: nome e foto em cima do palhaço do palco
+let djDono=null;
+function virarDJ(u){ if(!u) return; djDono=u; const t=$('djtag'); t.innerHTML=`${avatar(u)}<div><small>🎧 DJ</small>${esc(u.name)}</div>`; t.style.display='flex'; try{ localStorage.setItem('baile-dj',JSON.stringify({name:u.name,avatar:u.avatar||''})); }catch(e){} }
+try{ const v=JSON.parse(localStorage.getItem('baile-dj')||'null'); if(v&&v.name) setTimeout(()=>virarDJ(v),0); }catch(e){}
+const vdj=new THREE.Vector3();
+function posDJtag(){ if(!djDono) return; const t=$('djtag'); (dj.partes&&dj.partes.cabeca||dj.raiz).getWorldPosition(vdj); vdj.y+=dj.partes&&dj.partes.cabeca?3.3:6; vdj.project(camera);
+  if(vdj.z>1||Math.abs(vdj.x)>1.15||Math.abs(vdj.y)>1.15){ t.style.opacity=0; return; }
+  const dist=camera.position.distanceTo(dj.raiz.position); const k=Math.max(.6,Math.min(1.25,12/dist));
+  t.style.opacity=1; const px=Math.max(240,Math.min(620,(vdj.x*.5+.5)*1080)), py=Math.max(250,(-vdj.y*.5+.5)*1920); t.style.transform=`translate(${px}px,${py}px) translate(-50%,-100%) scale(${k})`; }
 function telaDe(d,altura=2.5){ vt.set(d.grupo.position.x,altura,d.grupo.position.z).project(camera); if(vt.z>1) return null; return { x:(vt.x*.5+.5)*1080, y:(-vt.y*.5+.5)*1920, z:vt.z }; }
 
 // ================= música =================
@@ -511,8 +524,8 @@ function onBaile(m){
         // quem manda presente aparece na tela: mais moedas = mais tempo no destaque
         if(d&&m.coins<30){ estouro(d.grupo.position,0xffd23f,30); coracoesEm(d,Math.min(16,4+Math.round(m.coins/2))); focar(d,Math.min(25,6+m.coins*0.6),3); } }
       break; }
-    case 'banda': musicaIdx=m.musica; musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎸 TOQUE NA BANDA!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> tocou na banda!`);
-      todosJuntos(rndA(['bracos','pula','passinho','polichinelo']),8); dj.acao('comemorar',2); banda.show(10); plano('banda',6,3); confete(60);
+    case 'banda': virarDJ(m.user); musicaIdx=m.musica; musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎧 NOVO DJ!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> virou o DJ do baile! 🎧`);
+      todosJuntos(rndA(['bracos','pula','passinho','polichinelo']),8); dj.acao('comemorar',2); banda.show(10); setTimeout(()=>banda.dancar(8),2500); plano('banda',6,3); confete(60);
       { const quem=m.user&&m.user.id; setTimeout(()=>{ const d=DS.get(quem); if(d) focar(d,Math.min(30,10+m.coins*0.1),3); },6200); } break;
     case 'noivos': definirCasal(m.noivo,m.noiva,true); break;
     case 'placar': placa('noivo',m.noivo); placa('noiva',m.noiva); break;
@@ -601,7 +614,7 @@ function ligarDemoLocal(){
 // ================= laço =================
 const rel=new THREE.Clock();
 function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ requestAnimationFrame(loop); return; } ultQuadro=n; }
-  const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=performance.now(); atualizarFrustum();
+  const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=performance.now(); atualizarFrustum(); posDJtag();
   if(pronto){
     if(chegadaQ.length&&agora>proxChegada){ proxChegada=agora+(chegadaQ.length>15?700:chegadaQ.length>5?1000:1400); chegar(); }
     const B=musica.batida(); bt+=dt*(B.porSeg||2); relogio+=dt; coreografo(dt);
@@ -648,7 +661,7 @@ function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ reques
   }
   moverCamera(dt,t);
   // vida no cenário
-  { const Bt=musica.batida(); dj.ritmo(Bt.porSeg||2); banda.ritmo(bt,Bt.porSeg||2); } dj.atualizar(dt,t); serpente.atualizar(dt,t); banda.atualizar(dt,t); if(!dj.ocupado()){ const r=Math.random(), seg=4/((musica.batida().porSeg)||2); dj.acao(r<.22?'dj':r<.38?'scratch':r<.55?'dancar':r<.68?'rebola':r<.78?'balanca':r<.85?'girar':r<.91?'pular':r<.97?'comemorar':'voar',r>=.97?5:seg*2); } // o DJ não para
+  { const Bt=musica.batida(); dj.ritmo(Bt.porSeg||2); banda.ritmo(bt,Bt.porSeg||2); } dj.atualizar(dt,t); serpente.atualizar(dt,t); banda.atualizar(dt,t); if(!dj.ocupado()){ const r=Math.random(), seg=4/((musica.batida().porSeg)||2); dj.acao(r<.12?'dj':r<.2?'scratch':r<.42?'dancar':r<.6?'rebola':r<.72?'balanca':r<.8?'girar':r<.88?'pular':r<.97?'comemorar':'voar',r>=.97?5:seg*2); } // o DJ não para
   feixes.forEach((f,i)=>{ f.rotation.z=Math.sin(t*1.3+i*2)*.5; f.rotation.x=Math.cos(t*1.1+i)*.3; });
   const b=musica.batida(); luzRosa.intensity=30+Math.pow(1-b.fase,3)*40; luzRoxa.intensity=22+Math.pow(1-((b.fase+.5)%1),3)*30;
   for(let i=particulas.length-1;i>=0;i--){ const q=particulas[i]; q.vida-=dt; q.v.y-=9*dt; q.m.position.addScaledVector(q.v,dt); q.m.rotation.x+=dt*6; if(q.vida<=0){ cena.remove(q.m); q.m.geometry.dispose(); particulas.splice(i,1); } }
