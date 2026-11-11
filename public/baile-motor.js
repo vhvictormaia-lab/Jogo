@@ -3,7 +3,7 @@
 // Regras:
 //  - 35 pessoas na roda (muda no painel). Lotou: a tela pede "continue comentando" e quem comentar quando abrir vaga (no próximo baile) entra.
 //  - Cada baile dura 5 minutos (muda no painel). No fim tem o casamento e começa outro.
-//  - Presentes: até 29 moedas troca a roupa · 30 ou mais toca na banda (muda a música e a dança).
+//  - Comentou ou compartilhou: entra na roda. Presente: aparece mais na tela (30 ou mais também toca na banda).
 //  - Todo presente soma moedas: quem mais mandou no baile vira o NOIVO (bonecos masculinos) ou a NOIVA (femininos).
 //  - Noivo e noiva que ainda estiverem na live (deram sinal nos últimos 10 minutos) entram direto no próximo baile.
 //  - Comentar "menina" ou "menino" troca o tipo de boneco da pessoa.
@@ -100,12 +100,10 @@
       moedas.set(u.id, (moedas.get(u.id) || 0) + coins);
       const d = entrar(u, 'presente', true); // presente entra mesmo com a roda cheia (até 10 a mais)
       const user = { id: u.id, name: u.name, avatar: u.avatar || null };
-      if (d) {
-        if (coins >= 30) { musica = (musica + 1) % MUSICAS.length; emitir({ ev: 'banda', musica, nomeMusica: MUSICAS[musica], user, coins, d: publicoD(d) }); }
-        else trocarRoupa(d);
-      }
-      emitir({ ev: 'presente', user, giftName, coins, total: moedas.get(u.id), naRoda: !!d });
-      verNoivos();
+      // presente = aparece mais na tela (quanto mais moedas, mais tempo e mais vezes). 30 ou mais também toca na banda.
+      if (d && coins >= 30) { musica = (musica + 1) % MUSICAS.length; emitir({ ev: 'banda', musica, nomeMusica: MUSICAS[musica], user, coins, d: publicoD(d) }); }
+      emitir({ ev: 'presente', user, giftName, coins, total: moedas.get(u.id), naRoda: !!d, d: d ? publicoD(d) : null });
+      // (troca de roupa e noivo/noiva desligados por enquanto)
     }
     // noivo = quem mais mandou presente entre os bonecos masculinos; noiva = entre os femininos
     function verNoivos() {

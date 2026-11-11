@@ -52,7 +52,7 @@
   #naroda b{color:var(--verde)} #naroda .cheia b{color:var(--rosa)} #naroda .fila{font-size:28px;color:#ffe0f0}
   #naroda .fila[hidden]{display:none}
   /* casal da rodada (noivo e noiva = quem mais mandou presente) */
-  #casal{position:absolute;right:24px;top:560px;z-index:5;width:300px;display:flex;flex-direction:column;gap:10px}
+  #casal{display:none!important;position:absolute;right:24px;top:560px;z-index:5;width:300px;display:flex;flex-direction:column;gap:10px}
   .par{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:22px;background:rgba(30,10,45,.82);border:3px solid rgba(255,255,255,.16);transition:transform .3s}
   .par .f{position:relative;flex:none} .par .f img,.par .f .av{width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #fff;display:grid;place-items:center;font:900 28px Nunito,sans-serif;background:linear-gradient(135deg,var(--rosa),var(--roxo))}
   .par .f i{position:absolute;right:-8px;bottom:-6px;font-style:normal;font-size:30px}
@@ -107,9 +107,9 @@
   <div id="titulo" class="lil"><span class="ic">💃</span>BAILE DO ABISMO</div>
   <div id="painelP">
     <div id="tempo" class="lil">30:00</div>
-    <div class="pp" id="ppRoupa"><div class="i">🌹<b>1</b></div><span>Troque de<br>Roupa</span></div>
+    <div class="pp" id="ppRoupa"><div class="i">💬</div><span>Comente ou<br>compartilhe</span></div>
     <div class="pp" id="ppBanda"><div class="i">🍩<b>30</b></div><span>Toque na<br>banda</span></div>
-    <div class="pp" id="ppNoivos"><div class="i">💍</div><span>Maior presente<br>vira noivo(a)</span></div>
+    <div class="pp" id="ppNoivos"><div class="i">🎁</div><span>Presente: mais<br>tempo na tela</span></div>
   </div>
   <div id="casal">
     <div class="par vazio" id="pNoivo"></div>
@@ -125,7 +125,7 @@
 </div>
 <div id="toque" role="button" tabindex="0" hidden>
   <div class="caixa"><div class="t1">BAILE DO ABISMO</div>
-    <div class="t2">Quem comenta entra na roda e dança! Quem manda o maior presente vira noivo ou noiva. Aqui tem espectadores e presentes de mentira, como numa live.</div>
+    <div class="t2">Quem comenta ou compartilha entra na roda e dança! Quem manda presente aparece mais na tela. Aqui tem espectadores e presentes de mentira, como numa live.</div>
     <div class="bt">🔊 Toque para entrar no baile</div></div>
 </div>
 <div id="demo-tag" hidden>MODO DEMONSTRAÇÃO</div>
@@ -414,7 +414,8 @@ function diretor(){ // escolhe o próximo ângulo sozinho, como um drone filmand
   if(intervalo){ plano(casal.noivo||casal.noiva?'altar':'drone',6); return; }
   const ds=[...DS.values()]; const r=Math.random();
   if(chegadaQ.length>3&&r<.5) return plano('tapete',6);
-  if(ds.length&&r<.34){ const recentes=ds.filter(d=>!d.andando).sort((a,b)=>(b.info.ultimo||0)-(a.info.ultimo||0)).slice(0,8); if(recentes.length) return focar(rndA(recentes),7,0); }
+  const ricos=ds.filter(d=>(d.info.moedas||0)>0&&!d.andando); if(ricos.length&&r<.40){ let x=Math.random()*ricos.reduce((s,d)=>s+Math.sqrt(d.info.moedas),0); for(const d of ricos){ x-=Math.sqrt(d.info.moedas); if(x<=0) return focar(d,Math.min(14,6+Math.sqrt(d.info.moedas)),0); } }
+  if(ds.length&&r<.55){ const recentes=ds.filter(d=>!d.andando).sort((a,b)=>(b.info.ultimo||0)-(a.info.ultimo||0)).slice(0,8); if(recentes.length) return focar(rndA(recentes),7,0); }
   if((casal.noivo||casal.noiva)&&r<.46) return plano('altar',6);
   const planos=[['roda',11,14],['drone',12,12],['baixo',10,10],['giro',9,5],['cima',8,6],['palco',8,5],['banda',8,5],['tapete',8,3]];
   let x=Math.random()*planos.reduce((s,p)=>s+p[2],0); for(const [n,seg,peso] of planos){ x-=peso; if(x<=0) return plano(n,seg); }
@@ -497,10 +498,15 @@ function onBaile(m){
     case 'sexo': case 'roupa': { const q=chegadaQ.find(x=>x.id===m.d.id); if(q) Object.assign(q,m.d); const d=DS.get(m.d.id);
       if(d){ d.info=Object.assign(d.info,m.d); d.info.ultimo=Date.now(); vestir(d); estouro(d.grupo.position,m.ev==='sexo'?(m.d.sexo==='f'?0xff9ec7:0x2fd5ff):0xff3d8b,34); acao(d,'sim'); focar(d,5,2); }
       if(m.ev==='roupa') piscar('ppRoupa'); break; }
-    case 'presente': if(m.coins<30||!m.naRoda) feed(m.user,`<b>${esc(m.user.name)}</b> mandou ${esc(window.Texto?window.Texto.presente(m.giftName).nome.toUpperCase():m.giftName)}${m.naRoda&&m.coins<30?' e trocou de roupa!':'!'}`);
-      if(m.naRoda) musica.vinheta([72,76,79,84]); break;
+    case 'presente': { feed(m.user,`<b>${esc(m.user.name)}</b> mandou ${esc(window.Texto?window.Texto.presente(m.giftName).nome.toUpperCase():m.giftName)}!`);
+      const d=DS.get(m.user.id); if(d){ d.info.moedas=m.total||0; d.info.ultimo=Date.now(); }
+      if(m.naRoda){ musica.vinheta([72,76,79,84]); piscar('ppNoivos');
+        // quem manda presente aparece na tela: mais moedas = mais tempo no destaque
+        if(d&&m.coins<30){ estouro(d.grupo.position,0xffd23f,30); coracoesEm(d,Math.min(16,4+Math.round(m.coins/2))); focar(d,Math.min(25,6+m.coins*0.6),3); } }
+      break; }
     case 'banda': musicaIdx=m.musica; musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎸 TOQUE NA BANDA!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> tocou na banda!`);
-      todosJuntos(rndA(['bracos','pula','passinho','polichinelo']),8); dj.acao('comemorar',2); banda.show(10); plano('banda',9,3); confete(60); break;
+      todosJuntos(rndA(['bracos','pula','passinho','polichinelo']),8); dj.acao('comemorar',2); banda.show(10); plano('banda',6,3); confete(60);
+      { const quem=m.user&&m.user.id; setTimeout(()=>{ const d=DS.get(quem); if(d) focar(d,Math.min(30,10+m.coins*0.1),3); },6200); } break;
     case 'noivos': definirCasal(m.noivo,m.noiva,true); break;
     case 'placar': placa('noivo',m.noivo); placa('noiva',m.noiva); break;
     case 'seguiu': { const d=DS.get(m.id); if(d){ coracoesEm(d,10); acao(d,'pular'); } break; }
@@ -525,7 +531,7 @@ function fimBaile(m){
   const el=$('fim'), pessoa=(u,ic,t)=>u?`<div>${avatar(u)}<div class="s">${ic} ${t}</div><div class="n">${esc(u.name)}</div></div>`:'';
   el.innerHTML=`<div class="c"><div class="t lil">${tem?'CASAMENTO DO BAILE':'FIM DO BAILE!'}</div>`+
     (tem?`<div class="casal">${pessoa(n,'🤵','Noivo')}${n&&a?'<div class="anel">💍</div>':''}${pessoa(a,'👰','Noiva')}</div><div class="s">${n&&a?'Os noivos':'Quem casou'} já ${n&&a?'entram':'entra'} no próximo baile!</div>`
-       :'<div class="s">Ninguém casou desta vez… no próximo baile, o maior presente vira noivo ou noiva 💍</div>')+
+       :'<div class="s">Valeu por dançar! Quem manda presente aparece mais na tela 🎁</div>')+
     `<div class="s">Comente pra entrar no próximo baile 💃</div></div>`;
   setTimeout(()=>{ if(intervalo) el.classList.add('on'); },tem?4500:500);
 }
@@ -641,7 +647,7 @@ function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=
 loop();
 // a frase de baixo: lotou = "continue comentando"; senão alterna o convite
 let iCham=0;
-function trocarChamada(agoraJa){ const l=lotou?['CONTINUE COMENTANDO PARA ENTRAR NO BAILE']:['COMENTE PRA ENTRAR NO BAILE','MAIOR PRESENTE VIRA NOIVO(A) 💍','COMENTE MENINA OU MENINO 👧👦'];
+function trocarChamada(agoraJa){ const l=lotou?['CONTINUE COMENTANDO PARA ENTRAR NO BAILE']:['COMENTE PRA ENTRAR NO BAILE','COMPARTILHE E ENTRE NA RODA 🔁','PRESENTE = MAIS TEMPO NA TELA 🎁','COMENTE MENINA OU MENINO 👧👦'];
   iCham=agoraJa?0:(iCham+1)%l.length; const c=$('chamada'); c.style.fontSize=''; c.innerHTML=`<span>${esc(l[iCham])}</span>`; const w=c.firstChild.offsetWidth; if(w>1030) c.style.fontSize=Math.floor(60*1030/w)+'px'; }
 setInterval(()=>trocarChamada(false),5000); trocarChamada(true);
 
