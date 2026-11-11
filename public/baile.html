@@ -450,6 +450,9 @@ function moverCamera(dt,t){
   camera.position.copy(cam.pos); camera.lookAt(cam.olha);
 }
 const vt=new THREE.Vector3();
+const frustum=new THREE.Frustum(), mPV=new THREE.Matrix4(), esfera=new THREE.Sphere(new THREE.Vector3(),1.8);
+function atualizarFrustum(){ camera.updateMatrixWorld(); mPV.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse); frustum.setFromProjectionMatrix(mPV); }
+function naTela(d){ esfera.center.set(d.grupo.position.x,1.1,d.grupo.position.z); return frustum.intersectsSphere(esfera); }
 function telaDe(d,altura=2.5){ vt.set(d.grupo.position.x,altura,d.grupo.position.z).project(camera); if(vt.z>1) return null; return { x:(vt.x*.5+.5)*1080, y:(-vt.y*.5+.5)*1920, z:vt.z }; }
 
 // ================= música =================
@@ -597,7 +600,7 @@ function ligarDemoLocal(){
 // ================= laço =================
 const rel=new THREE.Clock();
 function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ requestAnimationFrame(loop); return; } ultQuadro=n; }
-  const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=performance.now();
+  const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=performance.now(); atualizarFrustum();
   if(pronto){
     if(chegadaQ.length&&agora>proxChegada){ proxChegada=agora+(chegadaQ.length>15?700:chegadaQ.length>5?1000:1400); chegar(); }
     const B=musica.batida(); bt+=dt*(B.porSeg||2); relogio+=dt; coreografo(dt);
@@ -617,7 +620,9 @@ function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ reques
         let dr=rumo-g.rotation.y; while(dr>Math.PI) dr-=2*Math.PI; while(dr<-Math.PI) dr+=2*Math.PI; g.rotation.y+=dr*Math.min(1,dt*4); }
       d.andando=andando;
       if(andando){ d.seq=null; animarAndando(d,dt,d.vel>4); continue; }
-      if(d.boneco.mixamo){ if(d.mixAndando||relogio>=(d.mixFim||0)) mixDancar(d); d.mixAndando=false; d.boneco.atualizar(dt); continue; }
+      if(d.boneco.mixamo){ if(d.mixAndando||relogio>=(d.mixFim||0)) mixDancar(d); d.mixAndando=false;
+        // fora da câmera: anima bem menos vezes (economiza o processador)
+        d.acum=(d.acum||0)+dt; if(naTela(d)||d.acum>.25){ d.boneco.atualizar(d.acum); d.acum=0; } continue; }
       if(d.seq){ if(relogio>=d.seq.fim){ d.seq.i++; if(d.seq.i<d.seq.lista.length) tocarSeq(d); else { d.seq=null; proximoPasso(d); } }
         if(d.seq){ d.boneco.aplicar(null,dt,true); continue; } }
       d.boneco.clip('Idle');
@@ -638,7 +643,7 @@ function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ reques
     diretor(); if(cam.plano!=='destaque'&&cam.plano!=='dupla') esconderDestaque();
     // no close, quem estiver colado na câmera some (não tampa a pessoa em destaque)
     // quem estiver colado na câmera some (não tampa a pessoa em destaque nem o altar)
-    for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=d===cam.foco||!!d.noivo||(cam.plano==='dupla'&&cam.par&&cam.par.includes(d))||(cam.plano==='trem'&&!!d.trem)||camera.position.distanceTo(tmpV)>(cam.plano==='altar'||cam.plano==='banda'||cam.plano==='dupla'?5:3); }
+    for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=naTela(d)&&(d===cam.foco||!!d.noivo||(cam.plano==='dupla'&&cam.par&&cam.par.includes(d))||(cam.plano==='trem'&&!!d.trem)||camera.position.distanceTo(tmpV)>(cam.plano==='altar'||cam.plano==='banda'||cam.plano==='dupla'?5:3)); }
   }
   moverCamera(dt,t);
   // vida no cenário

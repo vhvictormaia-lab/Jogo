@@ -59,6 +59,17 @@ app.use('/musicas-baile', express.static(MUS_DIR));
 app.use('/baile-personagens', express.static(PERS_DIR));
 const listarPastas = (dir) => { try { return fs.readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name); } catch { return []; } };
 const listar = (dir, re) => { try { return fs.readdirSync(dir).filter((f) => re.test(f)).sort((a, b) => a.localeCompare(b, 'pt-BR')); } catch { return []; } };
+// Todas as danças por padrão. Se o PC sofrer pra abrir: crie o arquivo baile-personagens/poucas-dancas.txt
+// e cada personagem carrega só 8 danças (as mesmas pra todos) + andar, correr, parado e comemorar.
+const DANCAS_LEVE = ['Samba Dancing', 'Hip Hop Dancing', 'Macarena Dance', 'Gangnam Style', 'Chicken Dance', 'Twist Dance', 'Silly Dancing', 'Salsa Dancing'];
+const BASICOS = /walk|andar|run|corr|idle|parad|cheer|comemor/i;
+function dancasLeves(arqs) {
+  if (!fs.existsSync(path.join(PERS_DIR, 'poucas-dancas.txt'))) return arqs;
+  const sem = (f) => f.replace(/\.(glb|gltf|fbx)$/i, '');
+  const escolhidas = DANCAS_LEVE.filter((n) => arqs.some((f) => sem(f).toLowerCase() === n.toLowerCase()));
+  if (escolhidas.length < 4) return arqs; // pasta com outras danças: usa todas
+  return arqs.filter((f) => BASICOS.test(f) || escolhidas.some((n) => sem(f).toLowerCase() === n.toLowerCase()));
+}
 app.get('/api/baile/arquivos', (_req, res) => {
   let credito = ''; try { credito = fs.readFileSync(path.join(PERS_DIR, 'credito.txt'), 'utf8').trim().slice(0, 160); } catch {}
   res.json({
@@ -68,7 +79,7 @@ app.get('/api/baile/arquivos', (_req, res) => {
     // roupas: imagens com o mesmo nome do boneco (palhacinho-menino.jpg, palhacinho-menino-azul.jpg...) trocam a cor da roupa
     texturas: listar(PERS_DIR, /\.(jpe?g|png|webp)$/i).map((f) => 'baile-personagens/' + encodeURIComponent(f)),
     // danças de cada boneco: pasta baile-personagens/dancas/<nome do boneco>
-    dancasPorBoneco: Object.fromEntries(listarPastas(path.join(PERS_DIR, 'dancas')).map((d) => [d, listar(path.join(PERS_DIR, 'dancas', d), /\.(glb|gltf|fbx)$/i).map((f) => 'baile-personagens/dancas/' + encodeURIComponent(d) + '/' + encodeURIComponent(f))]).filter(([, l]) => l.length)),
+    dancasPorBoneco: Object.fromEntries(listarPastas(path.join(PERS_DIR, 'dancas')).map((d) => [d, dancasLeves(listar(path.join(PERS_DIR, 'dancas', d), /\.(glb|gltf|fbx)$/i)).map((f) => 'baile-personagens/dancas/' + encodeURIComponent(d) + '/' + encodeURIComponent(f))]).filter(([, l]) => l.length)),
     credito,
   });
 });

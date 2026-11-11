@@ -21,6 +21,13 @@ function noLugar(clip) {
   }
   return clip;
 }
+// textura 2048 -> 1024: 4x menos memória de vídeo, quase igual na tela do celular
+function reduzirTextura(t, max = 1024) {
+  const im = t.image; const w = im && (im.naturalWidth || im.width), h = im && (im.naturalHeight || im.height);
+  if (!w || !h || Math.max(w, h) <= max) return;
+  try { const k = max / Math.max(w, h); const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); t.image = c; } catch (e) {}
+}
 function prepararModelo(r, url) {
   const cena = r.scene || r;
   // o FBX da Mixamo vem com material brilhante (Phong) e a textura sem a cor certa (fica lavado/rosado):
@@ -29,7 +36,7 @@ function prepararModelo(r, url) {
     if (!o.isMesh) return; o.frustumCulled = false;
     const mats = (Array.isArray(o.material) ? o.material : [o.material]).map((m) => {
       if (!m) return m; const map = m.map || null;
-      if (map) { map.colorSpace = T.SRGBColorSpace; map.anisotropy = 4; map.needsUpdate = true; }
+      if (map) { reduzirTextura(map); map.colorSpace = T.SRGBColorSpace; map.anisotropy = 2; map.needsUpdate = true; }
       const n = new T.MeshStandardMaterial({ map, color: map ? 0xffffff : (m.color || 0xffffff), roughness: 0.75, metalness: 0 });
       n.name = m.name; m.dispose && m.dispose(); return n;
     });
