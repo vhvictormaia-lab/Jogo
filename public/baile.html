@@ -152,7 +152,10 @@ function avatar(u,cls=''){ const l=esc(([...(u&&u.name||'?')][0]||'?').toUpperCa
   return u&&u.avatar?`<img class="${cls}" src="${esc(u.avatar)}" referrerpolicy="no-referrer" alt="" onerror="this.outerHTML='<span class=&quot;av ${cls}&quot;>${l}</span>'">`:`<span class="av ${cls}">${l}</span>`; }
 
 // ================= cena =================
-const renderer=new THREE.WebGLRenderer({canvas:$('cena'),antialias:true}); renderer.setSize(1080,1920,false); renderer.setPixelRatio(1); renderer.outputColorSpace=THREE.SRGBColorSpace;
+// MODO LEVE (padrão): desenha em 720x1280 (a tela continua 1080x1920, só esticada) e a 30 quadros por segundo.
+// Pra qualidade máxima num PC forte: baile.html?leve=0
+const LEVE=!/[?&]leve=0\b/.test(location.search); let ultQuadro=0;
+const renderer=new THREE.WebGLRenderer({canvas:$('cena'),antialias:true,powerPreference:'high-performance'}); renderer.setSize(LEVE?720:1080,LEVE?1280:1920,false); renderer.setPixelRatio(1); renderer.outputColorSpace=THREE.SRGBColorSpace;
 const cena=new THREE.Scene(); cena.fog=new THREE.Fog(0x3a2350,38,90);
 const camera=new THREE.PerspectiveCamera(62,1080/1920,.1,200);
 { // céu de fim de tarde
@@ -593,7 +596,8 @@ function ligarDemoLocal(){
 
 // ================= laço =================
 const rel=new THREE.Clock();
-function loop(){ const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=performance.now();
+function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ requestAnimationFrame(loop); return; } ultQuadro=n; }
+  const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=performance.now();
   if(pronto){
     if(chegadaQ.length&&agora>proxChegada){ proxChegada=agora+(chegadaQ.length>15?700:chegadaQ.length>5?1000:1400); chegar(); }
     const B=musica.batida(); bt+=dt*(B.porSeg||2); relogio+=dt; coreografo(dt);
