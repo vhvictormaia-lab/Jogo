@@ -23,8 +23,11 @@ function noLugar(clip) {
 }
 // textura 2048 -> 1024: 4x menos memória de vídeo, quase igual na tela do celular
 function reduzirTextura(t, max = 1024) {
-  const im = t.image; const w = im && (im.naturalWidth || im.width), h = im && (im.naturalHeight || im.height);
-  if (!w || !h || Math.max(w, h) <= max) return;
+  const im = t.image; if (!im) return;
+  // o FBX carrega a imagem depois: espera ela chegar pra reduzir
+  if (im.complete === false || !(im.naturalWidth || im.width)) { if (im.addEventListener && !t.userData.esperaReduzir) { t.userData.esperaReduzir = true; im.addEventListener('load', () => { reduzirTextura(t, max); t.needsUpdate = true; }, { once: true }); } return; }
+  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+  if (Math.max(w, h) <= max) return;
   try { const k = max / Math.max(w, h); const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
     c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); t.image = c; } catch (e) {}
 }
@@ -90,6 +93,11 @@ export async function carregarPersonagens3D(THREE, lista, carregar) {
   if (!lib.dancas.length) { const m = lib.modelos.find((x) => x.mov && x.mov.dancas.length); if (m) Object.assign(lib, { dancas: m.mov.dancas.slice(), andar: lib.andar || m.mov.andar, correr: lib.correr || m.mov.correr, parado: lib.parado || m.mov.parado, comemora: lib.comemora || m.mov.comemora }); }
   for (const m of lib.modelos) if (m.mov) for (const c of m.mov.dancas) if (!lib.dancas.some((x) => x.name === c.name)) lib.dancas.push(c);
   lib.nomesDancas = [...nomes];
+  // texturas dos bonecos: espera as imagens chegarem e reduz de 2048 pra 1024 (4x menos memória de vídeo)
+  const mapas = new Set(); for (const m of lib.modelos) (m.cena || m.obj || m.scene || m).traverse?.((o) => { if (o.isMesh) for (const mt of [].concat(o.material)) if (mt && mt.map) mapas.add(mt.map); });
+  for (let i = 0; i < 100 && [...mapas].some((t) => !t.image || t.image.complete === false); i++) await new Promise((r) => setTimeout(r, 100));
+  for (const t of mapas) { reduzirTextura(t); t.needsUpdate = true; }
+  lib.texturasReduzidas = mapas.size;
   return lib;
 }
 // separa as animações em andar, correr, parado, comemorar e danças

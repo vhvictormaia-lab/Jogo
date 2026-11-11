@@ -141,6 +141,7 @@ import { carregarCaveiras, criarCaveira, enfeite } from './esqueletos.js';
 import { carregarPersonagens3D, criarBoneco3D } from './personagens3d.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const $=id=>document.getElementById(id);
 const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stage=$('stage');
@@ -287,7 +288,7 @@ const banda=(()=>{
         else { P0.raiz.position.y=Y+Math.abs(Math.sin(k*6+i))*.4; P0.raiz.rotation.y=RUMO+Math.sin(k*4+i)*.6; }
         P.ombroE.rotation.x=P.ombroD.rotation.x=-2.7+Math.sin(k*9+i)*.25; P.ombroE.rotation.z=-.4; P.ombroD.rotation.z=.4; P.cotoveloE.rotation.x=P.cotoveloD.rotation.x=-.2; } }
     for(let i=notas.length-1;i>=0;i--){ const n=notas[i]; n.vida-=dt; n.sp.position.y+=n.v*dt; n.sp.position.x+=n.dx*dt; n.sp.material.opacity=Math.min(1,n.vida); if(n.vida<=0){ cena.remove(n.sp); n.sp.material.dispose(); notas.splice(i,1); } } }
-  return { atualizar, ritmo(b,p){ bat=b; bps=p; for(const x of mus) x.P0.ritmo(p); }, show(seg=10){ showAte=performance.now()+seg*1000; }, dancar(seg=8){ festaIni=performance.now(); festaAte=festaIni+seg*1000; }, centro:new THREE.Vector3(PALCO.x,1.6,PALCO.z+3.2) };
+  return { mus, atualizar, ritmo(b,p){ bat=b; bps=p; for(const x of mus) x.P0.ritmo(p); }, show(seg=10){ showAte=performance.now()+seg*1000; }, dancar(seg=8){ festaIni=performance.now(); festaAte=festaIni+seg*1000; }, centro:new THREE.Vector3(PALCO.x,1.6,PALCO.z+3.2) };
 })();
 const serpente=criarSerpente(THREE); serpente.posicionar(4.2,ARCO_Z-.6,-0.9); serpente.raiz.scale.setScalar(.8); cena.add(serpente.raiz);
 // holofotes coloridos do palco
@@ -668,11 +669,41 @@ setInterval(()=>trocarChamada(false),5000); trocarChamada(true);
   if(LISTA.modelos&&LISTA.modelos.length){ try{ MIX=await carregarPersonagens3D(THREE,LISTA,carregarGLB); }catch(e){ console.error(e); MIX=null; } }
   if(MIX) $('credito').textContent=LISTA.credito||'Personagens 3D: Meshy (CC BY 4.0) · danças: Mixamo';
   else { try{ CAV=await carregarCaveiras(THREE,carregarGLB); }catch(e){ console.error(e); $('carregando').textContent='Não consegui carregar os personagens 😢'; return; } }
-  $('carregando').hidden=true; pronto=true; mostrarMusica(0);
+  $('carregando').hidden=true; pronto=true; mostrarMusica(0); setTimeout(otimizarCena,3000);
   if(snapshot) handle(snapshot); for(const m of handle.fila||[]) handle(m); handle.fila=[];
   let servidor=false; try{ const r=await fetch('api/status',{cache:'no-store'}); servidor=r.ok&&!!(await r.json()); }catch(e){}
   if(!servidor&&window.BaileMotor) ligarDemoLocal(); else { musica.ligar(); if(new URLSearchParams(location.search).get('demo')==='1') iniciarDemo(); }
 })();
+// ---------- JUNTA AS PEÇAS PARADAS DO CENÁRIO ----------
+// O cenário e os palhaços do palco são feitos de centenas de pecinhas; cada uma era um "desenho" separado por quadro.
+// Aqui as pecinhas que nunca se mexem e são vizinhas (mesmo pai, mesmo material) viram uma peça só. Fica igual na tela.
+function otimizarCena(){
+  const fixos=new Set(); // peças que o código mexe direto (boca, olhos, nariz...) ficam separadas
+  const marcar=v=>{ if(!v) return; if(v.isObject3D){ fixos.add(v); return; } if(Array.isArray(v)) v.forEach(marcar); else if(typeof v==='object') Object.values(v).forEach(x=>{ if(x&&(x.isObject3D||Array.isArray(x))) marcar(x); }); };
+  for(const c of [dj,serpente,...(banda.mus||[]).map(x=>x.P0)]) if(c&&c.partes) Object.values(c.partes).forEach(marcar);
+  for(const x of banda.mus||[]) marcar(x.inst);
+  feixes.forEach(f=>fixos.add(f));
+  const dancarinos=new Set([...DS.values()].map(d=>d.grupo));
+  const malhas=[]; cena.traverse(o=>{ if(o.isMesh&&!o.isSkinnedMesh&&!o.isInstancedMesh&&!fixos.has(o)&&!o.children.length&&!Array.isArray(o.material)&&o.parent){ let p=o; while(p&&!dancarinos.has(p)) p=p.parent; if(!p) malhas.push(o); } });
+  // observa por 5 segundos: o que se mexer, piscar ou sumir fica de fora
+  const foto=o=>o.position.toArray().concat(o.quaternion.toArray(),o.scale.toArray(),[o.visible?1:0]).map(v=>v.toFixed(4)).join(',');
+  const ini=new Map(malhas.map(o=>[o,foto(o)])); const mexeu=new Set(); let n=0;
+  const t=setInterval(()=>{ for(const o of malhas) if(!mexeu.has(o)&&foto(o)!==ini.get(o)) mexeu.add(o);
+    if(++n<25) return; clearInterval(t);
+    const grupos=new Map();
+    for(const o of malhas){ if(mexeu.has(o)||!o.parent||!o.visible) continue; const m=o.material; if(m.transparent||m.side===THREE.DoubleSide&&m.blending!==THREE.NormalBlending) continue;
+      const g=o.geometry; const chave=o.parent.uuid+'|'+m.uuid+'|'+Object.keys(g.attributes).sort().join(',')+'|'+(o.renderOrder||0)+'|'+(o.castShadow?1:0);
+      if(!grupos.has(chave)) grupos.set(chave,[]); grupos.get(chave).push(o); }
+    let antes=0, depois=0;
+    for(const lista of grupos.values()){ if(lista.length<2) continue;
+      try{ const geos=lista.map(o=>{ o.updateMatrix(); let g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone(); g.applyMatrix4(o.matrix); for(const k of Object.keys(g.morphAttributes||{})) delete g.morphAttributes[k]; return g; });
+        const junta=mergeGeometries(geos,false); if(!junta) continue; geos.forEach(g=>g.dispose());
+        const pai=lista[0].parent, nova=new THREE.Mesh(junta,lista[0].material); nova.renderOrder=lista[0].renderOrder; nova.frustumCulled=lista.every(o=>o.frustumCulled);
+        for(const o of lista) pai.remove(o); pai.add(nova); antes+=lista.length; depois++;
+      }catch(e){ console.warn('não juntou',e); } }
+    console.log(`cenário otimizado: ${antes} peças viraram ${depois}`); window.__otimizado={antes,depois};
+  },200);
+}
 window.__baile={renderer,DS,handle,cena,camera,cam,focar,plano,musica,todosJuntos,dupla,trem,banda};
 </script>
 </body>
