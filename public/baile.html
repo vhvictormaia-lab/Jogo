@@ -458,7 +458,7 @@ function mostrarMusica(i,nome){ if($('musica')) $('musica').textContent='🎵 '+
 let restaSeg=1800, restaBase=performance.now();
 function setResta(s){ restaSeg=s; restaBase=performance.now(); }
 function contar(){ const antes=lotou; lotou=intervalo||DS.size+chegadaQ.length>=maxRoda; if(lotou!==antes) trocarChamada(true); }
-let maxRoda=35, lotou=false, intervalo=false;
+let maxRoda=30, lotou=false, intervalo=false;
 const casal={noivo:null,noiva:null};
 // quem comenta entra pelo tapete vermelho, um de cada vez
 const chegadaQ=[]; let proxChegada=0;
@@ -535,7 +535,7 @@ function novoBaile(seg){
   ordem=[]; casal.noivo=casal.noiva=null; placa('noivo',null); placa('noiva',null); setResta(seg); contar(); plano('tapete',8,4);
 }
 function estadoInicial(e){ if(!e) return; for(const id of [...DS.keys()]) removerD(id,false); ordem=[]; chegadaQ.length=0;
-  maxRoda=(e.cfg&&e.cfg.maximo)||35;
+  maxRoda=(e.cfg&&e.cfg.maximo)||30;
   musicaIdx=e.musica||0; musica.tocar(musicaIdx); mostrarMusica(musicaIdx,e.nomeMusica); setResta(e.resta||300);
   casal.noivo=e.noivo?e.noivo.id:null; casal.noiva=e.noiva?e.noiva.id:null; placa('noivo',e.noivo); placa('noiva',e.noiva);
   for(const info of e.roda||[]) criarD(info,{chegando:false}); contar(); }

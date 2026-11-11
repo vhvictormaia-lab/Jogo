@@ -11,7 +11,7 @@ const ARQ_USUARIO = path.join(os.homedir(), '.tiktok-snake-user'); // o mesmo ar
 const PADRAO = {
   usuario: '',
   musica: { ligada: true, volume: 40 },          // 0 a 100
-  baile: { duracao: 5, maximo: 35 },             // minutos de cada baile · pessoas na roda
+  baile: { duracao: 5, maximo: 30 },             // minutos de cada baile · pessoas na roda
   atualizacao: { repo: 'vhvictormaia-lab/Jogo', token: '', instalado: '' },
 };
 
@@ -26,8 +26,9 @@ function mesclar(base, novo) {
 
 let cfg = mesclar(PADRAO, {});
 try { cfg = mesclar(PADRAO, JSON.parse(fs.readFileSync(ARQ, 'utf8'))); } catch {}
-// uma vez só: o baile passa a ter 5 minutos e 35 pessoas (se depois você mudar no painel, fica o seu)
-if (!cfg.baileV2) { cfg.baile.duracao = 5; cfg.baile.maximo = 35; cfg.musica.volume = Math.max(40, cfg.musica.volume || 0); cfg.baileV2 = true; setTimeout(() => salvar(), 0); }
+// uma vez só: o baile passa a ter 5 minutos e 30 pessoas (se depois você mudar no painel, fica o seu)
+if (!cfg.baileV3) { cfg.baile.maximo = 30; cfg.baileV3 = true; setTimeout(() => salvar(), 0); }
+if (!cfg.baileV2) { cfg.baile.duracao = 5; cfg.baile.maximo = 30; cfg.musica.volume = Math.max(40, cfg.musica.volume || 0); cfg.baileV2 = true; setTimeout(() => salvar(), 0); }
 // limpa o que era dos jogos antigos
 for (const k of ['modo', 'openai', 'vozes', 'vozEspectador', 'falaSolta', 'quiz', 'vozesV2']) delete cfg[k];
 if (!cfg.usuario) { try { cfg.usuario = fs.readFileSync(ARQ_USUARIO, 'utf8').trim().replace(/^@/, ''); } catch {} }

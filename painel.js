@@ -55,7 +55,7 @@ module.exports = function painel(ctx) {
     if (b.acao === 'limpar') baile.limpar();
     else if (b.acao === 'fim') baile.fimDoBaile();
     else if (b.acao === 'config') {
-      const c = {}; if (b.duracao !== undefined) c.duracao = num(b.duracao, 1, 60, 5); if (b.maximo !== undefined) c.maximo = num(b.maximo, 5, 80, 35);
+      const c = {}; if (b.duracao !== undefined) c.duracao = num(b.duracao, 1, 60, 5); if (b.maximo !== undefined) c.maximo = num(b.maximo, 5, 80, 30);
       const novo = baile.config(c); CFG.atualizar({ baile: { duracao: novo.duracao, maximo: novo.maximo } });
     }
     res.json(estado());

@@ -39,7 +39,7 @@
     const T = opc.texto || null;
     const emitir = (m) => { try { opc.emitir({ type: 'baile', ...m }); } catch (e) {} };
     const agora = opc.agora || (() => Date.now());
-    const cfg = Object.assign({ maximo: 35, duracao: 5, ativoMin: 10, intervalo: 12, vipExtra: 10 }, opc.cfg || {});
+    const cfg = Object.assign({ maximo: 30, duracao: 5, ativoMin: 10, intervalo: 12, vipExtra: 10 }, opc.cfg || {});
     const roda = new Map();     // id -> dançarino
     const moedas = new Map();   // id -> moedas mandadas neste baile
     const sexo = new Map();     // id -> 'm' | 'f' (vale para os próximos bailes)
@@ -159,7 +159,7 @@
     function parar() { clearInterval(timer); timer = null; }
     function config(c = {}) {
       if (c.duracao) { cfg.duracao = Math.max(1, Math.min(60, Number(c.duracao) || 5)); if (!pausaAte) { fimEm = agora() + cfg.duracao * 60000; emitir({ ev: 'tempo', resta: cfg.duracao * 60 }); } }
-      if (c.maximo) cfg.maximo = Math.max(5, Math.min(80, Number(c.maximo) || 35));
+      if (c.maximo) cfg.maximo = Math.max(5, Math.min(80, Number(c.maximo) || 30));
       return { ...cfg };
     }
     function limpar() { roda.clear(); moedas.clear(); noivo = null; noiva = null; emitir({ ev: 'limpou' }); }
