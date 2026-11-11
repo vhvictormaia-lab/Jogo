@@ -84,15 +84,24 @@ export function criarMusicaBaile({ falando = () => false } = {}) {
     if (proxT < ac.currentTime) proxT = ac.currentTime + 0.05;
     while (proxT < ac.currentTime + 0.2) { E.toca(passo % 64, proxT, col); proxT += col; passo++; }
   }
-  function tocarMp3(i) {
+  // uma música por vez: a anterior é desligada por completo antes de começar a próxima
+  // (antes, o "erro" da música desligada apagava a atual e o som do jogo tocava junto = som sobreposto)
+  function pararMp3() {
+    const a = audio; audio = null; if (!a) return;
+    a.onended = a.onerror = null;
+    try { a.pause(); a.removeAttribute('src'); a.load(); } catch (e) {}
+    try { if (fonteAudio) fonteAudio.disconnect(); } catch (e) {} fonteAudio = null;
+  }
+  function tocarMp3(i, mesmoSeIgual = true) {
     if (!lista.length) return;
-    faixa = ((i % lista.length) + lista.length) % lista.length;
-    try { if (audio) { audio.pause(); audio.src = ''; } } catch (e) {}
-    audio = new Audio(lista[faixa]); audio.crossOrigin = 'anonymous';
-    try { fonteAudio = ac.createMediaElementSource(audio); fonteAudio.connect(duck); } catch (e) {}
-    audio.onended = () => tocarMp3(faixa + 1);
-    audio.onerror = () => { lista.splice(faixa, 1); audio = null; if (lista.length) tocarMp3(faixa); };
-    audio.play().catch(() => {});
+    const n = ((i % lista.length) + lista.length) % lista.length;
+    if (!mesmoSeIgual && audio && n === faixa && !audio.ended) return; // já está tocando esta
+    pararMp3(); faixa = n;
+    const a = new Audio(lista[faixa]); a.crossOrigin = 'anonymous'; audio = a;
+    try { fonteAudio = ac.createMediaElementSource(a); fonteAudio.connect(duck); } catch (e) {}
+    a.onended = () => { if (audio === a) tocarMp3(faixa + 1); };
+    a.onerror = () => { if (audio !== a) return; pararMp3(); lista.splice(faixa, 1); if (lista.length) tocarMp3(faixa); };
+    a.play().catch(() => {});
   }
   return {
     config(m) { if (!m) return; cfg = m; if (out) out.gain.value = vol(); },
@@ -100,7 +109,7 @@ export function criarMusicaBaile({ falando = () => false } = {}) {
     // lista de MP3 (urls); vazia = músicas do jogo
     playlist(urls) { lista = (urls || []).slice(); if (ok && lista.length && !audio) tocarMp3(0); },
     // "toque na banda": próxima música (MP3 ou estilo do jogo)
-    tocar(i) { if (lista.length && ok) tocarMp3(i); else { estilo = ((i % ESTILOS.length) + ESTILOS.length) % ESTILOS.length; passo = 0; } },
+    tocar(i) { if (lista.length && ok) tocarMp3(i, false); else { estilo = ((i % ESTILOS.length) + ESTILOS.length) % ESTILOS.length; passo = 0; } },
     proxima() { if (lista.length && ok) tocarMp3(faixa + 1); else { estilo = (estilo + 1) % ESTILOS.length; passo = 0; } },
     get tocando() { return !!ac && ac.state === 'running' && !(cfg && cfg.ligada === false); },
     get estilo() { return lista.length ? 'mp3' : ESTILOS[estilo].nome; },
