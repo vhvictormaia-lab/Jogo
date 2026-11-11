@@ -63,22 +63,40 @@ export async function carregarPersonagens3D(THREE, lista, carregar) {
       try { const t = await tl.loadAsync(lista.resolver ? lista.resolver(u) : u); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; t.userData.base = n === base; m.texturas.push(t); } catch (e) { console.warn('roupa não carregou', u, e); }
     }
   }
-  const todos = [];
-  // o boneco baixado "With Skin" traz um clipe parado em T ("mixamo.com"/"Take 001"): esse não é dança
-  for (const m of lib.modelos) for (const c of m.clips) if (c.name && !/mixamo\.com|Take 0|^Armature|tpose|t-pose/i.test(c.name)) todos.push(c);
-  for (const u of lista.dancas || []) {
-    try { const r = await carregar(u); for (const c of r.animations || []) { if (!c.name || /mixamo\.com|Take 001|^Armature/i.test(c.name)) c.name = nomeArq(u); todos.push(c); } }
-    catch (e) { console.warn('dança não carregou', u, e); }
+  // danças da pasta "dancas" (servem para todos) + as de cada boneco (pasta dancas/<nome do boneco>, baixadas com ele na Mixamo)
+  const lerDancas = async (urls) => {
+    const out = [];
+    for (const u of urls || []) {
+      try { const r = await carregar(u); for (const c of r.animations || []) { if (!c.name || /mixamo\.com|Take 001|^Armature/i.test(c.name)) c.name = nomeArq(u); out.push(c); } }
+      catch (e) { console.warn('dança não carregou', u, e); }
+    }
+    return out;
+  };
+  const geral = await lerDancas(lista.dancas);
+  Object.assign(lib, separar(geral));
+  for (const m of lib.modelos) {
+    const proprias = (lista.dancasPorBoneco || {})[m.nome] || (lista.dancasPorBoneco || {})[m.nome.toLowerCase()];
+    if (proprias && proprias.length) m.mov = separar(await lerDancas(proprias));
   }
-  for (const c of todos) {
-    if (!lib.andar && ehAndar(c.name)) lib.andar = noLugar(c);
-    else if (!lib.correr && ehCorrer(c.name)) lib.correr = noLugar(c);
-    else if (!lib.parado && ehParado(c.name)) lib.parado = noLugar(c);
-    else if (!lib.comemora && ehComemora(c.name)) lib.comemora = noLugar(c);
-    else if (!ehAndar(c.name) && !ehCorrer(c.name) && !ehParado(c.name) && !/death|die|hit|punch|kick|fall|tpose|t-pose/i.test(c.name)) lib.dancas.push(noLugar(c));
-  }
-  if (!lib.dancas.length && lib.parado) lib.dancas.push(lib.parado);
+  // nomes de todas as danças (o coreógrafo escolhe pelo nome e cada boneco dança a sua versão)
+  const nomes = new Set(lib.dancas.map((c) => c.name)); for (const m of lib.modelos) if (m.mov) for (const c of m.mov.dancas) nomes.add(c.name);
+  if (!lib.dancas.length) { const m = lib.modelos.find((x) => x.mov && x.mov.dancas.length); if (m) Object.assign(lib, { dancas: m.mov.dancas.slice(), andar: lib.andar || m.mov.andar, correr: lib.correr || m.mov.correr, parado: lib.parado || m.mov.parado, comemora: lib.comemora || m.mov.comemora }); }
+  for (const m of lib.modelos) if (m.mov) for (const c of m.mov.dancas) if (!lib.dancas.some((x) => x.name === c.name)) lib.dancas.push(c);
+  lib.nomesDancas = [...nomes];
   return lib;
+}
+// separa as animações em andar, correr, parado, comemorar e danças
+function separar(todos) {
+  const s = { dancas: [], andar: null, correr: null, parado: null, comemora: null };
+  for (const c of todos) {
+    if (!s.andar && ehAndar(c.name)) s.andar = noLugar(c);
+    else if (!s.correr && ehCorrer(c.name)) s.correr = noLugar(c);
+    else if (!s.parado && ehParado(c.name)) s.parado = noLugar(c);
+    else if (!s.comemora && ehComemora(c.name)) s.comemora = noLugar(c);
+    else if (!ehAndar(c.name) && !ehCorrer(c.name) && !ehParado(c.name) && !/death|die|hit|punch|kick|fall|tpose|t-pose/i.test(c.name)) s.dancas.push(noLugar(c));
+  }
+  if (!s.dancas.length && s.parado) s.dancas.push(s.parado);
+  return s;
 }
 
 // a dança baixada com um boneco serve em outro de altura diferente: ajusta a altura do quadril de cada um
@@ -136,7 +154,9 @@ vec3 trocaCor(vec3 cor, vec3 h, vec3 alvo, float peso){ if(alvo.x<0.||peso<=0.) 
 
 export function criarBoneco3D(lib, { semente = 1, sexo = 'm', enfeite = null } = {}) {
   const pool = lib.modelos.filter((m) => !m.sexo || m.sexo === sexo); const lista = pool.length ? pool : lib.modelos;
-  const M = lista[(semente >>> 0) % lista.length];
+  // cada um que entra vira o próximo bicho da lista (a roda fica toda misturada; a Rosa troca por outro)
+  lib.proxModelo ||= {}; const k = pool.length ? sexo : 'todos'; lib.proxModelo[k] = (lib.proxModelo[k] || 0) + 1;
+  const M = lista[lib.proxModelo[k] % lista.length];
   const obj = SkeletonUtils.clone(M.cena); obj.scale.setScalar(M.escala); obj.position.y = M.baseY;
   const raiz = new T.Group(); raiz.add(obj);
   // roupa: cada boneco novo pega a próxima combinação de cor da roupa + cor do cabelo (35 seguidos nunca se repetem; a Rosa dá outra)
@@ -144,6 +164,8 @@ export function criarBoneco3D(lib, { semente = 1, sexo = 'm', enfeite = null } =
   obj.traverse((o) => { if (o.isMesh) { const um = (m) => vestirMaterial(m, visual); o.material = Array.isArray(o.material) ? o.material.map(um) : um(o.material); } });
   let cabeca = null; if (M.cabeca) obj.traverse((o) => { if (!cabeca && o.name === M.cabeca) cabeca = o; });
   const mixer = new T.AnimationMixer(obj);
+  // movimentos deste boneco: os dele (pasta dancas/<nome>) e, no que faltar, os gerais
+  const mv = M.mov || {}; const mov = { dancas: (mv.dancas && mv.dancas.length) ? mv.dancas : lib.dancas, andar: mv.andar || lib.andar, correr: mv.correr || lib.correr, parado: mv.parado || lib.parado, comemora: mv.comemora || lib.comemora };
   let atual = null, clipAtual = null;
   function tocar(clip, { loop = true, fade = 0.4, vel = 1, inicio = null } = {}) {
     if (!clip) return null; clip = adaptar(M, clip);
@@ -163,9 +185,14 @@ export function criarBoneco3D(lib, { semente = 1, sexo = 'm', enfeite = null } =
   }
   return {
     raiz, mixer, setPar, altura: 2.35, mixamo: true,
-    dancar(clip, opc) { return tocar(clip || lib.dancas[Math.floor(Math.random() * lib.dancas.length)], opc); },
-    andar(correndo) { return tocar((correndo && lib.correr) || lib.andar || lib.correr || lib.parado || lib.dancas[0], { fade: 0.25 }); },
-    comemorar() { return tocar(lib.comemora || lib.dancas[0], { loop: !lib.comemora, fade: 0.25 }); },
+    // a dança pedida (pelo nome) na versão deste boneco; se ele não tiver essa, uma das dele
+    dancar(clip, opc) {
+      const minhas = mov.dancas.length ? mov.dancas : lib.dancas; const nome = clip && (clip.name || clip);
+      const c = (nome && minhas.find((x) => x.name === nome)) || (!M.mov && clip && clip.isAnimationClip ? clip : null) || minhas[Math.floor(Math.random() * minhas.length)];
+      return tocar(c, opc);
+    },
+    andar(correndo) { return tocar((correndo && mov.correr) || mov.andar || mov.correr || mov.parado || mov.dancas[0], { fade: 0.25 }); },
+    comemorar() { return tocar(mov.comemora || mov.dancas[0], { loop: !mov.comemora, fade: 0.25 }); },
     get clip() { return clipAtual; },
     atualizar(dt) { mixer.update(dt); },
   };

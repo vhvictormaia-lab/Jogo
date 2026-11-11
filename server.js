@@ -57,6 +57,7 @@ const MUS_DIR = path.join(__dirname, 'musicas-baile'), PERS_DIR = path.join(__di
 for (const d of [MUS_DIR, PERS_DIR, path.join(PERS_DIR, 'dancas')]) { try { fs.mkdirSync(d, { recursive: true }); } catch {} }
 app.use('/musicas-baile', express.static(MUS_DIR));
 app.use('/baile-personagens', express.static(PERS_DIR));
+const listarPastas = (dir) => { try { return fs.readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name); } catch { return []; } };
 const listar = (dir, re) => { try { return fs.readdirSync(dir).filter((f) => re.test(f)).sort((a, b) => a.localeCompare(b, 'pt-BR')); } catch { return []; } };
 app.get('/api/baile/arquivos', (_req, res) => {
   let credito = ''; try { credito = fs.readFileSync(path.join(PERS_DIR, 'credito.txt'), 'utf8').trim().slice(0, 160); } catch {}
@@ -66,6 +67,8 @@ app.get('/api/baile/arquivos', (_req, res) => {
     dancas: listar(path.join(PERS_DIR, 'dancas'), /\.(glb|gltf|fbx)$/i).map((f) => 'baile-personagens/dancas/' + encodeURIComponent(f)),
     // roupas: imagens com o mesmo nome do boneco (palhacinho-menino.jpg, palhacinho-menino-azul.jpg...) trocam a cor da roupa
     texturas: listar(PERS_DIR, /\.(jpe?g|png|webp)$/i).map((f) => 'baile-personagens/' + encodeURIComponent(f)),
+    // danças de cada boneco: pasta baile-personagens/dancas/<nome do boneco>
+    dancasPorBoneco: Object.fromEntries(listarPastas(path.join(PERS_DIR, 'dancas')).map((d) => [d, listar(path.join(PERS_DIR, 'dancas', d), /\.(glb|gltf|fbx)$/i).map((f) => 'baile-personagens/dancas/' + encodeURIComponent(d) + '/' + encodeURIComponent(f))]).filter(([, l]) => l.length)),
     credito,
   });
 });
