@@ -42,6 +42,8 @@
   #destaque.on{opacity:1}
   #destaque .n .e{color:var(--ouro);font-size:64px}
   #destaque .n{display:inline-flex;align-items:center;gap:18px;font-size:92px;max-width:1040px;color:#fff;text-shadow:0 0 18px rgba(0,0,0,.6),0 5px 0 rgba(0,0,0,.45);-webkit-text-stroke:2px rgba(60,10,60,.6)}
+  #destaque.dois .n{font-size:58px;gap:12px}
+  #destaque.dois .n img,#destaque.dois .n .av{width:84px!important;height:84px!important}
   #destaque .n img,#destaque .n .av{width:130px;height:130px;flex:none;border-radius:50%;object-fit:cover;border:6px solid #fff;font-size:60px;display:grid;place-items:center;background:linear-gradient(135deg,var(--rosa),var(--roxo))}
   /* baixo */
   #feed{position:absolute;left:24px;bottom:210px;z-index:5;width:640px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
@@ -412,11 +414,41 @@ function piscar(id){ const e=$(id); e.classList.remove('pisca'); void e.offsetWi
 // ================= câmera drone =================
 const cam={ pos:new THREE.Vector3(0,9,26), olha:new THREE.Vector3(0,1,0), alvoPos:new THREE.Vector3(0,9,26), alvoOlha:new THREE.Vector3(0,1,0), plano:'roda', ate:0, foco:null, t0:0, prioridade:0 };
 camera.position.copy(cam.pos);
+// HOLOFOTE: quem manda presente (rosa etc.) aparece SOZINHO na tela dançando por 25 s. Vários presentes = fila.
+const holo={fila:[],d:null,ate:0,pausa:0};
+function pedirHolofote(id){ const ag=performance.now(); if(holo.d&&holo.d.info.id===id){ holo.ate=Math.max(holo.ate,ag+25000); return; } if(!holo.fila.some(x=>x.id===id)) holo.fila.push({id,t:ag}); }
+function cuidarHolofote(){ const ag=performance.now();
+  if(holo.d&&(ag>holo.ate||!DS.has(holo.d.info.id))){ holo.d=null; cam.ate=0; cam.prioridade=0; esconderDestaque(); holo.nome=null; }
+  holo.fila=holo.fila.filter(x=>ag-x.t<90000&&(DS.has(x.id)||ag-x.t<30000));
+  if(ag<holo.pausa) return;
+  if(!holo.d) for(let i=0;i<holo.fila.length;i++){ const d=DS.get(holo.fila[i].id); if(d){ holo.fila.splice(i,1); const seg=holo.fila.length>3?15:25; holo.d=d; holo.ate=ag+seg*1000;
+      estouro(d.grupo.position,0xffd23f,40); coracoesEm(d,12); focar(d,seg,5); break; } }
+  if(holo.d&&cam.foco!==holo.d) focar(holo.d,Math.max(1,(holo.ate-ag)/1000),5);
+  if(holo.d&&holo.nome!==holo.d.info.id){ holo.nome=holo.d.info.id; mostrarDestaque(holo.d); } }
+// SOLO / DUPLA: a cada 10–20 s, 1 ou 2 bonecos aparecem sozinhos na tela por 6–8 s (presente tem prioridade)
+const spot={ds:null,ate:0,prox:performance.now()+12000};
+function soEles(){ const ag=performance.now(); if(holo.d&&ag>=holo.pausa) return [holo.d]; if(spot.ds&&ag<spot.ate&&!(ag<holo.pausa)) return spot.ds; return null; }
+function sortearSolo(ag){
+  const ds=[...DS.values()].filter(d=>!d.andando&&!d.trem&&!d.noivo); if(!ds.length) return;
+  const peso=d=>1+Math.sqrt(d.info.moedas||0)+(ag-(d.vistoSolo||0)>60000?2:0);
+  let x=Math.random()*ds.reduce((t,d)=>t+peso(d),0), a=ds[0]; for(const d of ds){ x-=peso(d); if(x<=0){ a=d; break; } }
+  const seg=6+Math.random()*2; a.vistoSolo=ag;
+  if(ds.length>=2&&Math.random()<.45){ let b=null,m=1e9; for(const d of ds){ if(d===a) continue; const q=d.grupo.position.distanceTo(a.grupo.position); if(q<m){ m=q; b=d; } }
+    b.vistoSolo=ag; spot.ds=[a,b]; spot.ate=ag+seg*1000;
+    const clip=MIX&&MIX.dancas.length?MIX.dancas[Math.floor(Math.random()*MIX.dancas.length)]:null;
+    for(const [p,q] of [[a,b],[b,a]]){ if(MIX&&p.boneco.mixamo) mixDancar(p,clip,0,seg+1); p.olhar=q; }
+    cam.ate=0; cam.prioridade=0; cam.par=[a,b]; plano('dupla',seg,4); mostrarDestaqueTxt(`${avatar(a.info)}${esc(a.info.name)} <span class="e">&</span> ${avatar(b.info)}${esc(b.info.name)}`);
+  } else { spot.ds=[a]; spot.ate=ag+seg*1000; cam.ate=0; cam.prioridade=0; focar(a,seg,4); }
+}
+function cuidarSolo(){ const ag=performance.now();
+  if(holo.d||ag<holo.pausa){ if(spot.ds){ spot.ds=null; } spot.prox=Math.max(spot.prox,ag+8000); return; }
+  if(spot.ds&&ag>spot.ate){ spot.ds=null; cam.ate=0; cam.prioridade=0; esconderDestaque(); spot.prox=ag+(10+Math.random()*10)*1000; }
+  if(!spot.ds&&ag>spot.prox&&DS.size>=2) sortearSolo(ag); }
 function focar(d,seg=7,prio=1){ if(!d||performance.now()<cam.ate&&prio<cam.prioridade) return; cam.cortar=cam.plano!=='destaque'||cam.foco!==d; cam.plano='destaque'; cam.foco=d; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; cam.lado=Math.random()<.5?-1:1; mostrarDestaque(d); if(!d.andando&&!d.trem&&!(coreo.passo&&bt<coreo.ate)&&!d.boneco.mixamo) fazer(d,rndA(SOLOS2)); }
 function plano(nome,seg=9,prio=0){ if(performance.now()<cam.ate&&prio<cam.prioridade) return; cam.cortar=cam.plano!==nome; cam.plano=nome; cam.foco=null; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; esconderDestaque(); }
-function mostrarDestaqueTxt(h){ $('destaque').firstElementChild.innerHTML=h; $('destaque').classList.add('on'); }
-function mostrarDestaque(d){ $('destaque').firstElementChild.innerHTML=`${avatar(d.info)}${esc(d.info.name)}`; $('destaque').classList.add('on'); }
-function esconderDestaque(){ $('destaque').classList.remove('on'); }
+function mostrarDestaqueTxt(h){ if(holo.d&&performance.now()>=holo.pausa) return; $('destaque').classList.toggle('dois',h.includes('class="e"')); if(spot.ds&&performance.now()<spot.ate&&cam.plano==='dupla'&&!h.includes(esc(spot.ds[0].info.name))) return; $('destaque').firstElementChild.innerHTML=h; $('destaque').classList.add('on'); }
+function mostrarDestaque(d){ if(holo.d&&d!==holo.d&&performance.now()>=holo.pausa) return; $('destaque').classList.remove('dois'); $('destaque').firstElementChild.innerHTML=`${avatar(d.info)}${esc(d.info.name)}`; $('destaque').classList.add('on'); }
+function esconderDestaque(){ if(holo.d&&performance.now()>=holo.pausa) return; $('destaque').classList.remove('on'); }
 function diretor(){ // escolhe o próximo ângulo sozinho, como um drone filmando o baile
   if(performance.now()<cam.ate) return;
   if(intervalo){ plano(casal.noivo||casal.noiva?'altar':'drone',6); return; }
@@ -440,8 +472,8 @@ function moverCamera(dt,t){
   else if(cam.plano==='palco'){ p.set(PALCO.x+5.5,5.2,PALCO.z+12); o.set(PALCO.x,3.6,PALCO.z); }
   else if(cam.plano==='banda'){ p.set(PALCO.x+2.4+Math.sin(k*.4)*1.2,5.0,PALCO.z+15-Math.min(k,8)*.3); o.set(PALCO.x-.2,2.7,PALCO.z+2); }
   else if(cam.plano==='dupla'&&cam.par&&cam.par.every(x=>DS.has(x.id))){ const [a,b]=cam.par; const ax=a.grupo.position, bx=b.grupo.position; const mx=(ax.x+bx.x)/2, mz=(ax.z+bx.z)/2;
-    let nx=-(bx.z-ax.z), nz=bx.x-ax.x; const L=Math.hypot(nx,nz)||1; nx/=L; nz/=L; if(nx*mx+nz*mz<0){ nx=-nx; nz=-nz; } // de fora da roda
-    p.set(mx+nx*4.4+Math.sin(k*.5)*.6,2.9,mz+nz*4.4); o.set(mx,1.1,mz); }
+    let nx=-(bx.z-ax.z), nz=bx.x-ax.x; const L=Math.hypot(nx,nz)||1; nx/=L; nz/=L; if(nx*mx+nz*mz>0){ nx=-nx; nz=-nz; } // de dentro da roda (de frente pra eles)
+    const sep=Math.hypot(bx.x-ax.x,bx.z-ax.z), dd=4.6+sep*1.15; p.set(mx+nx*dd+Math.sin(k*.5)*.6,2.7,mz+nz*dd); o.set(mx,1.15,mz); }
   else if(cam.plano==='trem'&&cam.trem&&cam.trem.trem){ const g=cam.trem.grupo.position; const a=Math.atan2(g.z,g.x); p.set(Math.cos(a+.42)*13.6,3.3,Math.sin(a+.42)*13.6); o.set(Math.cos(a-.12)*10.2,1.1,Math.sin(a-.12)*10.2); }
   else if(cam.plano==='altar'){ p.set(Math.sin(t*.2)*1.6,3,ARCO_Z+7); o.set(0,1.6,ARCO_Z+.8); }
   else if(cam.plano==='entrada'&&cam.foco&&DS.has(cam.foco.id)){ const g=cam.foco.grupo; const a=g.rotation.y+.5; p.set(g.position.x+Math.sin(a)*4.2,2.6,g.position.z+Math.cos(a)*4.2); o.set(g.position.x,1.3,g.position.z); }
@@ -522,9 +554,9 @@ function onBaile(m){
       const d=DS.get(m.user.id); if(d){ d.info.moedas=m.total||0; d.info.ultimo=Date.now(); }
       if(m.naRoda){ musica.vinheta([72,76,79,84]); piscar('ppNoivos');
         // quem manda presente aparece na tela: mais moedas = mais tempo no destaque
-        if(d&&m.coins<30){ estouro(d.grupo.position,0xffd23f,30); coracoesEm(d,Math.min(16,4+Math.round(m.coins/2))); focar(d,Math.min(25,6+m.coins*0.6),3); } }
+        if(m.coins<30) pedirHolofote(m.user.id); }
       break; }
-    case 'banda': virarDJ(m.user); musicaIdx=m.musica; musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎧 NOVO DJ!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> virou o DJ do baile! 🎧`);
+    case 'banda': if(holo.d){ holo.ate+=11000; } holo.pausa=performance.now()+11000; cam.ate=0; cam.prioridade=0; virarDJ(m.user); musicaIdx=m.musica; musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎧 NOVO DJ!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> virou o DJ do baile! 🎧`);
       todosJuntos(rndA(['bracos','pula','passinho','polichinelo']),8); dj.acao('comemorar',2); banda.show(10); setTimeout(()=>banda.dancar(8),2500); plano('banda',6,3); confete(60);
       { const quem=m.user&&m.user.id; setTimeout(()=>{ const d=DS.get(quem); if(d) focar(d,Math.min(30,10+m.coins*0.1),3); },6200); } break;
     case 'noivos': definirCasal(m.noivo,m.noiva,true); break;
@@ -614,7 +646,7 @@ function ligarDemoLocal(){
 // ================= laço =================
 const rel=new THREE.Clock();
 function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ requestAnimationFrame(loop); return; } ultQuadro=n; }
-  const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=performance.now(); atualizarFrustum(); posDJtag();
+  const dt=Math.min(.2,rel.getDelta()), t=rel.elapsedTime, agora=performance.now(); atualizarFrustum(); posDJtag(); if(pronto){ cuidarHolofote(); cuidarSolo(); }
   if(pronto){
     if(chegadaQ.length&&agora>proxChegada){ proxChegada=agora+(chegadaQ.length>15?700:chegadaQ.length>5?1000:1400); chegar(); }
     const B=musica.batida(); bt+=dt*(B.porSeg||2); relogio+=dt; coreografo(dt);
@@ -649,7 +681,7 @@ function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ reques
     // nomes e balões em cima das cabeças
     for(const d of DS.values()){
       const p=telaDe(d,(d.alt||2.4)+.15); const perto=cam.plano==='destaque'&&cam.foco===d;
-      if(!p||p.x<-120||p.x>1200||p.y<40||p.y>1900||(perto)){ d.tag.style.opacity=0; if(d.bal) d.bal.style.opacity=0; continue; }
+      if(!p||p.x<-120||p.x>1200||p.y<40||p.y>1900||(perto)||(soEles()&&!soEles().includes(d))){ d.tag.style.opacity=0; if(d.bal) d.bal.style.opacity=0; continue; }
       const dist=camera.position.distanceTo(d.grupo.position); const s=Math.max(.72,Math.min(1.3,11/dist));
       d.tag.style.opacity=dist>46?0:1; d.tag.style.transform=`translate(${p.x}px,${p.y}px) translate(-50%,-100%) scale(${s})`; d.tag.style.zIndex=Math.round((1-p.z)*10000);
       if(d.bal){ if(agora>d.balAte){ d.bal.remove(); d.bal=null; } else { d.bal.style.opacity=1; d.bal.style.transform=`translate(${p.x}px,${p.y-52*s}px) translate(-50%,-100%) scale(${s})`; } }
@@ -657,7 +689,7 @@ function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ reques
     diretor(); if(cam.plano!=='destaque'&&cam.plano!=='dupla') esconderDestaque();
     // no close, quem estiver colado na câmera some (não tampa a pessoa em destaque)
     // quem estiver colado na câmera some (não tampa a pessoa em destaque nem o altar)
-    for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=naTela(d)&&(d===cam.foco||!!d.noivo||(cam.plano==='dupla'&&cam.par&&cam.par.includes(d))||(cam.plano==='trem'&&!!d.trem)||camera.position.distanceTo(tmpV)>(cam.plano==='altar'||cam.plano==='banda'||cam.plano==='dupla'?5:3)); }
+    for(const d of DS.values()){ tmpV.set(d.grupo.position.x,1.2,d.grupo.position.z); d.grupo.visible=naTela(d)&&(!soEles()||soEles().includes(d))&&(d===cam.foco||!!d.noivo||(cam.plano==='dupla'&&cam.par&&cam.par.includes(d))||(cam.plano==='trem'&&!!d.trem)||camera.position.distanceTo(tmpV)>(cam.plano==='altar'||cam.plano==='banda'||cam.plano==='dupla'?5:3)); }
   }
   moverCamera(dt,t);
   // vida no cenário
