@@ -113,9 +113,9 @@
   <div id="titulo" class="lil"><span class="ic">💃</span>BAILE DO ABISMO</div>
   <div id="painelP">
     <div id="tempo" class="lil">30:00</div>
-    <div class="pp" id="ppRoupa"><div class="i">💬</div><span>Comente ou<br>compartilhe</span></div>
+    <div class="pp" id="ppRoupa"><div class="i">💬</div><span>Comente pra<br>entrar no baile</span></div>
+    <div class="pp" id="ppNoivos"><div class="i">🌹<b>1</b></div><span>Rosa: dança<br>sozinho na tela</span></div>
     <div class="pp" id="ppBanda"><div class="i">🍩<b>30</b></div><span>Rosquinha:<br>vira o DJ</span></div>
-    <div class="pp" id="ppNoivos"><div class="i">🎁</div><span>Presente: mais<br>tempo na tela</span></div>
   </div>
   <div id="casal">
     <div class="par vazio" id="pNoivo"></div>
@@ -131,7 +131,7 @@
 </div>
 <div id="toque" role="button" tabindex="0" hidden>
   <div class="caixa"><div class="t1">BAILE DO ABISMO</div>
-    <div class="t2">Quem comenta ou compartilha entra na roda e dança! Quem manda presente aparece mais na tela. Aqui tem espectadores e presentes de mentira, como numa live.</div>
+    <div class="t2">Comente pra entrar no baile! Rosa: você dança sozinho na tela. Rosquinha: você vira o DJ. Aqui tem espectadores e presentes de mentira, como numa live.</div>
     <div class="bt">🔊 Toque para entrar no baile</div></div>
 </div>
 <div id="demo-tag" hidden>MODO DEMONSTRAÇÃO</div>
@@ -585,7 +585,7 @@ function fimBaile(m){
   const el=$('fim'), pessoa=(u,ic,t)=>u?`<div>${avatar(u)}<div class="s">${ic} ${t}</div><div class="n">${esc(u.name)}</div></div>`:'';
   el.innerHTML=`<div class="c"><div class="t lil">${tem?'CASAMENTO DO BAILE':'FIM DO BAILE!'}</div>`+
     (tem?`<div class="casal">${pessoa(n,'🤵','Noivo')}${n&&a?'<div class="anel">💍</div>':''}${pessoa(a,'👰','Noiva')}</div><div class="s">${n&&a?'Os noivos':'Quem casou'} já ${n&&a?'entram':'entra'} no próximo baile!</div>`
-       :'<div class="s">Valeu por dançar! Quem manda presente aparece mais na tela 🎁</div>')+
+       :'<div class="s">Valeu por dançar! Manda rosa pra dançar sozinho na tela 🌹</div>')+
     `<div class="s">Comente pra entrar no próximo baile 💃</div></div>`;
   setTimeout(()=>{ if(intervalo) el.classList.add('on'); },tem?4500:500);
 }
@@ -704,7 +704,7 @@ function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ reques
 loop();
 // a frase de baixo: lotou = "continue comentando"; senão alterna o convite
 let iCham=0;
-function trocarChamada(agoraJa){ const l=lotou?['CONTINUE COMENTANDO PARA ENTRAR NO BAILE']:['COMENTE PRA ENTRAR NO BAILE','COMPARTILHE E ENTRE NA RODA 🔁','PRESENTE = MAIS TEMPO NA TELA 🎁','COMENTE MENINA OU MENINO 👧👦'];
+function trocarChamada(agoraJa){ const l=lotou?['CONTINUE COMENTANDO PARA ENTRAR NO BAILE']:['COMENTE PRA ENTRAR NO BAILE','COMPARTILHE E ENTRE NA RODA 🔁','ROSA = DANÇA SOZINHO NA TELA 🌹','COMENTE MENINA OU MENINO 👧👦'];
   iCham=agoraJa?0:(iCham+1)%l.length; const c=$('chamada'); c.style.fontSize=''; c.innerHTML=`<span>${esc(l[iCham])}</span>`; const w=c.firstChild.offsetWidth; if(w>1030) c.style.fontSize=Math.floor(60*1030/w)+'px'; }
 setInterval(()=>trocarChamada(false),5000); trocarChamada(true);
 
