@@ -679,28 +679,42 @@ setInterval(()=>trocarChamada(false),5000); trocarChamada(true);
 // Aqui as pecinhas que nunca se mexem e são vizinhas (mesmo pai, mesmo material) viram uma peça só. Fica igual na tela.
 function otimizarCena(){
   const fixos=new Set(); // peças que o código mexe direto (boca, olhos, nariz...) ficam separadas
-  const marcar=v=>{ if(!v) return; if(v.isObject3D){ fixos.add(v); return; } if(Array.isArray(v)) v.forEach(marcar); else if(typeof v==='object') Object.values(v).forEach(x=>{ if(x&&(x.isObject3D||Array.isArray(x))) marcar(x); }); };
+  const marcar=v=>{ if(!v) return; if(v.isObject3D){ fixos.add(v); return; } if(Array.isArray(v)) v.forEach(marcar); else if(typeof v==='object') Object.values(v).forEach(x=>{ if(x&&(x.isObject3D||Array.isArray(x)||(typeof x==='object'&&x.constructor===Object))) marcar(x); }); };
   for(const c of [dj,serpente,...(banda.mus||[]).map(x=>x.P0)]) if(c&&c.partes) Object.values(c.partes).forEach(marcar);
   for(const x of banda.mus||[]) marcar(x.inst);
   feixes.forEach(f=>fixos.add(f));
   const dancarinos=new Set([...DS.values()].map(d=>d.grupo));
-  const malhas=[]; cena.traverse(o=>{ if(o.isMesh&&!o.isSkinnedMesh&&!o.isInstancedMesh&&!fixos.has(o)&&!o.children.length&&!Array.isArray(o.material)&&o.parent){ let p=o; while(p&&!dancarinos.has(p)) p=p.parent; if(!p) malhas.push(o); } });
-  // observa por 5 segundos: o que se mexer, piscar ou sumir fica de fora
-  const foto=o=>o.position.toArray().concat(o.quaternion.toArray(),o.scale.toArray(),[o.visible?1:0]).map(v=>v.toFixed(4)).join(',');
-  const ini=new Map(malhas.map(o=>[o,foto(o)])); const mexeu=new Set(); let n=0;
-  const t=setInterval(()=>{ for(const o of malhas) if(!mexeu.has(o)&&foto(o)!==ini.get(o)) mexeu.add(o);
+  const dentroDeDancarino=o=>{ let p=o; while(p&&!dancarinos.has(p)) p=p.parent; return !!p; };
+  // peça = malha sem filhos, ou malha cujos filhos são só o contorno preto (malhas sem filhos)
+  const pecas=[]; cena.traverse(o=>{ if(!o.isMesh||o.isSkinnedMesh||o.isInstancedMesh||Array.isArray(o.material)||!o.parent||fixos.has(o)) return;
+    if(o.parent.isMesh&&o.parent.children.length&&!fixos.has(o.parent)&&!o.children.length) return; // contorno: vai junto com a peça
+    if(!o.children.every(c=>c.isMesh&&!c.children.length&&!Array.isArray(c.material)&&!fixos.has(c))) return;
+    if(dentroDeDancarino(o)) return; pecas.push(o); });
+  // observa por 5 segundos: o que se mexer, piscar, sumir ou mudar de cor fica de fora
+  const foto=o=>{ let r=o.position.toArray().concat(o.quaternion.toArray(),o.scale.toArray(),[o.visible?1:0]).map(v=>v.toFixed(4)).join(',')+'|'+(o.material.color?o.material.color.getHexString():'')+(o.material.opacity??'');
+    for(const c of o.children) r+='#'+c.position.toArray().concat(c.scale.toArray(),[c.visible?1:0]).map(v=>v.toFixed(4)).join(','); return r; };
+  const ini=new Map(pecas.map(o=>[o,foto(o)])); const mexeu=new Set(); let n=0;
+  const t=setInterval(()=>{ for(const o of pecas) if(!mexeu.has(o)&&foto(o)!==ini.get(o)) mexeu.add(o);
     if(++n<25) return; clearInterval(t);
-    const grupos=new Map();
-    for(const o of malhas){ if(mexeu.has(o)||!o.parent||!o.visible) continue; const m=o.material; if(m.transparent||m.side===THREE.DoubleSide&&m.blending!==THREE.NormalBlending) continue;
-      const g=o.geometry; const chave=o.parent.uuid+'|'+m.uuid+'|'+Object.keys(g.attributes).sort().join(',')+'|'+(o.renderOrder||0)+'|'+(o.castShadow?1:0);
-      if(!grupos.has(chave)) grupos.set(chave,[]); grupos.get(chave).push(o); }
-    let antes=0, depois=0;
-    for(const lista of grupos.values()){ if(lista.length<2) continue;
-      try{ const geos=lista.map(o=>{ o.updateMatrix(); let g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone(); g.applyMatrix4(o.matrix); for(const k of Object.keys(g.morphAttributes||{})) delete g.morphAttributes[k]; return g; });
-        const junta=mergeGeometries(geos,false); if(!junta) continue; geos.forEach(g=>g.dispose());
-        const pai=lista[0].parent, nova=new THREE.Mesh(junta,lista[0].material); nova.renderOrder=lista[0].renderOrder; nova.frustumCulled=lista.every(o=>o.frustumCulled);
-        for(const o of lista) pai.remove(o); pai.add(nova); antes+=lista.length; depois++;
+    const assin=(m,g)=>[m.type,m.side,m.transparent?1:0,m.opacity,m.depthWrite?1:0,m.blending,m.map?m.map.uuid:'',m.gradientMap?m.gradientMap.uuid:'',m.emissive?m.emissive.getHexString():'',m.vertexColors?1:0,m.fog?1:0,Object.keys(g.attributes).filter(k=>k!=='color').sort().join(',')].join('|');
+    const grupos=new Map(); const add=(pai,malha,matriz,ordem)=>{ const k=pai.uuid+'|'+ordem+'|'+assin(malha.material,malha.geometry); if(!grupos.has(k)) grupos.set(k,{pai,ordem,itens:[]}); grupos.get(k).itens.push({malha,matriz}); };
+    for(const o of pecas){ if(mexeu.has(o)||!o.visible) continue; if(o.material.transparent&&o.material.blending!==THREE.NormalBlending) continue;
+      o.updateMatrix(); add(o.parent,o,o.matrix.clone(),o.renderOrder||0);
+      for(const c of o.children){ c.updateMatrix(); add(o.parent,c,o.matrix.clone().multiply(c.matrix),c.renderOrder||0); } }
+    let antes=0, depois=0; const tirar=new Set();
+    for(const {pai,ordem,itens} of grupos.values()){ if(itens.length<2) continue;
+      try{ const mats=new Set(itens.map(i=>i.malha.material)); const cores=mats.size>1;
+        const geos=itens.map(({malha,matriz})=>{ let g=malha.geometry.index?malha.geometry.toNonIndexed():malha.geometry.clone(); g.applyMatrix4(matriz); g.morphAttributes={};
+          if(cores){ const c=malha.material.color||new THREE.Color(1,1,1), n=g.attributes.position.count, arr=new Float32Array(n*3); for(let i=0;i<n;i++){ arr[i*3]=c.r; arr[i*3+1]=c.g; arr[i*3+2]=c.b; } g.setAttribute('color',new THREE.BufferAttribute(arr,3)); }
+          else g.deleteAttribute('color'); return g; });
+        const junta=mergeGeometries(geos,false); geos.forEach(g=>g.dispose()); if(!junta) continue;
+        let mat=itens[0].malha.material; if(cores){ mat=mat.clone(); mat.color=new THREE.Color(1,1,1); mat.vertexColors=true; mat.needsUpdate=true; }
+        const nova=new THREE.Mesh(junta,mat); nova.renderOrder=ordem; pai.add(nova);
+        for(const {malha} of itens) tirar.add(malha); antes+=itens.length; depois++;
       }catch(e){ console.warn('não juntou',e); } }
+    // tira as peças originais (a peça só sai se ela e o contorno dela foram juntados)
+    for(const o of pecas){ if(!tirar.has(o)) continue; if(o.children.some(c=>!tirar.has(c))) { o.material=new THREE.MeshBasicMaterial({visible:false}); continue; } o.parent.remove(o); }
+    for(const o of tirar) if(o.parent&&o.parent.isMesh&&!tirar.has(o.parent)) o.parent.remove(o);
     console.log(`cenário otimizado: ${antes} peças viraram ${depois}`); window.__otimizado={antes,depois};
   },200);
 }
