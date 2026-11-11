@@ -98,7 +98,79 @@ export async function carregarPersonagens3D(THREE, lista, carregar) {
   for (let i = 0; i < 100 && [...mapas].some((t) => !t.image || t.image.complete === false); i++) await new Promise((r) => setTimeout(r, 100));
   for (const t of mapas) { reduzirTextura(t); t.needsUpdate = true; }
   lib.texturasReduzidas = mapas.size;
+  try { criarBlocos(lib); } catch (e) { console.warn('bonecos de blocos não montaram', e); }
   return lib;
+}
+
+// ---------- BONECOS DE BLOCOS (feitos só com código) ----------
+// Pega o esqueleto de um personagem que já dança (mesmos ossos da Mixamo) e prende caixas nos ossos:
+// cabeça quadrada, corpo, braços, pernas. Dançam as mesmas danças e são levíssimos (poucas centenas de triângulos).
+// Camisa roxa e cabelo verde-limão de propósito: o sistema de roupas troca essas cores, então cada um sai de um jeito.
+const BLOCOS = [
+  { nome: 'bloquinho-menino', sexo: 'm', camisa: 0x7a3cff, calca: 0x2d5bd6, pele: 0xf1c08f, cabelo: 0x9be22d, sapato: 0x222233, menina: false },
+  { nome: 'bloquinha-menina', sexo: 'f', camisa: 0xb43cff, calca: 0xff5fa2, pele: 0xd9a06f, cabelo: 0x8fe03a, sapato: 0xffffff, menina: true },
+];
+function rostoBloco(pele, menina) {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = '#' + new T.Color(pele).getHexString(); g.fillRect(0, 0, 128, 128);
+  g.fillStyle = '#ffffff'; g.fillRect(28, 44, 26, 26); g.fillRect(74, 44, 26, 26);
+  g.fillStyle = '#1b1430'; g.fillRect(36, 50, 14, 18); g.fillRect(82, 50, 14, 18);
+  if (menina) { g.fillRect(26, 38, 8, 6); g.fillRect(94, 38, 8, 6); g.fillStyle = '#ff7aa8'; g.fillRect(18, 78, 16, 8); g.fillRect(94, 78, 16, 8); g.fillStyle = '#1b1430'; }
+  g.lineWidth = 7; g.strokeStyle = '#1b1430'; g.lineCap = 'round'; g.beginPath(); g.arc(64, 78, 20, 0.2 * Math.PI, 0.8 * Math.PI); g.stroke();
+  const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.magFilter = T.NearestFilter; return t;
+}
+function criarBlocos(lib) {
+  const donor = lib.modelos.find((m) => m.mov && m.mov.dancas.length && /palhac|noel|duende|rena|grilo|barata/.test(m.nome)) || lib.modelos.find((m) => m.mov && m.mov.dancas.length);
+  if (!donor) return;
+  for (const B of BLOCOS) {
+    const cena = SkeletonUtils.clone(donor.cena);
+    const sk = []; cena.traverse((o) => { if (o.isMesh) sk.push(o); }); for (const o of sk) o.parent.remove(o);
+    cena.updateMatrixWorld(true);
+    const ossos = []; cena.traverse((o) => { if (o.isBone) ossos.push(o); });
+    const osso = (n) => ossos.find((o) => new RegExp('(^|[^A-Za-z])' + n + '$').test(o.name) || o.name.endsWith(n) && !/Index|Middle|Ring|Pinky|Thumb/.test(o.name));
+    const P = (o) => o.getWorldPosition(new T.Vector3());
+    const hips = osso('Hips'), neck = osso('Neck'), head = osso('Head');
+    if (!hips || !neck || !head) continue;
+    const top = osso('HeadTop_End');
+    const pe = (L) => osso(L + 'Foot'), ombro = (L) => osso(L + 'Arm');
+    const pH = P(hips), pN = P(neck), pHead = P(head);
+    const chao = Math.min(P(pe('Left') || hips).y, P(pe('Right') || hips).y);
+    const larg = ombro('Left') && ombro('Right') ? P(ombro('Left')).distanceTo(P(ombro('Right'))) : (pN.y - chao) * 0.3;
+    const u = larg; // unidade: largura dos ombros
+    const mat = (cor, extra = {}) => new T.MeshStandardMaterial({ color: cor, roughness: 0.8, metalness: 0, ...extra });
+    const mCamisa = mat(B.camisa), mCalca = mat(B.calca), mPele = mat(B.pele), mCabelo = mat(B.cabelo), mSapato = mat(B.sapato);
+    // caixa presa num osso, posicionada no mundo (o osso leva ela junto quando dança)
+    const caixa = (pai, w, h, d, centro, material, dir = null) => {
+      const m = new T.Mesh(new T.BoxGeometry(w, h, d), material); m.position.copy(centro);
+      if (dir) m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir.clone().normalize());
+      cena.add(m); m.updateMatrixWorld(true); pai.attach(m); m.castShadow = true; return m;
+    };
+    const membro = (a, b, esp, material, extra = 0) => { if (!a || !b) return; const pa = P(a), pb = P(b); const dir = pb.clone().sub(pa); const len = dir.length() + extra; caixa(a, esp, len, esp, pa.clone().add(pb).multiplyScalar(0.5), material, dir); };
+    // corpo
+    const altCorpo = pN.y - pH.y;
+    caixa(osso('Spine1') || osso('Spine') || hips, u * 0.95, altCorpo * 1.05, u * 0.5, new T.Vector3(pH.x, pH.y + altCorpo * 0.55, pH.z), mCamisa);
+    caixa(hips, u * 0.9, altCorpo * 0.32, u * 0.48, new T.Vector3(pH.x, pH.y + altCorpo * 0.02, pH.z), B.menina ? mCamisa : mCalca);
+    if (B.menina) caixa(hips, u * 1.15, altCorpo * 0.42, u * 0.68, new T.Vector3(pH.x, pH.y - altCorpo * 0.12, pH.z), mCalca); // saia
+    // cabeça quadrada com rosto na frente (+Z)
+    const lado = u * 0.92; const cH = new T.Vector3(pN.x, pN.y + lado * 0.55, pN.z);
+    const rosto = mat(0xffffff, { map: rostoBloco(B.pele, B.menina) });
+    caixa(head, lado, lado, lado, cH, [mPele, mPele, mPele, mPele, rosto, mPele]);
+    caixa(head, lado * 1.06, lado * 0.26, lado * 1.06, cH.clone().add(new T.Vector3(0, lado * 0.47, -lado * 0.02)), mCabelo); // cabelo em cima
+    caixa(head, lado * 1.06, lado * (B.menina ? 1.15 : 0.6), lado * 0.22, cH.clone().add(new T.Vector3(0, B.menina ? -lado * 0.12 : lado * 0.2, -lado * 0.47)), mCabelo); // nuca
+    caixa(neck, u * 0.3, (pHead.y - pN.y) + lado * 0.1, u * 0.3, new T.Vector3(pN.x, (pN.y + pHead.y) / 2, pN.z), mPele);
+    // braços, mãos, pernas, pés
+    for (const L of ['Left', 'Right']) {
+      const a = osso(L + 'Arm'), fa = osso(L + 'ForeArm'), h = osso(L + 'Hand');
+      membro(a, fa, u * 0.3, mCamisa, u * 0.1); membro(fa, h, u * 0.27, mPele, u * 0.05);
+      if (h) caixa(h, u * 0.3, u * 0.3, u * 0.3, P(h).add(P(h).sub(P(fa)).normalize().multiplyScalar(u * 0.12)), mPele);
+      const ul = osso(L + 'UpLeg'), lg = osso(L + 'Leg'), ft = osso(L + 'Foot'), toe = osso(L + 'ToeBase');
+      membro(ul, lg, u * 0.4, mCalca, u * 0.08); membro(lg, ft, u * 0.36, B.menina ? mPele : mCalca, u * 0.06);
+      if (ft) { const pf = P(ft), pt = toe ? P(toe) : pf.clone().add(new T.Vector3(0, 0, u * 0.3)); const meio = pf.clone().add(pt).multiplyScalar(0.5); meio.y = chao + u * 0.1;
+        caixa(ft, u * 0.4, u * 0.2, pf.distanceTo(pt) + u * 0.35, meio, mSapato); }
+    }
+    let n = 0; cena.traverse((o) => { if (o.isMesh) n++; });
+    lib.modelos.push({ ...donor, cena, nome: B.nome, sexo: B.sexo, adapt: new Map(), blocos: true, pecas: n });
+  }
 }
 // separa as animações em andar, correr, parado, comemorar e danças
 function separar(todos) {
