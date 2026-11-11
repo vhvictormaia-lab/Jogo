@@ -310,6 +310,8 @@ const carregarGLB=url=>{ const nome=url.split('/').pop(); const b64=window.CAVEI
 const fbxL=new FBXLoader();
 let CAV=null, MIX=null, LISTA={};
 async function carregarMusicas(){ try{ const r=await fetch('api/baile/arquivos',{cache:'no-store'}); if(r.ok){ LISTA=await r.json(); if(LISTA.musicas) musica.playlist(LISTA.musicas); } }catch(e){} }
+// a cada 30 s olha a pasta musicas-baile: música nova entra na fila sem precisar fechar o jogo
+setInterval(async()=>{ try{ const r=await fetch('api/baile/arquivos',{cache:'no-store'}); if(!r.ok) return; const L=await r.json(); const nova=JSON.stringify(L.musicas||[]); if(nova!==JSON.stringify(LISTA.musicas||[])){ LISTA.musicas=L.musicas||[]; musica.atualizarLista(LISTA.musicas); } }catch(e){} },30000);
 const DS=new Map(); // id -> dançarino
 let ordem=[]; // ids na ordem de chegada (define o lugar na roda)
 const ENTRADA=new THREE.Vector3(0,0,18.5);
