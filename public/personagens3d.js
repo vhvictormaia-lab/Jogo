@@ -120,7 +120,7 @@ function rostoBloco(pele, menina) {
   const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.magFilter = T.NearestFilter; return t;
 }
 function criarBlocos(lib) {
-  const donor = lib.modelos.find((m) => m.mov && m.mov.dancas.length && /palhac|noel|duende|rena|grilo|barata/.test(m.nome)) || lib.modelos.find((m) => m.mov && m.mov.dancas.length);
+  const donor = lib.modelos.find((m) => m.mov && m.mov.dancas.length && /palhac|noel|duende|rena|grilo|barata/.test(m.nome)) || lib.modelos.find((m) => m.mov && m.mov.dancas.length) || lib.modelos.find((m) => /palhac|noel|duende|rena|grilo|barata/.test(m.nome)) || lib.modelos[0];
   if (!donor) return;
   for (const B of BLOCOS) {
     const cena = SkeletonUtils.clone(donor.cena);
