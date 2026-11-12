@@ -341,7 +341,8 @@ function criarD(info,{chegando=true}={}){
   return d;
 }
 const SOMBRA_G=new THREE.CircleGeometry(.55,16), SOMBRA_M=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.28,depthWrite:false});
-function atualizarTag(d){ d.tag.className='tag'+(d.noivo?' noivo':''); d.tag.dataset.par=d.noivo==='noivo'?'🤵':d.noivo==='veu'?'👰':''; d.tag.innerHTML=`${avatar(d.info)}<span>${esc(d.info.name)}</span>`; }
+function atualizarTag(d){ d.tag.className='tag'+(d.noivo?' noivo':''); d.tag.dataset.par=d.noivo==='noivo'?'🤵':d.noivo==='veu'?'👰':''; const fala=d.info.fala?String(d.info.fala).trim():''; const curta=fala.length>34?fala.slice(0,33)+'…':fala;
+  d.tag.innerHTML=`${avatar(d.info)}<span>${esc(curta?'“'+curta+'”':d.info.name)}</span>`; }
 function removerD(id,poof=true){ const d=DS.get(id); if(!d) return; if(poof) estouro(d.grupo.position,0xffffff); cena.remove(d.grupo); d.tag.remove(); d.bal&&d.bal.remove(); DS.delete(id); ordem=ordem.filter(x=>x!==id); reposicionar(); }
 function reposicionar(){ ordem.forEach((id,i)=>{ const d=DS.get(id); if(!d||d.noivo) return; const L=lugar(i); d.alvo.set(L.x,0,L.z); d.rumo=Math.atan2(-L.x,-L.z); }); }
 let musicaIdx=0;
@@ -416,15 +417,23 @@ function piscar(id){ const e=$(id); e.classList.remove('pisca'); void e.offsetWi
 // ================= câmera drone =================
 const cam={ pos:new THREE.Vector3(0,9,26), olha:new THREE.Vector3(0,1,0), alvoPos:new THREE.Vector3(0,9,26), alvoOlha:new THREE.Vector3(0,1,0), plano:'roda', ate:0, foco:null, t0:0, prioridade:0 };
 camera.position.copy(cam.pos);
-// HOLOFOTE: quem manda presente (rosa etc.) aparece SOZINHO na tela dançando por 25 s. Vários presentes = fila.
-const holo={fila:[],d:null,ate:0,pausa:0};
-function pedirHolofote(id){ const ag=performance.now(); if(holo.d&&holo.d.info.id===id){ holo.ate=Math.max(holo.ate,ag+25000); return; } if(!holo.fila.some(x=>x.id===id)) holo.fila.push({id,t:ag}); }
+// HOLOFOTE: quem manda presente (rosa etc.) aparece SOZINHO na tela dançando por 10 s. Presente novo entra na hora; muita gente mandando = intercala com a roda.
+const holo={prox:null,d:null,ate:0,pausa:0,rajada:[],rodaAte:0,ultimaRoda:0};
+const HOLO_SEG=10;
+function pedirHolofote(id){ const ag=performance.now(); holo.prox={id,t:ag}; holo.rajada.push({id,t:ag}); }
 function cuidarHolofote(){ const ag=performance.now();
+  holo.rajada=holo.rajada.filter(x=>ag-x.t<20000);
   if(holo.d&&(ag>holo.ate||!DS.has(holo.d.info.id))){ holo.d=null; cam.ate=0; cam.prioridade=0; esconderDestaque(); holo.nome=null; }
-  holo.fila=holo.fila.filter(x=>ag-x.t<90000&&(DS.has(x.id)||ag-x.t<30000));
-  if(ag<holo.pausa) return;
-  if(!holo.d) for(let i=0;i<holo.fila.length;i++){ const d=DS.get(holo.fila[i].id); if(d){ holo.fila.splice(i,1); const seg=holo.fila.length>3?15:25; holo.d=d; holo.ate=ag+seg*1000;
-      estouro(d.grupo.position,0xffd23f,40); coracoesEm(d,12); focar(d,seg,5); break; } }
+  if(ag<holo.pausa||ag<holo.rodaAte) return;
+  if(holo.prox&&ag-holo.prox.t>30000) holo.prox=null;
+  const p=holo.prox; const d=p&&DS.get(p.id);
+  if(d&&d!==holo.d){
+    // muita gente mandando presente: a cada 20 s mostra a roda inteira por 5 s e depois volta
+    const pessoas=new Set(holo.rajada.map(x=>x.id)).size;
+    if(pessoas>=3&&ag-holo.ultimaRoda>20000&&holo.d){ holo.d=null; holo.nome=null; holo.ultimaRoda=ag; holo.rodaAte=ag+5000; cam.ate=0; cam.prioridade=0; esconderDestaque(); plano('drone',5,6); return; }
+    holo.prox=null; holo.d=d; holo.ate=ag+HOLO_SEG*1000; cam.ate=0; cam.prioridade=0;
+    estouro(d.grupo.position,0xffd23f,40); coracoesEm(d,12); focar(d,HOLO_SEG,5);
+  } else if(d&&d===holo.d){ holo.prox=null; holo.ate=Math.max(holo.ate,ag+HOLO_SEG*1000); }
   if(holo.d&&cam.foco!==holo.d) focar(holo.d,Math.max(1,(holo.ate-ag)/1000),5);
   if(holo.d&&holo.nome!==holo.d.info.id){ holo.nome=holo.d.info.id; mostrarDestaque(holo.d); } }
 // SOLO / DUPLA: a cada 10–20 s, 1 ou 2 bonecos aparecem sozinhos na tela por 6–8 s (presente tem prioridade)
@@ -443,7 +452,7 @@ function sortearSolo(ag){
   } else { spot.ds=[a]; spot.ate=ag+seg*1000; cam.ate=0; cam.prioridade=0; focar(a,seg,4); }
 }
 function cuidarSolo(){ const ag=performance.now();
-  if(holo.d||ag<holo.pausa){ if(spot.ds){ spot.ds=null; } spot.prox=Math.max(spot.prox,ag+8000); return; }
+  if(holo.d||ag<holo.pausa||ag<holo.rodaAte||holo.prox){ if(spot.ds){ spot.ds=null; } spot.prox=Math.max(spot.prox,ag+8000); return; }
   if(spot.ds&&ag>spot.ate){ spot.ds=null; cam.ate=0; cam.prioridade=0; esconderDestaque(); spot.prox=ag+(10+Math.random()*10)*1000; }
   if(!spot.ds&&ag>spot.prox&&DS.size>=2) sortearSolo(ag); }
 function focar(d,seg=7,prio=1){ if(!d||performance.now()<cam.ate&&prio<cam.prioridade) return; cam.cortar=cam.plano!=='destaque'||cam.foco!==d; cam.plano='destaque'; cam.foco=d; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; cam.lado=Math.random()<.5?-1:1; mostrarDestaque(d); if(!d.andando&&!d.trem&&!(coreo.passo&&bt<coreo.ate)&&!d.boneco.mixamo) fazer(d,rndA(SOLOS2)); }
@@ -548,7 +557,7 @@ function onBaile(m){
     case 'entrou': { if(m.max) maxRoda=m.max; if(!DS.has(m.d.id)&&!chegadaQ.some(x=>x.id===m.d.id)) chegadaQ.push(m.d); contar(); break; }
     case 'saiu': tirarDaChegada(m.id); removerD(m.id); contar(); break;
     case 'lotado': lotou=true; trocarChamada(true); break;
-    case 'fala': { const d=DS.get(m.id); if(d){ d.info.ultimo=Date.now(); balao2(d,m.texto); if(Math.random()<.5) acao(d,rndA(['acenar','sim','pular'])); } break; }
+    case 'fala': { const d=DS.get(m.id); if(d){ d.info.ultimo=Date.now(); d.info.fala=m.texto; atualizarTag(d); if(Math.random()<.5) acao(d,rndA(['acenar','sim','pular'])); } break; }
     case 'sexo': case 'roupa': { const q=chegadaQ.find(x=>x.id===m.d.id); if(q) Object.assign(q,m.d); const d=DS.get(m.d.id);
       if(d){ d.info=Object.assign(d.info,m.d); d.info.ultimo=Date.now(); vestir(d); estouro(d.grupo.position,m.ev==='sexo'?(m.d.sexo==='f'?0xff9ec7:0x2fd5ff):0xff3d8b,34); acao(d,'sim'); focar(d,5,2); }
       if(m.ev==='roupa') piscar('ppRoupa'); break; }

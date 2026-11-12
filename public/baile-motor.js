@@ -61,7 +61,7 @@
     const ativo = (id) => agora() - (visto.get(id) || 0) <= cfg.ativoMin * 60000;
     function publicoD(d) {
       return { id: d.id, name: d.name, avatar: d.avatar || null, roupa: d.roupa, modelo: d.modelo, sexo: sexo.get(d.id) || 'm',
-        par: d.id === noivo ? 'noivo' : d.id === noiva ? 'noiva' : null, moedas: moedas.get(d.id) || 0 };
+        par: d.id === noivo ? 'noivo' : d.id === noiva ? 'noiva' : null, moedas: moedas.get(d.id) || 0, fala: d.fala || null };
     }
     const lotado = (vip) => roda.size >= cfg.maximo + (vip ? cfg.vipExtra : 0);
     // roda cheia (ou casamento acontecendo): avisa a tela "continue comentando" — sem fila
@@ -70,13 +70,13 @@
       if (agora() - ultLotado > 4000) { ultLotado = agora(); emitir({ ev: 'lotado', motivo, user: { id: u.id, name: u.name, avatar: u.avatar || null } }); }
       return null;
     }
-    function entrar(u, motivo = 'comentou', vip = false) {
+    function entrar(u, motivo = 'comentou', vip = false, fala = null) {
       if (!u || !u.id) return null;
       const ja = roda.get(u.id); if (ja) return ja;
       if (pausaAte) return lotou(u, 'intervalo');
       if (lotado(vip)) return lotou(u, 'lotou');
       sexoDe(u);
-      const d = { id: u.id, name: u.name, avatar: u.avatar || null, roupa: semente(), modelo: Math.floor(Math.random() * 1000), entrou: agora(), ultimo: agora() };
+      const d = { id: u.id, name: u.name, avatar: u.avatar || null, roupa: semente(), modelo: Math.floor(Math.random() * 1000), entrou: agora(), ultimo: agora(), fala };
       roda.set(u.id, d);
       emitir({ ev: 'entrou', d: publicoD(d), total: roda.size, max: cfg.maximo, motivo });
       return d;
@@ -90,8 +90,10 @@
         const d = roda.get(u.id);
         if (d) { d.modelo = Math.floor(Math.random() * 1000); emitir({ ev: 'sexo', d: publicoD(d) }); verNoivos(); return; }
       }
-      const ja = roda.has(u.id); const d = entrar(u);
-      if (ja && d) { const t = T ? T.podeLer(texto) : String(texto).slice(0, 60); if (t) emitir({ ev: 'fala', id: u.id, texto: t.slice(0, 60) }); }
+      // o comentário aparece em cima do boneco no lugar do nome (só o que passa no filtro)
+      const t0 = T ? T.podeLer(texto) : String(texto).slice(0, 60); const t = t0 ? t0.slice(0, 60) : null;
+      const ja = roda.has(u.id); const d = entrar(u, 'comentou', false, t);
+      if (ja && d && t) { d.fala = t; emitir({ ev: 'fala', id: u.id, texto: t }); }
     }
     function trocarRoupa(d) { d.roupa = semente(); d.modelo = Math.floor(Math.random() * 1000); emitir({ ev: 'roupa', d: publicoD(d) }); }
     function presente(u, giftName, diamonds, count) {
