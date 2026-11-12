@@ -110,7 +110,7 @@
         if (d) { const f = (sexo.get(u.id) || 'm') === 'f'; const antes = f ? noiva : noivo;
           if (f) noiva = u.id; else noivo = u.id;
           if (antes !== u.id) emitir({ ev: 'noivos', noivo: noivo && roda.get(noivo) ? publicoD(roda.get(noivo)) : null, noiva: noiva && roda.get(noiva) ? publicoD(roda.get(noiva)) : null, novoNoivo: f ? null : u.id, novaNoiva: f ? u.id : null }); }
-      } else if (/mini ?dino|tiny ?din|dininho/.test(g)) {
+      } else if (/dino|tiny ?din|dininho/.test(g)) {
         // 🦖 Mini Dino: foto grande no OUTDOOR até o fim do baile. O próximo que mandar troca.
         especial = 'outdoor'; outdoor = user; emitir({ ev: 'outdoor', user });
       } else if (d && coins >= 30) { musica = (musica + 1) % MUSICAS.length; emitir({ ev: 'banda', musica, nomeMusica: MUSICAS[musica], user, coins, d: publicoD(d) }); } // 🍩 vira o DJ

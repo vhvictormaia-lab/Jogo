@@ -16,15 +16,17 @@ COMO FUNCIONA
   o palco, o altar e o tapete vermelho por onde a galera chega.
 
 PRESENTES
-  🌹 Até 29 moedas (Rosa e outros pequenos) = TROQUE DE ROUPA: outra caveira, outra cor e outro enfeite
-  🍩 30 moedas ou mais (Rosquinha...) = TOQUE NA BANDA: a bandinha de palhaços (guitarra, saxofone, sanfona e bateria)
-     faz um show no palco, com notas musicais voando; troca a música e todo mundo muda a dança
-  💍 Todo presente soma moedas. Quem mais mandou no baile vira o NOIVO (bonecos de menino) ou a NOIVA (bonecas de menina):
-     ganha cartola ou véu, vai pro altar e aparece no canto da tela com a foto. Se alguém mandar mais, toma o lugar.
+  💬 Comentou (ou compartilhou / seguiu) = entra no baile. O comentário aparece em cima do boneco, no lugar do nome.
+  🌹 Rosa (e presentes até 29 moedas) = DANÇA SOZINHO NA TELA por 10 s. Presente novo entra na hora;
+     com muita gente mandando, a câmera intercala com a roda inteira.
+  🍩 Rosquinha (30 moedas ou mais) = VIRA O DJ: foto e nome em cima do palhaço do palco, troca a música e a banda faz o show.
+  🦖 Mini Dino = FOTO NO OUTDOOR até o fim do baile. O próximo que mandar troca a foto.
+  🎆 Fogos de artifício = vira NOIVO (menino) ou NOIVA (menina) e vai pro altar. O próximo que mandar toma o lugar.
+     No fim do baile, os dois casam.
   🎟️ Quem manda presente entra na hora, mesmo com a roda cheia (até 10 a mais que o limite).
   Noivo e noiva que ainda estiverem na live (comentaram, curtiram ou mandaram presente nos últimos 10 minutos)
   entram direto no próximo baile. O TikTok não avisa quando alguém sai da live, por isso o jogo usa esse tempo.
-  Seguir e compartilhar também colocam a pessoa na roda. A cada 500 curtidas tem festa com confete.
+  A cada 500 curtidas tem festa com confete.
 
 COMO USAR
 1. Clique duas vezes no atalho "Baile do Abismo" (ou no iniciar.bat). O painel abre sozinho no navegador.

@@ -160,8 +160,8 @@ const fmt=n=>Number(n||0).toLocaleString('pt-BR');
 function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),2200); }
 async function api(url,corpo,metodo){ try{ const r=await fetch('/api/painel/'+url,{method:metodo||(corpo!==undefined?'POST':'GET'),headers:{'content-type':'application/json'},body:corpo!==undefined?JSON.stringify(corpo):undefined}); return await r.json(); }catch(e){ return {ok:false,erro:'Não consegui falar com o jogo. Ele está aberto?'}; } }
 
-const TESTES=[['💬 Comentou',{type:'chat',text:'eu'}],['🙋‍♀️ "menina"',{type:'chat',text:'menina'}],['🙋‍♂️ "menino"',{type:'chat',text:'menino'}],['🌹 Rosa (troca roupa)',{type:'gift',giftName:'Rose',diamonds:1,count:1}],
-  ['🍩 Rosquinha (banda)',{type:'gift',giftName:'Doughnut',diamonds:30,count:1}],['🦁 Leão (presentão)',{type:'gift',giftName:'Lion',diamonds:29999,count:1}],['➕ Seguiu',{type:'follow'}],['🔁 Compartilhou',{type:'share'}],['❤️ Curtidas',{type:'like',likes:50}]];
+const TESTES=[['💬 Comentou',{type:'chat',text:'eu'}],['🙋‍♀️ "menina"',{type:'chat',text:'menina'}],['🙋‍♂️ "menino"',{type:'chat',text:'menino'}],['🌹 Rosa (dança sozinho)',{type:'gift',giftName:'Rose',diamonds:1,count:1}],
+  ['🍩 Rosquinha (vira DJ)',{type:'gift',giftName:'Doughnut',diamonds:30,count:1}],['🦖 Mini Dino (outdoor)',{type:'gift',giftName:'Mini Dino',diamonds:5,count:1}],['🎆 Fogos (noivo/noiva)',{type:'gift',giftName:'Fireworks',diamonds:1088,count:1}],['➕ Seguiu',{type:'follow'}],['🔁 Compartilhou',{type:'share'}],['❤️ Curtidas',{type:'like',likes:50}]];
 $('testes').innerHTML=TESTES.map(([n],i)=>`<button data-teste="${i}">${n}</button>`).join('')+'<button id="b-encher">👥 Encher a roda (40 pessoas)</button>';
 const NOMES=['Lisa','Marco','Juliana','Pedrinho','Carol','Rafa','Bruno','Ana','Gabi','Thiago','Mari','Caio','Duda','Léo','Yasmin','Enzo','Sofia','Davi','Helena','Kauã'];
 let seq=0; const pessoa=()=>{ const n=NOMES[Math.floor(Math.random()*NOMES.length)]+(++seq); return {id:n.toLowerCase(),name:n}; };
