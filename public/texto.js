@@ -7,12 +7,36 @@
 'use strict';
 // \b do JavaScript não entende acentos ("maçã", "você"): troca por limite de palavra Unicode
 const W = (re) => new RegExp(re.source.replace(/\\b/g, '(?:(?<![\\p{L}\\p{N}])(?=[\\p{L}\\p{N}])|(?<=[\\p{L}\\p{N}])(?![\\p{L}\\p{N}]))'), re.flags.includes('u') ? re.flags : re.flags + 'u');
-const PALAVROES = W(/\b(porra|caralho|merda|puta|puto|fdp|vsf|vtnc|pqp|buceta|cu|cuzao|cuzão|arrombad\w*|viad\w*|bicha|corno|piroca|pau|rola|foder|fode|fodase|foda|desgraça\w*|desgraca\w*|otario\w*|otário\w*|idiota|imbecil|retardad\w*|macac\w*|nazi\w*|estupr\w*|matar|morre|suicid\w*|sexo|nude\w*|nudes|pelad\w*|gostos\w*|safad\w*|tes[aã]o|pinto|xota|xoxota|bct|krl|crl|prr)\b/i);
+const LISTA = 'porra|porr\\w*|caralh\\w*|merda|puta|puto|putaria|putinha|fdp|vsf|vtnc|tnc|pqp|pnc|buceta|bucet\\w*|cu|cuzao|cuzão|arrombad\\w*|viad\\w*|bicha|corno|cornudo|piroca|pau|rola|foder|fode|fodase|foda|fodid\\w*|fud\\w*|desgraça\\w*|desgraca\\w*|otario\\w*|otário\\w*|idiota|imbecil|retardad\\w*|macac[oa]s?|nazi\\w*|estupr\\w*|matar|morre|suicid\\w*|sexo|sexy|nude\\w*|nudes|pelad\\w*|gostos\\w*|safad\\w*|tes[aã]o|pinto|xota|xoxota|bct|krl|crl|prr|cacet\\w*|bost\\w*|vagabund\\w*|piranh\\w*|prostitut\\w*|rapariga|quenga|punhet\\w*|siririca|boquete|chupa|chupad\\w*|penis|pênis|vagina|piru|pica|xereca|xana|babaca|cretin\\w*|escrot\\w*|nojent\\w*|lixo|fuck\\w*|shit|bitch|dick|pussy|nigg\\w*|sex';
+const PALAVROES = W(new RegExp('\\b(' + LISTA + ')\\b', 'i'));
 const semAcento = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+// mesma lista, mas com letras repetidas juntadas (porra -> pora), para pegar "porraaaa", "caaaralho"
+const PALAVROES_1 = W(new RegExp('\\b(' + semAcento(LISTA).replace(/([a-z])\1+/g, '$1') + ')\\b', 'i'));
+// troca truques comuns: p0rr4, c@ralho, p.o.r.r.a, p o r r a
+const LEET = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b', '@': 'a', '$': 's', '!': 'i' };
+function variantes(t) {
+  const a = semAcento(t);
+  const b = a.replace(/[0134578@$!]/g, (c) => LEET[c]);
+  const c = b.replace(/(^|\s)((?:[a-z][\s.\-_*]){1,}[a-z])(?=\s|$)/g, (m, ini, letras) => ini + letras.replace(/[\s.\-_*]/g, '')); // p o r r a -> porra
+  const d = c.replace(/([a-z])[.\-_*]+(?=[a-z])/g, '$1'); // p.orr-a -> porra
+  const e = a.replace(/[0-9_]+/g, ' '); // fdp123 -> fdp
+  return [t, a, b, c, d, e];
+}
 // filtro extra (no servidor: palavras-proibidas.txt). Padrão: nada.
 let extraProibido = () => false;
 function setExtraProibido(fn) { extraProibido = typeof fn === 'function' ? fn : () => false; }
-function proibido(t) { return PALAVROES.test(t) || !!extraProibido(t); }
+function proibido(t) {
+  for (const v of variantes(t)) {
+    if (PALAVROES.test(v) || PALAVROES_1.test(v.replace(/([a-z])\1+/g, '$1')) || extraProibido(v)) return true;
+  }
+  return false;
+}
+// nome que aparece na tela: sem palavrão, sem link, curto
+function nomeTela(nome) {
+  const n = String(nome || '').replace(/https?:\/\/\S+|www\.\S+/gi, '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
+  if (!n || proibido(n) || proibido(String(nome || ''))) return 'amigo';
+  return n.slice(0, 24);
+}
 
 function limparFala(s) {
   return String(s || '')
@@ -31,6 +55,7 @@ function nomeFalado(u) {
 }
 function podeLer(texto) {
   if (/https?:\/\/|www\.|\.com\b/i.test(String(texto || ''))) return null; // links: não lê
+  if (proibido(String(texto || ''))) return null; // testa antes de limpar (c@ralho)
   const t = limparFala(texto);
   if (t.length < 2 || t.length > 90) return null;
   if (proibido(t)) return null;
@@ -69,5 +94,5 @@ function plural(p) {
   return { art: p.art === 'a' ? 'as' : 'os', nome: [pw, ...resto].join(' ') };
 }
 
-return { semAcento, setExtraProibido, proibido, limparFala, nomeFalado, podeLer, presente, plural };
+return { semAcento, setExtraProibido, proibido, nomeTela, limparFala, nomeFalado, podeLer, presente, plural };
 });

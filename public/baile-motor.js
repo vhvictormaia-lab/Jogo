@@ -185,7 +185,10 @@
         resta: pausaAte ? 0 : Math.max(0, Math.round((fimEm - agora()) / 1000)), intervalo: !!pausaAte, musica, nomeMusica: MUSICAS[musica],
         noivo: noivo && roda.get(noivo) ? publicoD(roda.get(noivo)) : null, noiva: noiva && roda.get(noiva) ? publicoD(roda.get(noiva)) : null, outdoor, cfg: { ...cfg } };
     }
-    return { iniciar, parar, config, limpar, estado, chat, presente, seguiu, compartilhou, entrou: entrouLive, curtidas: curtir, fimDoBaile,
+    // nome que aparece na tela (placas, DJ, outdoor, noivos): sem palavrão
+    const limpo = (u) => (u && T && T.nomeTela ? { ...u, name: T.nomeTela(u.name) } : u);
+    const L = (fn) => (u, ...r) => fn(limpo(u), ...r);
+    return { iniciar, parar, config, limpar, estado, chat: L(chat), presente: L(presente), seguiu: L(seguiu), compartilhou: L(compartilhou), entrou: L(entrouLive), curtidas: L(curtir), fimDoBaile,
       get rodando() { return !!timer; }, get tamanho() { return roda.size; } };
   }
   return { criar, MUSICAS, palpiteSexo, comandoSexo };
