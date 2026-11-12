@@ -45,6 +45,7 @@
     const sexo = new Map();     // id -> 'm' | 'f' (vale para os próximos bailes)
     const visto = new Map();    // id -> último sinal de vida (comentou, curtiu, presente...)
     const pessoas = new Map();  // id -> {id, name, avatar} mais recente
+    const fogosEspera = new Map();
     let noivo = null, noiva = null, outdoor = null, fimEm = 0, timer = null, musica = 0, pausaAte = 0, casalAnterior = [];
     let sementeN = 1, curtidas = 0, proxFesta = 500;
     const semente = () => (((Math.random() * 1e9) >>> 0) ^ ((sementeN++ * 2654435761) >>> 0)) >>> 0;
@@ -107,6 +108,7 @@
       if (/firework|fogos/.test(g)) {
         // 🎆 Fogos de artifício: vira NOIVO (menino) ou NOIVA (menina). O próximo que mandar toma o lugar.
         especial = 'noivos';
+        if (!d && pausaAte) fogosEspera.set(u.id, user); // mandou no intervalo entre bailes: vira noivo(a) no começo do próximo
         if (d) { const f = (sexo.get(u.id) || 'm') === 'f'; const antes = f ? noiva : noivo;
           if (f) noiva = u.id; else noivo = u.id;
           if (antes !== u.id) emitir({ ev: 'noivos', noivo: noivo && roda.get(noivo) ? publicoD(roda.get(noivo)) : null, noiva: noiva && roda.get(noiva) ? publicoD(roda.get(noiva)) : null, novoNoivo: f ? null : u.id, novaNoiva: f ? u.id : null }); }
@@ -165,6 +167,10 @@
       for (const c of casalAnterior) if (ativo(c.id)) { const p = pessoas.get(c.id) || c; if (entrar(p, 'noivos')) voltaram.push({ id: p.id, name: p.name, avatar: p.avatar || null }); }
       if (voltaram.length) emitir({ ev: 'voltaram', quem: voltaram });
       casalAnterior = [];
+      // fogos mandados no intervalo: já começam o baile como noivo/noiva
+      for (const p of fogosEspera.values()) { const dd = entrar(p, 'presente', true); if (!dd) continue; if ((sexo.get(p.id) || 'm') === 'f') noiva = p.id; else noivo = p.id; }
+      if (fogosEspera.size && (noivo || noiva)) emitir({ ev: 'noivos', noivo: noivo && roda.get(noivo) ? publicoD(roda.get(noivo)) : null, noiva: noiva && roda.get(noiva) ? publicoD(roda.get(noiva)) : null, novoNoivo: noivo, novaNoiva: noiva });
+      fogosEspera.clear();
     }
     function iniciar() { if (timer) return; fimEm = agora() + cfg.duracao * 60000; timer = setInterval(tick, 1000); }
     function parar() { clearInterval(timer); timer = null; }
