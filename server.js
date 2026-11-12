@@ -70,6 +70,23 @@ function dancasLeves(arqs) {
   if (escolhidas.length < 4) return arqs; // pasta com outras danças: usa todas
   return arqs.filter((f) => BASICOS.test(f) || escolhidas.some((n) => sem(f).toLowerCase() === n.toLowerCase()));
 }
+// foto do TikTok pelo próprio servidor (pra desenhar no outdoor 3D sem bloqueio do navegador). Só imagens do TikTok.
+const fotosCache = new Map();
+app.get('/api/foto', async (req, res) => {
+  try {
+    const u = new URL(String(req.query.u || ''));
+    if (u.protocol !== 'https:' || !/(^|\.)(tiktokcdn(-us|-eu)?\.com|ibyteimg\.com|byteimg\.com|tiktokv\.com|muscdn\.com)$/i.test(u.hostname)) return res.status(400).end();
+    let f = fotosCache.get(u.href);
+    if (!f) {
+      const r = await fetch(u.href, { signal: AbortSignal.timeout(8000) });
+      const tipo = r.headers.get('content-type') || '';
+      if (!r.ok || !/^image\//i.test(tipo)) return res.status(404).end();
+      const buf = Buffer.from(await r.arrayBuffer()); if (buf.length > 3e6) return res.status(413).end();
+      f = { tipo, buf }; fotosCache.set(u.href, f); if (fotosCache.size > 60) fotosCache.delete(fotosCache.keys().next().value);
+    }
+    res.set('Content-Type', f.tipo); res.set('Cache-Control', 'max-age=3600'); res.send(f.buf);
+  } catch (e) { res.status(404).end(); }
+});
 app.get('/api/baile/arquivos', (_req, res) => {
   let credito = ''; try { credito = fs.readFileSync(path.join(PERS_DIR, 'credito.txt'), 'utf8').trim().slice(0, 160); } catch {}
   res.json({

@@ -45,7 +45,7 @@
     const sexo = new Map();     // id -> 'm' | 'f' (vale para os próximos bailes)
     const visto = new Map();    // id -> último sinal de vida (comentou, curtiu, presente...)
     const pessoas = new Map();  // id -> {id, name, avatar} mais recente
-    let noivo = null, noiva = null, fimEm = 0, timer = null, musica = 0, pausaAte = 0, casalAnterior = [];
+    let noivo = null, noiva = null, outdoor = null, fimEm = 0, timer = null, musica = 0, pausaAte = 0, casalAnterior = [];
     let sementeN = 1, curtidas = 0, proxFesta = 500;
     const semente = () => (((Math.random() * 1e9) >>> 0) ^ ((sementeN++ * 2654435761) >>> 0)) >>> 0;
     const limparNome = (u) => (T ? T.limparFala(u.name).slice(0, 24) || 'amigo' : String(u.name || 'amigo').slice(0, 24));
@@ -102,13 +102,24 @@
       moedas.set(u.id, (moedas.get(u.id) || 0) + coins);
       const d = entrar(u, 'presente', true); // presente entra mesmo com a roda cheia (até 10 a mais)
       const user = { id: u.id, name: u.name, avatar: u.avatar || null };
-      // presente = aparece mais na tela (quanto mais moedas, mais tempo e mais vezes). 30 ou mais também toca na banda.
-      if (d && coins >= 30) { musica = (musica + 1) % MUSICAS.length; emitir({ ev: 'banda', musica, nomeMusica: MUSICAS[musica], user, coins, d: publicoD(d) }); }
-      emitir({ ev: 'presente', user, giftName, coins, total: moedas.get(u.id), naRoda: !!d, d: d ? publicoD(d) : null });
-      // (troca de roupa e noivo/noiva desligados por enquanto)
+      const g = String(giftName || '').toLowerCase();
+      let especial = null;
+      if (/firework|fogos/.test(g)) {
+        // 🎆 Fogos de artifício: vira NOIVO (menino) ou NOIVA (menina). O próximo que mandar toma o lugar.
+        especial = 'noivos';
+        if (d) { const f = (sexo.get(u.id) || 'm') === 'f'; const antes = f ? noiva : noivo;
+          if (f) noiva = u.id; else noivo = u.id;
+          if (antes !== u.id) emitir({ ev: 'noivos', noivo: noivo && roda.get(noivo) ? publicoD(roda.get(noivo)) : null, noiva: noiva && roda.get(noiva) ? publicoD(roda.get(noiva)) : null, novoNoivo: f ? null : u.id, novaNoiva: f ? u.id : null }); }
+      } else if (/mini ?dino|tiny ?din|dininho/.test(g)) {
+        // 🦖 Mini Dino: foto grande no OUTDOOR até o fim do baile. O próximo que mandar troca.
+        especial = 'outdoor'; outdoor = user; emitir({ ev: 'outdoor', user });
+      } else if (d && coins >= 30) { musica = (musica + 1) % MUSICAS.length; emitir({ ev: 'banda', musica, nomeMusica: MUSICAS[musica], user, coins, d: publicoD(d) }); } // 🍩 vira o DJ
+      emitir({ ev: 'presente', user, giftName, coins, total: moedas.get(u.id), naRoda: !!d, d: d ? publicoD(d) : null, especial });
     }
     // noivo = quem mais mandou presente entre os bonecos masculinos; noiva = entre os femininos
-    function verNoivos() {
+    // noivo/noiva agora vêm dos FOGOS (presente). Antigo critério (quem mais gastou) desligado:
+    function verNoivos() { emitirPlacar(); }
+    function verNoivosPorMoedas() {
       let m = null, f = null, mm = 0, mf = 0;
       for (const d of roda.values()) {
         const c = moedas.get(d.id) || 0; if (!c) continue;
@@ -146,7 +157,7 @@
     }
     function novoBaile() {
       pausaAte = 0;
-      roda.clear(); moedas.clear(); noivo = null; noiva = null;
+      roda.clear(); moedas.clear(); noivo = null; noiva = null; outdoor = null; emitir({ ev: 'outdoor', user: null });
       fimEm = agora() + cfg.duracao * 60000;
       emitir({ ev: 'novo', fim: cfg.duracao * 60 });
       // o casal do baile anterior (se ainda estiver na live) já entra; o resto entra comentando
@@ -162,11 +173,11 @@
       if (c.maximo) cfg.maximo = Math.max(5, Math.min(80, Number(c.maximo) || 30));
       return { ...cfg };
     }
-    function limpar() { roda.clear(); moedas.clear(); noivo = null; noiva = null; emitir({ ev: 'limpou' }); }
+    function limpar() { roda.clear(); moedas.clear(); noivo = null; noiva = null; outdoor = null; emitir({ ev: 'limpou' }); emitir({ ev: 'outdoor', user: null }); }
     function estado() {
       return { roda: [...roda.values()].map(publicoD),
         resta: pausaAte ? 0 : Math.max(0, Math.round((fimEm - agora()) / 1000)), intervalo: !!pausaAte, musica, nomeMusica: MUSICAS[musica],
-        noivo: noivo && roda.get(noivo) ? publicoD(roda.get(noivo)) : null, noiva: noiva && roda.get(noiva) ? publicoD(roda.get(noiva)) : null, cfg: { ...cfg } };
+        noivo: noivo && roda.get(noivo) ? publicoD(roda.get(noivo)) : null, noiva: noiva && roda.get(noiva) ? publicoD(roda.get(noiva)) : null, outdoor, cfg: { ...cfg } };
     }
     return { iniciar, parar, config, limpar, estado, chat, presente, seguiu, compartilhou, entrou: entrouLive, curtidas: curtir, fimDoBaile,
       get rodando() { return !!timer; }, get tamanho() { return roda.size; } };
