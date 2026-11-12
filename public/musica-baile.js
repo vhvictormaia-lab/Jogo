@@ -112,6 +112,7 @@ export function criarMusicaBaile({ falando = () => false } = {}) {
     // lista de MP3 (urls); vazia = músicas do jogo
     playlist(urls) { lista = (urls || []).slice(); if (rodando && lista.length && !audio) tocarMp3(0); },
     // músicas novas na pasta com o jogo aberto: entra na lista sem cortar a que está tocando
+    get tocandoMp3() { return !!(audio && lista.length); },
     atualizarLista(urls) { const atual = audio ? lista[faixa] : null; lista = (urls || []).slice(); const i = atual ? lista.indexOf(atual) : -1; if (i >= 0) faixa = i; else if (audio && atual) faixa = Math.max(0, faixa - 1); if (rodando && lista.length && !audio) tocarMp3(0); },
     // "toque na banda": próxima música (MP3 ou estilo do jogo)
     tocar(i) { if (lista.length && rodando) tocarMp3(i, false); else { estilo = ((i % ESTILOS.length) + ESTILOS.length) % ESTILOS.length; passo = 0; } },

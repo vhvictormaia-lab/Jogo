@@ -558,7 +558,7 @@ function onBaile(m){
         // quem manda presente aparece na tela: mais moedas = mais tempo no destaque
         if(m.coins<30) pedirHolofote(m.user.id); }
       break; }
-    case 'banda': if(holo.d){ holo.ate+=11000; } holo.pausa=performance.now()+11000; cam.ate=0; cam.prioridade=0; virarDJ(m.user); musicaIdx=m.musica; musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎧 NOVO DJ!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> virou o DJ do baile! 🎧`);
+    case 'banda': if(holo.d){ holo.ate+=11000; } holo.pausa=performance.now()+11000; cam.ate=0; cam.prioridade=0; virarDJ(m.user); musicaIdx=m.musica; if(musica.tocandoMp3) musica.proxima(); else musica.tocar(m.musica); mostrarMusica(m.musica,m.nomeMusica); piscar('ppBanda'); banner(`🎧 NOVO DJ!<small>${esc(m.user.name)}</small>`); feed(m.user,`<b>${esc(m.user.name)}</b> virou o DJ do baile! 🎧`);
       todosJuntos(rndA(['bracos','pula','passinho','polichinelo']),8); dj.acao('comemorar',2); banda.show(10); setTimeout(()=>banda.dancar(8),2500); plano('banda',6,3); confete(60);
       { const quem=m.user&&m.user.id; setTimeout(()=>{ const d=DS.get(quem); if(d) focar(d,Math.min(30,10+m.coins*0.1),3); },6200); } break;
     case 'noivos': definirCasal(m.noivo,m.noiva,true); break;
@@ -596,7 +596,8 @@ function novoBaile(seg){
 }
 function estadoInicial(e){ if(!e) return; for(const id of [...DS.keys()]) removerD(id,false); ordem=[]; chegadaQ.length=0;
   maxRoda=(e.cfg&&e.cfg.maximo)||30;
-  musicaIdx=e.musica||0; musica.tocar(musicaIdx); mostrarMusica(musicaIdx,e.nomeMusica); setResta(e.resta||300);
+  // reconexão não volta pra primeira música: com MP3 a fila é do próprio jogo (acabou, vai pra próxima)
+  musicaIdx=e.musica||0; if(!musica.tocandoMp3) musica.tocar(musicaIdx); mostrarMusica(musicaIdx,e.nomeMusica); setResta(e.resta||300);
   casal.noivo=e.noivo?e.noivo.id:null; casal.noiva=e.noiva?e.noiva.id:null; placa('noivo',e.noivo); placa('noiva',e.noiva);
   for(const info of e.roda||[]) criarD(info,{chegando:false}); contar(); }
 let snapshot=null, pronto=false;
