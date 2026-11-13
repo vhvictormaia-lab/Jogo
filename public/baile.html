@@ -188,14 +188,14 @@ const LEVE=!/[?&]leve=0\b/.test(location.search); let ultQuadro=0;
 const renderer=new THREE.WebGLRenderer({canvas:$('cena'),antialias:true,powerPreference:'high-performance'}); renderer.setSize(LEVE?720:1080,LEVE?1280:1920,false); renderer.setPixelRatio(1); renderer.outputColorSpace=THREE.SRGBColorSpace;
 const cena=new THREE.Scene(); cena.fog=new THREE.Fog(0x3a2350,38,90);
 const camera=new THREE.PerspectiveCamera(62,1080/1920,.1,200);
-{ // céu de fim de tarde
-  const c=document.createElement('canvas'); c.width=16; c.height=512; const g=c.getContext('2d'); const gr=g.createLinearGradient(0,0,0,512);
-  gr.addColorStop(0,'#1b0f3a'); gr.addColorStop(.45,'#6a3a8a'); gr.addColorStop(.7,'#e06aa0'); gr.addColorStop(1,'#ffb38a'); g.fillStyle=gr; g.fillRect(0,0,16,512);
-  const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; const ceu=new THREE.Mesh(new THREE.SphereGeometry(150,24,16),new THREE.MeshBasicMaterial({map:t,side:THREE.BackSide,fog:false})); cena.add(ceu);
-  const est=new THREE.BufferGeometry(); const p=[]; for(let i=0;i<300;i++){ const a=Math.random()*Math.PI*2, e=.35+Math.random()*1.1; p.push(Math.cos(a)*140*Math.cos(e),140*Math.sin(e),Math.sin(a)*140*Math.cos(e)); }
-  est.setAttribute('position',new THREE.Float32BufferAttribute(p,3)); cena.add(new THREE.Points(est,new THREE.PointsMaterial({color:0xffffff,size:.6,fog:false})));
-}
-cena.add(new THREE.HemisphereLight(0xffe7f5,0x5a3a4a,1.25));
+// céu (as cores mudam com o clima do baile: dia, fim de tarde, noite, chuva)
+const ceuCanvas=document.createElement('canvas'); ceuCanvas.width=16; ceuCanvas.height=512;
+const ceuTex=new THREE.CanvasTexture(ceuCanvas); ceuTex.colorSpace=THREE.SRGBColorSpace;
+const ceu=new THREE.Mesh(new THREE.SphereGeometry(150,24,16),new THREE.MeshBasicMaterial({map:ceuTex,side:THREE.BackSide,fog:false})); cena.add(ceu);
+function pintarCeu(cores){ const g=ceuCanvas.getContext('2d'), gr=g.createLinearGradient(0,0,0,512); [0,.45,.7,1].forEach((p,i)=>gr.addColorStop(p,'#'+cores[i].getHexString())); g.fillStyle=gr; g.fillRect(0,0,16,512); ceuTex.needsUpdate=true; }
+const estrelas=(()=>{ const est=new THREE.BufferGeometry(); const p=[]; for(let i=0;i<300;i++){ const a=Math.random()*Math.PI*2, e=.35+Math.random()*1.1; p.push(Math.cos(a)*140*Math.cos(e),140*Math.sin(e),Math.sin(a)*140*Math.cos(e)); }
+  est.setAttribute('position',new THREE.Float32BufferAttribute(p,3)); const pts=new THREE.Points(est,new THREE.PointsMaterial({color:0xffffff,size:.6,fog:false,transparent:true})); cena.add(pts); return pts; })();
+const hemi=new THREE.HemisphereLight(0xffe7f5,0x5a3a4a,1.25); cena.add(hemi);
 const sol=new THREE.DirectionalLight(0xfff0e0,1.3); sol.position.set(-12,20,14); cena.add(sol);
 const luzRosa=new THREE.PointLight(0xff3d8b,40,30,1.6); luzRosa.position.set(0,6,0); cena.add(luzRosa);
 const luzRoxa=new THREE.PointLight(0x7a3cff,30,30,1.6); luzRoxa.position.set(-8,5,-6); cena.add(luzRoxa);
@@ -654,13 +654,15 @@ function novoBaile(seg){
   intervalo=false; $('fim').classList.remove('on'); chegadaQ.length=0; lotou=false; trocarChamada(true);
   for(const id of [...DS.keys()]) removerD(id,false);
   ordem=[]; casal.noivo=casal.noiva=null; placa('noivo',null); placa('noiva',null); setResta(seg); contar(); plano('tapete',8,4);
+  sortearClimas(seg);
 }
 function estadoInicial(e){ if(!e) return; for(const id of [...DS.keys()]) removerD(id,false); ordem=[]; chegadaQ.length=0;
   maxRoda=(e.cfg&&e.cfg.maximo)||30;
   // reconexão não volta pra primeira música: com MP3 a fila é do próprio jogo (acabou, vai pra próxima)
   musicaIdx=e.musica||0; if(!musica.tocandoMp3) musica.tocar(musicaIdx); mostrarMusica(musicaIdx,e.nomeMusica); setResta(e.resta||300);
   casal.noivo=e.noivo?e.noivo.id:null; casal.noiva=e.noiva?e.noiva.id:null; placa('noivo',e.noivo); placa('noiva',e.noiva); desenharOutdoor(e.outdoor||null);
-  for(const info of e.roda||[]) criarD(info,{chegando:false}); contar(); }
+  for(const info of e.roda||[]) criarD(info,{chegando:false}); contar();
+  sortearClimas(((e.cfg&&e.cfg.duracao)||5)*60,e.intervalo?0:(e.resta||300)); }
 let snapshot=null, pronto=false;
 function handle(m){
   if(!pronto){ if(m.type==='snapshot') snapshot=m; else if(m.type==='baile') (handle.fila||=[]).push(m); return; }
@@ -718,6 +720,58 @@ function ligarDemoLocal(){
   t.addEventListener('click',comecar); t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' ') comecar(); });
 }
 
+// ================= clima do baile: cada baile tem dois cenários (muda na metade) =================
+// dia, fim de tarde, noite, dia de chuva e tempestade de noite (com relâmpago)
+const CC=h=>new THREE.Color(h);
+const CLIMAS={
+  dia:       { nome:'☀️ DIA DE SOL',          ceu:['#3f86d8','#79b4ec','#c9e3fb','#fff1d6'], estrelas:0,  hemi:[0xffffff,0x6f7d5a,1.55], sol:[0xfff2d8,1.7], luz:.45, fog:[0xb9d3ee,45,115], chuva:0, raio:0 },
+  tarde:     { nome:'🌅 FIM DE TARDE',         ceu:['#1b0f3a','#6a3a8a','#e06aa0','#ffb38a'], estrelas:.6, hemi:[0xffe7f5,0x5a3a4a,1.25], sol:[0xfff0e0,1.3], luz:1,   fog:[0x3a2350,38,90],  chuva:0, raio:0 },
+  noite:     { nome:'🌙 CAIU A NOITE',         ceu:['#02030c','#0a0f2e','#1c1f4c','#2c2652'], estrelas:1,  hemi:[0x9aa4ff,0x2a2440,1.05], sol:[0xb8c6ff,.6],  luz:1,    fog:[0x10102a,40,100], chuva:0, raio:0 },
+  chuvaDia:  { nome:'🌧️ COMEÇOU A CHOVER',     ceu:['#5c6570','#7a838e','#98a1ab','#b0b7bf'], estrelas:0,  hemi:[0xdfe7ef,0x4a5048,1.2],  sol:[0xdfe7ef,.6],  luz:.6,  fog:[0x8b949e,20,75],  chuva:1, raio:0, corChuva:0x7d8a9c },
+  chuvaNoite:{ nome:'⛈️ TEMPESTADE NA NOITE',  ceu:['#030409','#0a0d17','#141927','#1d2332'], estrelas:0,  hemi:[0x9aa8c8,0x1a1e2a,.95],  sol:[0x9aa8d8,.45], luz:.65,  fog:[0x161b26,24,72],  chuva:1, raio:1 },
+};
+const PARES=[['dia','chuvaDia'],['dia','tarde'],['tarde','noite'],['noite','chuvaNoite'],['chuvaDia','dia'],['tarde','chuvaNoite'],['chuvaNoite','noite'],['noite','tarde']];
+const clima={ de:'tarde', para:'tarde', k:1, par:['tarde','noite'], trocou:false, dur:300, raio:0, proxRaio:8, fixo:(location.search.match(/[?&]clima=(\w+)/)||[])[1] };
+if(clima.fixo&&!CLIMAS[clima.fixo]) clima.fixo=null;
+const mixC=(a,b,k)=>a.clone().lerp(b,k), mixN=(a,b,k)=>a+(b-a)*k;
+const tmpCeu=[0,1,2,3].map(()=>new THREE.Color());
+let ultCeuK=-1;
+function aplicarClima(){ const A=CLIMAS[clima.de], B=CLIMAS[clima.para], k=clima.k;
+  if(k!==ultCeuK){ ultCeuK=k; for(let i=0;i<4;i++) tmpCeu[i].copy(CC(A.ceu[i])).lerp(CC(B.ceu[i]),k); pintarCeu(tmpCeu);
+    estrelas.material.opacity=mixN(A.estrelas,B.estrelas,k); estrelas.visible=estrelas.material.opacity>.02;
+    hemi.color.copy(mixC(CC(A.hemi[0]),CC(B.hemi[0]),k)); hemi.groundColor.copy(mixC(CC(A.hemi[1]),CC(B.hemi[1]),k));
+    sol.color.copy(mixC(CC(A.sol[0]),CC(B.sol[0]),k)); sol.intensity=mixN(A.sol[1],B.sol[1],k);
+    cena.fog.color.copy(mixC(CC(A.fog[0]),CC(B.fog[0]),k)); cena.fog.near=mixN(A.fog[1],B.fog[1],k); cena.fog.far=mixN(A.fog[2],B.fog[2],k); }
+  hemi.intensity=mixN(A.hemi[2],B.hemi[2],k)+clima.raio*3.2; ceu.material.color.setScalar(1+clima.raio*2.5);
+  return { luz:mixN(A.luz,B.luz,k), chuva:mixN(A.chuva,B.chuva,k), raio:mixN(A.raio,B.raio,k) }; }
+function irPara(nome,anunciar){ if(!CLIMAS[nome]) return; if(clima.para===nome&&clima.k>=1) return; clima.de=clima.k>=.5?clima.para:clima.de; clima.para=nome; clima.k=0; ultCeuK=-1;
+  if(anunciar) banner(CLIMAS[nome].nome); }
+function sortearClimas(dur,resta){ clima.dur=dur||300; const par=clima.fixo?[clima.fixo,clima.fixo]:rndA(PARES); clima.par=par;
+  const meio=resta!=null&&resta<clima.dur/2; clima.trocou=meio; irPara(meio?par[1]:par[0],false); }
+// chuva: risquinhos caindo em volta da câmera
+const CHUVA_N=1500, chuvaPos=new Float32Array(CHUVA_N*6), chuvaOff=new Float32Array(CHUVA_N*3);
+for(let i=0;i<CHUVA_N;i++){ chuvaOff[i*3]=(Math.random()-.5)*30; chuvaOff[i*3+1]=Math.random()*20; chuvaOff[i*3+2]=(Math.random()-.5)*30; }
+const chuvaG=new THREE.BufferGeometry(); chuvaG.setAttribute('position',new THREE.BufferAttribute(chuvaPos,3));
+const chuva=new THREE.LineSegments(chuvaG,new THREE.LineBasicMaterial({color:0xcfe3ff,transparent:true,opacity:0,depthWrite:false,fog:false})); chuva.frustumCulled=false; chuva.visible=false; cena.add(chuva);
+function atualizarClima(dt){
+  if(clima.k<1) clima.k=Math.min(1,clima.k+dt/7);
+  // metade do baile: troca pro segundo cenário
+  if(!intervalo&&!clima.trocou&&clima.par[0]!==clima.par[1]){ const resta=Math.max(0,restaSeg-(performance.now()-restaBase)/1000); if(resta>0&&resta<clima.dur/2){ clima.trocou=true; irPara(clima.par[1],true); } }
+  // relâmpago na tempestade
+  const pesoRaio=CLIMAS[clima.para].raio*clima.k+CLIMAS[clima.de].raio*(1-clima.k);
+  clima.raio=Math.max(0,clima.raio-dt*4.5);
+  if(pesoRaio>.5){ clima.proxRaio-=dt; if(clima.proxRaio<=0){ clima.proxRaio=7+Math.random()*12; clima.raio=1; setTimeout(()=>{ clima.raio=Math.max(clima.raio,.8); },180); } }
+  const f=aplicarClima();
+  chuva.visible=f.chuva>.02; chuva.material.opacity=.45*f.chuva; chuva.material.color.setHex(CLIMAS[clima.k>=.5?clima.para:clima.de].corChuva||0xcfe3ff);
+  if(chuva.visible){ const cx=camera.position.x, cz=camera.position.z, ativas=Math.floor(CHUVA_N*Math.min(1,f.chuva*1.2));
+    for(let i=0;i<CHUVA_N;i++){ const o=i*3, v=i*6; let y=chuvaOff[o+1]-dt*19; if(y<0){ y+=20; chuvaOff[o]=(Math.random()-.5)*30; chuvaOff[o+2]=(Math.random()-.5)*30; } chuvaOff[o+1]=y;
+      if(i>=ativas){ chuvaPos[v+1]=chuvaPos[v+4]=-50; continue; }
+      const x=cx+chuvaOff[o], z=cz+chuvaOff[o+2]; chuvaPos[v]=x; chuvaPos[v+1]=y; chuvaPos[v+2]=z; chuvaPos[v+3]=x+.12; chuvaPos[v+4]=y+.7; chuvaPos[v+5]=z; }
+    chuvaG.attributes.position.needsUpdate=true; }
+  return f;
+}
+sortearClimas(300);
+
 // ================= laço =================
 const rel=new THREE.Clock();
 function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ requestAnimationFrame(loop); return; } ultQuadro=n; }
@@ -770,7 +824,7 @@ function loop(){ if(LEVE){ const n=performance.now(); if(n-ultQuadro<28){ reques
   // vida no cenário
   { const Bt=musica.batida(); dj.ritmo(Bt.porSeg||2); banda.ritmo(bt,Bt.porSeg||2); } dj.atualizar(dt,t); serpente.atualizar(dt,t); banda.atualizar(dt,t); if(!dj.ocupado()){ const r=Math.random(), seg=4/((musica.batida().porSeg)||2); dj.acao(r<.12?'dj':r<.2?'scratch':r<.42?'dancar':r<.6?'rebola':r<.72?'balanca':r<.8?'girar':r<.88?'pular':r<.97?'comemorar':'voar',r>=.97?5:seg*2); } // o DJ não para
   feixes.forEach((f,i)=>{ f.rotation.z=Math.sin(t*1.3+i*2)*.5; f.rotation.x=Math.cos(t*1.1+i)*.3; });
-  const b=musica.batida(); luzRosa.intensity=30+Math.pow(1-b.fase,3)*40; luzRoxa.intensity=22+Math.pow(1-((b.fase+.5)%1),3)*30;
+  const fc=atualizarClima(dt); const b=musica.batida(); luzRosa.intensity=(30+Math.pow(1-b.fase,3)*40)*fc.luz; luzRoxa.intensity=(22+Math.pow(1-((b.fase+.5)%1),3)*30)*fc.luz;
   for(let i=particulas.length-1;i>=0;i--){ const q=particulas[i]; q.vida-=dt; q.v.y-=9*dt; q.m.position.addScaledVector(q.v,dt); q.m.rotation.x+=dt*6; if(q.vida<=0){ cena.remove(q.m); q.m.geometry.dispose(); particulas.splice(i,1); } }
   const resta=Math.max(0,restaSeg-(agora-restaBase)/1000); $('tempo').textContent=`${String(Math.floor(resta/60)).padStart(2,'0')}:${String(Math.floor(resta%60)).padStart(2,'0')}`;
   renderer.render(cena,camera); requestAnimationFrame(loop); }
@@ -802,7 +856,7 @@ function otimizarCena(){
   const marcar=v=>{ if(!v) return; if(v.isObject3D){ fixos.add(v); return; } if(Array.isArray(v)) v.forEach(marcar); else if(typeof v==='object') Object.values(v).forEach(x=>{ if(x&&(x.isObject3D||Array.isArray(x)||(typeof x==='object'&&x.constructor===Object))) marcar(x); }); };
   for(const c of [dj,serpente,...(banda.mus||[]).map(x=>x.P0)]) if(c&&c.partes) Object.values(c.partes).forEach(marcar);
   for(const x of banda.mus||[]) marcar(x.inst);
-  feixes.forEach(f=>fixos.add(f));
+  feixes.forEach(f=>fixos.add(f)); fixos.add(ceu);
   const dancarinos=new Set([...DS.values()].map(d=>d.grupo));
   const dentroDeDancarino=o=>{ let p=o; while(p&&!dancarinos.has(p)) p=p.parent; return !!p; };
   // peça = malha sem filhos, ou malha cujos filhos são só o contorno preto (malhas sem filhos)
@@ -838,7 +892,7 @@ function otimizarCena(){
     console.log(`cenário otimizado: ${antes} peças viraram ${depois}`); window.__otimizado={antes,depois};
   },200);
 }
-window.__baile={renderer,DS,handle,cena,camera,cam,focar,plano,musica,todosJuntos,dupla,trem,banda};
+window.__baile={renderer,DS,handle,cena,camera,cam,focar,plano,musica,todosJuntos,dupla,trem,banda,clima,irPara};
 </script>
 </body>
 </html>
