@@ -116,8 +116,9 @@ module.exports = function criarComediante({ CFG, Texto, broadcast, baile, porta 
         if (r.status === 404) { erro = 'modelo ' + modelo + ' não existe'; continue; }
         const j = await r.json().catch(() => ({}));
         if (!r.ok) {
-          erro = r.status === 429 ? 'limite grátis da IA atingido (volta sozinho depois)' : (r.status === 400 || r.status === 403) ? 'chave da IA inválida' : 'IA respondeu ' + r.status;
-          if (r.status === 429 || r.status === 400 || r.status === 403) break; else continue;
+          const msg = String(j.error?.message || '').slice(0, 140);
+          erro = r.status === 429 ? 'limite grátis da IA atingido (volta sozinho depois)' : [400, 401, 403].includes(r.status) ? 'o Google recusou a chave' + (msg ? ' (' + msg + ')' : '') : 'IA respondeu ' + r.status;
+          if ([400, 401, 403, 429].includes(r.status)) break; else continue;
         }
         const out = (j.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join(' ').trim();
         if (out) { ultimaIA = { ok: modelo, erro: null }; return out; }
