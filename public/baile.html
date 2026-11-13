@@ -6,6 +6,7 @@
 <title>Baile do Abismo</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800;900&display=swap">
 <style>
+  [hidden]{display:none!important}
   :root{ --rosa:#ff3d8b; --rosa2:#c4005a; --ouro:#ffcc33; --verde:#5cff8a; --roxo:#7a3cff; --texto:#fff; }
   html,body{margin:0;height:100%;background:#0b0614;overflow:hidden;color:var(--texto);font-family:Nunito,system-ui,sans-serif}
   #stage{position:absolute;left:50%;top:50%;width:1080px;height:1920px;transform-origin:center center;overflow:hidden;background:#0b0614}
@@ -134,10 +135,8 @@
   <div id="painelP">
     <div id="tempo" class="lil">30:00</div>
     <div class="pp" id="ppRoupa"><div class="i">💬</div><span>Comente pra<br>entrar no baile</span></div>
-    <div class="pp" id="ppNoivos"><div class="i">🌹<b>1</b></div><span>Rosa: dança<br>sozinho na tela</span></div>
-    <div class="pp" id="ppBanda"><div class="i">🍩<b>30</b></div><span>Rosquinha:<br>vira o DJ</span></div>
-    <div class="pp" id="ppDino"><div class="i">🦖</div><span>Mini Dino:<br>foto no outdoor</span></div>
-    <div class="pp" id="ppFogos"><div class="i">🎆</div><span>Fogos: vira<br>noivo(a)</span></div>
+    <!-- regras dos presentes: não aparecem na tela (o TikTok restringe pedir presente), mas tudo continua funcionando -->
+    <div class="pp" id="ppNoivos" hidden></div><div class="pp" id="ppBanda" hidden></div><div class="pp" id="ppDino" hidden></div><div class="pp" id="ppFogos" hidden></div>
   </div>
   <div id="casal">
     <div class="par vazio" id="pNoivo"></div>
@@ -154,7 +153,7 @@
 </div>
 <div id="toque" role="button" tabindex="0" hidden>
   <div class="caixa"><div class="t1">BAILE DO ABISMO</div>
-    <div class="t2">Comente pra entrar no baile! Rosa: você dança sozinho na tela. Rosquinha: você vira o DJ. Aqui tem espectadores e presentes de mentira, como numa live.</div>
+    <div class="t2">Comente pra entrar no baile e dançar na roda! Aqui tem espectadores de mentira, como numa live.</div>
     <div class="bt">🔊 Toque para entrar no baile</div></div>
 </div>
 <div id="demo-tag" hidden>MODO DEMONSTRAÇÃO</div>
@@ -247,10 +246,10 @@ let outdoorDono=null;
 function desenharOutdoor(u){ outdoorDono=u||null; const g=outCanvas.getContext('2d'), W=1024, H=640;
   const fundo=()=>{ const gr=g.createLinearGradient(0,0,W,H); gr.addColorStop(0,'#2b0f4d'); gr.addColorStop(1,'#ff3d8b'); g.fillStyle=gr; g.fillRect(0,0,W,H);
     g.fillStyle='rgba(255,255,255,.08)'; for(let i=0;i<14;i++){ g.beginPath(); g.arc(Math.random()*W,Math.random()*H,20+Math.random()*60,0,7); g.fill(); }
-    g.fillStyle='#ffcc33'; g.font='900 54px Nunito, sans-serif'; g.textAlign='center'; g.fillText('🦖 OUTDOOR DO BAILE',W/2,78); };
+    g.fillStyle='#ffcc33'; g.font='900 54px Nunito, sans-serif'; g.textAlign='center'; g.fillText('📸 OUTDOOR DO BAILE',W/2,78); };
   const texto=(t,y,tam,cor='#fff')=>{ g.fillStyle=cor; g.font=`900 ${tam}px Nunito, sans-serif`; g.textAlign='center'; let s=t; while(g.measureText(s).width>W-80&&s.length>3) s=s.slice(0,-2); if(s!==t) s=s.slice(0,-1)+'…'; g.fillText(s,W/2,y); };
   fundo();
-  if(!u){ texto('MANDE UM MINI DINO 🦖',300,74); texto('E SUA FOTO APARECE AQUI!',400,62,'#ffe9f3'); outTex.needsUpdate=true; return; }
+  if(!u){ texto('💃 BAILE DO ABISMO',300,74); texto('COMENTE E ENTRE NA RODA!',400,62,'#ffe9f3'); outTex.needsUpdate=true; return; }
   const nome=u.name||'amigo';
   const final=(img)=>{ if(outdoorDono!==u) return; fundo(); const r=190, cx=W/2, cy=300;
     g.save(); g.beginPath(); g.arc(cx,cy,r+12,0,7); g.fillStyle='#fff'; g.fill(); g.beginPath(); g.arc(cx,cy,r,0,7); g.clip();
@@ -583,7 +582,7 @@ let ultEntrada=0;
 function tirarDaChegada(id){ const i=chegadaQ.findIndex(x=>x.id===id); if(i>=0) chegadaQ.splice(i,1); }
 // placa do noivo e da noiva no canto da tela
 function placa(tipo,u){ const el=$(tipo==='noivo'?'pNoivo':'pNoiva'); const ic=tipo==='noivo'?'🤵':'👰';
-  if(!u){ el.className='par vazio'; el.innerHTML=`<div class="f"><span class="av">${ic}</span></div><div class="x"><small>${tipo.toUpperCase()}</small><b>Mande fogos 🎆</b></div>`; return; }
+  if(!u){ el.className='par vazio'; el.innerHTML=''; el.hidden=true; return; } el.hidden=false;
   el.className='par'; el.innerHTML=`<div class="f">${avatar(u)}<i>${ic}</i></div><div class="x"><small>${tipo.toUpperCase()}</small><b>${esc(u.name)}</b></div>`; }
 placa('noivo',null); placa('noiva',null);
 function virarPar(d,tipo,anunciar=true){
@@ -612,7 +611,7 @@ function onBaile(m){
     case 'sexo': case 'roupa': { const q=chegadaQ.find(x=>x.id===m.d.id); if(q) Object.assign(q,m.d); const d=DS.get(m.d.id);
       if(d){ d.info=Object.assign(d.info,m.d); d.info.ultimo=Date.now(); vestir(d); estouro(d.grupo.position,m.ev==='sexo'?(m.d.sexo==='f'?0xff9ec7:0x2fd5ff):0xff3d8b,34); acao(d,'sim'); focar(d,5,2); }
       if(m.ev==='roupa') piscar('ppRoupa'); break; }
-    case 'presente': { feed(m.user,`<b>${esc(m.user.name)}</b> mandou ${esc(window.Texto?window.Texto.presente(m.giftName).nome.toUpperCase():m.giftName)}!`);
+    case 'presente': { feed(m.user,`<b>${esc(m.user.name)}</b> valeu pelo carinho! 💖`);
       const d=DS.get(m.user.id); if(d){ d.info.moedas=m.total||0; d.info.ultimo=Date.now(); }
       if(m.naRoda){ musica.vinheta([72,76,79,84]); piscar('ppNoivos');
         // quem manda presente aparece na tela: mais moedas = mais tempo no destaque
@@ -623,7 +622,7 @@ function onBaile(m){
       { const quem=m.user&&m.user.id; setTimeout(()=>{ const d=DS.get(quem); if(d) focar(d,Math.min(30,10+m.coins*0.1),3); },6200); } break;
     case 'noivos': holo.pausa=performance.now()+7000; cam.ate=0; cam.prioridade=0; definirCasal(m.noivo,m.noiva,true); piscar('ppFogos'); break;
     case 'placar': placa('noivo',m.noivo); placa('noiva',m.noiva); break;
-    case 'outdoor': desenharOutdoor(m.user); if(m.user){ holo.pausa=performance.now()+8000; cam.ate=0; cam.prioridade=0; plano('outdoor',7,6); banner(`🦖 OUTDOOR!<small>${esc(m.user.name)}</small>`); confete(70); piscar('ppDino'); feed(m.user,`<b>${esc(m.user.name)}</b> foi pro OUTDOOR! 🦖`); } break;
+    case 'outdoor': desenharOutdoor(m.user); if(m.user){ holo.pausa=performance.now()+8000; cam.ate=0; cam.prioridade=0; plano('outdoor',7,6); banner(`📸 OUTDOOR!<small>${esc(m.user.name)}</small>`); confete(70); piscar('ppDino'); feed(m.user,`<b>${esc(m.user.name)}</b> foi pro OUTDOOR! 📸`); } break;
     case 'seguiu': { const d=DS.get(m.id); if(d){ coracoesEm(d,10); acao(d,'pular'); } break; }
     case 'compartilhou': { const d=DS.get(m.id); if(d){ estouro(d.grupo.position,0x2fd5ff,20); acao(d,'acenar'); } break; }
     case 'curtiu': { const d=DS.get(m.id); if(d&&Math.random()<.4) coracoesEm(d,2); break; }
@@ -646,7 +645,7 @@ function fimBaile(m){
   const el=$('fim'), pessoa=(u,ic,t)=>u?`<div>${avatar(u)}<div class="s">${ic} ${t}</div><div class="n">${esc(u.name)}</div></div>`:'';
   el.innerHTML=`<div class="c"><div class="t lil">${tem?'CASAMENTO DO BAILE':'FIM DO BAILE!'}</div>`+
     (tem?`<div class="casal">${pessoa(n,'🤵','Noivo')}${n&&a?'<div class="anel">💍</div>':''}${pessoa(a,'👰','Noiva')}</div><div class="s">${n&&a?'Os noivos':'Quem casou'} já ${n&&a?'entram':'entra'} no próximo baile!</div>`
-       :'<div class="s">Valeu por dançar! Manda rosa pra dançar sozinho na tela 🌹</div>')+
+       :'<div class="s">Valeu por dançar! 💃</div>')+
     `<div class="s">Comente pra entrar no próximo baile 💃</div></div>`;
   setTimeout(()=>{ if(intervalo) el.classList.add('on'); },tem?4500:500);
 }
