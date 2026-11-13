@@ -62,6 +62,17 @@ function podeLer(texto) {
   if (/\d{6,}/.test(t)) return null; // telefones, códigos
   return t;
 }
+// comentário que aparece escrito na tela: igual ao podeLer, mas mantém emojis (❤️🔥😂)
+function podeMostrar(texto) {
+  const bruto = String(texto || '');
+  if (/https?:\/\/|www\.|\.com\b/i.test(bruto)) return null;
+  if (proibido(bruto)) return null;
+  const t = bruto.replace(/@/g, '').replace(/[<>{}\[\]\\`|]/g, ' ').replace(/(.)\1{3,}/gu, '$1$1$1').replace(/\s+/g, ' ').trim();
+  if (!t || t.length > 90) return null;
+  if (proibido(t) || proibido(limparFala(t))) return null;
+  if (/\d{6,}/.test(t)) return null;
+  return t;
+}
 // ---------------- nomes dos presentes em português ----------------
 const PRESENTES = {
   'rose': ['a', 'Rosa'], 'tiktok': ['o', 'TikTok'], 'gg': ['o', 'GG'], 'heart me': ['o', 'Coração'], 'finger heart': ['o', 'Coraçãozinho'],
@@ -94,5 +105,5 @@ function plural(p) {
   return { art: p.art === 'a' ? 'as' : 'os', nome: [pw, ...resto].join(' ') };
 }
 
-return { semAcento, setExtraProibido, proibido, nomeTela, limparFala, nomeFalado, podeLer, presente, plural };
+return { semAcento, setExtraProibido, proibido, nomeTela, podeMostrar, limparFala, nomeFalado, podeLer, presente, plural };
 });

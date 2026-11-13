@@ -367,7 +367,7 @@ function criarD(info,{chegando=true}={}){
   return d;
 }
 const SOMBRA_G=new THREE.CircleGeometry(.55,16), SOMBRA_M=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.28,depthWrite:false});
-function atualizarTag(d){ d.tag.className='tag'+(d.noivo?' noivo':''); d.tag.dataset.par=d.noivo==='noivo'?'🤵':d.noivo==='veu'?'👰':''; const fala=d.info.fala?String(d.info.fala).trim():''; const curta=fala.length>34?fala.slice(0,33)+'…':fala;
+function atualizarTag(d){ d.tag.className='tag'+(d.noivo?' noivo':''); d.tag.dataset.par=d.noivo==='noivo'?'🤵':d.noivo==='veu'?'👰':''; const fala=d.info.fala?String(d.info.fala).trim():''; const cs=Array.from(fala); const curta=cs.length>34?cs.slice(0,33).join('')+'…':fala;
   d.tag.innerHTML=`${avatar(d.info)}<span>${esc(curta?'“'+curta+'”':d.info.name)}</span>`; }
 function removerD(id,poof=true){ const d=DS.get(id); if(!d) return; if(poof) estouro(d.grupo.position,0xffffff); cena.remove(d.grupo); d.tag.remove(); d.bal&&d.bal.remove(); DS.delete(id); ordem=ordem.filter(x=>x!==id); reposicionar(); }
 function reposicionar(){ ordem.forEach((id,i)=>{ const d=DS.get(id); if(!d||d.noivo) return; const L=lugar(i); d.alvo.set(L.x,0,L.z); d.rumo=Math.atan2(-L.x,-L.z); }); }
@@ -584,7 +584,7 @@ function onBaile(m){
     case 'entrou': { if(m.max) maxRoda=m.max; if(!DS.has(m.d.id)&&!chegadaQ.some(x=>x.id===m.d.id)) chegadaQ.push(m.d); contar(); break; }
     case 'saiu': tirarDaChegada(m.id); removerD(m.id); contar(); break;
     case 'lotado': lotou=true; trocarChamada(true); break;
-    case 'fala': { const d=DS.get(m.id); if(d){ d.info.ultimo=Date.now(); d.info.fala=m.texto; atualizarTag(d); if(Math.random()<.5) acao(d,rndA(['acenar','sim','pular'])); } break; }
+    case 'fala': { const d=DS.get(m.id); if(!d){ const q=chegadaQ.find(x=>x.id===m.id); if(q) q.fala=m.texto; } if(d){ d.info.ultimo=Date.now(); d.info.fala=m.texto; atualizarTag(d); if(Math.random()<.5) acao(d,rndA(['acenar','sim','pular'])); } break; }
     case 'sexo': case 'roupa': { const q=chegadaQ.find(x=>x.id===m.d.id); if(q) Object.assign(q,m.d); const d=DS.get(m.d.id);
       if(d){ d.info=Object.assign(d.info,m.d); d.info.ultimo=Date.now(); vestir(d); estouro(d.grupo.position,m.ev==='sexo'?(m.d.sexo==='f'?0xff9ec7:0x2fd5ff):0xff3d8b,34); acao(d,'sim'); focar(d,5,2); }
       if(m.ev==='roupa') piscar('ppRoupa'); break; }

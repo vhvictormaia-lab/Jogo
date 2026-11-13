@@ -17,7 +17,7 @@ let USERNAME = CFG.get().usuario || (process.argv[2] || process.env.TIKTOK_USER 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.get('/', (_req, res) => res.redirect('/baile.html'));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { setHeaders: (res, f) => { if (/\.(html|js)$/.test(f)) res.set('Cache-Control', 'no-cache'); } })); // sempre pega a versão nova depois de atualizar
 
 // um erro inesperado não derruba o jogo no meio da live
 process.on('unhandledRejection', (e) => console.error('Erro:', e?.message || e));

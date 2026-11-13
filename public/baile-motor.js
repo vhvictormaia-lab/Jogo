@@ -92,7 +92,7 @@
         if (d) { d.modelo = Math.floor(Math.random() * 1000); emitir({ ev: 'sexo', d: publicoD(d) }); verNoivos(); return; }
       }
       // o comentário aparece em cima do boneco no lugar do nome (só o que passa no filtro)
-      const t0 = T ? T.podeLer(texto) : String(texto).slice(0, 60); const t = t0 ? t0.slice(0, 60) : null;
+      const t0 = T ? (T.podeMostrar ? T.podeMostrar(texto) : T.podeLer(texto)) : String(texto).slice(0, 60); const t = t0 ? Array.from(t0).slice(0, 60).join('') : null;
       const ja = roda.has(u.id); const d = entrar(u, 'comentou', false, t);
       if (ja && d && t) { d.fala = t; emitir({ ev: 'fala', id: u.id, texto: t }); }
     }
