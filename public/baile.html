@@ -43,9 +43,29 @@
   #destaque .n .e{color:var(--ouro);font-size:64px}
   #destaque .n{display:inline-flex;align-items:center;gap:18px;font-size:92px;max-width:1040px;color:#fff;text-shadow:0 0 18px rgba(0,0,0,.6),0 5px 0 rgba(0,0,0,.45);-webkit-text-stroke:2px rgba(60,10,60,.6)}
   #destaque.dois .n{font-size:58px;gap:12px}
+  /* coluna da esquerda: não passa por baixo das regras e das placas dos noivos (lado direito) */
+  #destaque{left:22px!important;right:auto!important;width:460px;text-align:left!important}
+  #destaque .n{max-width:100%!important}
+  #destaque .n .tx{flex:1;min-width:0;white-space:normal;text-align:left;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;line-height:1.05;font-size:72px;overflow-wrap:anywhere}
+  #destaque .n .tx.fala{font-size:50px}
+  #destaque .n img,#destaque .n .av{width:110px!important;height:110px!important}
+  #destaque.dois .n{display:grid!important;grid-template-columns:84px 1fr;gap:6px 12px;align-items:center}
+  #destaque.dois .n .e{grid-column:1/-1;font-size:44px;line-height:1}
+  #destaque.dois .n .tx{font-size:40px;-webkit-line-clamp:2}
+  #destaque.dois .n img,#destaque.dois .n .av{width:84px!important;height:84px!important}
   #destaque.dois .n img,#destaque.dois .n .av{width:84px!important;height:84px!important}
   #destaque .n img,#destaque .n .av{width:130px;height:130px;flex:none;border-radius:50%;object-fit:cover;border:6px solid #fff;font-size:60px;display:grid;place-items:center;background:linear-gradient(135deg,var(--rosa),var(--roxo))}
   /* baixo */
+  /* DJ comediante: balão com o comentário escolhido e a resposta dele */
+  #piada{position:absolute;left:24px;top:118px;width:450px;z-index:6;pointer-events:none;opacity:0;transform:translateY(-20px) scale(.96);transition:opacity .35s,transform .35s}
+  #piada.on{opacity:1;transform:none}
+  #piada .quem{display:flex;align-items:center;gap:10px;padding:8px 18px 8px 8px;border-radius:24px 24px 24px 6px;background:rgba(20,6,30,.85);border:2px solid rgba(255,255,255,.25);font:800 24px Nunito,sans-serif;color:#fff}
+  #piada .quem img,#piada .quem .av{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:none;display:grid;place-items:center;font:900 24px Nunito,sans-serif;background:linear-gradient(135deg,var(--rosa),var(--roxo))}
+  #piada .quem span{min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  #piada .quem b{color:var(--ouro);margin-right:6px}
+  #piada .resp{position:relative;margin:12px 0 0 34px;padding:14px 20px 16px;border-radius:26px;background:linear-gradient(135deg,#ffcc33,#ff3d8b);color:#1b0d2b;font:900 29px/1.18 Nunito,sans-serif;box-shadow:0 8px 26px rgba(0,0,0,.45);border:4px solid #fff}
+  #piada .resp .mic{display:block;font:400 22px 'Lilita One',Nunito,sans-serif;letter-spacing:1px;color:#5a0f3a;margin-bottom:4px}
+  #piada .resp::before{content:"";position:absolute;left:28px;top:-16px;border:12px solid transparent;border-bottom:16px solid #fff;border-top:0}
   #feed{position:absolute;left:24px;bottom:210px;z-index:5;width:640px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
   .fp{display:flex;align-items:center;gap:10px;max-width:100%;padding:6px 20px 6px 6px;border-radius:40px;background:linear-gradient(90deg,rgba(122,60,255,.92),rgba(196,0,90,.88));border:2px solid rgba(255,255,255,.35);font:900 26px Nunito,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:entraF .35s ease-out}
   .fp img,.fp .av{width:46px;height:46px;border-radius:50%;object-fit:cover;flex:none}
@@ -124,6 +144,7 @@
     <div class="par vazio" id="pNoiva"></div>
   </div>
   <div id="destaque"><div class="n lil"></div></div>
+  <div id="piada"><div class="quem"></div><div class="resp"><span class="mic">🎤 DJ PALHAÇO</span><span class="t"></span></div></div>
   <div id="feed"></div>
   <div id="chamada" class="lil">COMENTE PRA ENTRAR NO BAILE</div>
   <div id="credito"></div>
@@ -409,7 +430,7 @@ function dupla(){ const ds=[...DS.values()].filter(d=>!d.andando&&!d.trem&&!d.no
   if(!b) return; const passo=rndA(SOLOS2), dur=8, ini=Math.ceil(bt);
   const clipD=MIX?MIX.dancas[Math.floor(Math.random()*MIX.dancas.length)]:null;
   for(const [x,y] of [[a,b],[b,a]]){ if(MIX) mixDancar(x,clipD,0,9); else fazer(x,passo,ini+dur-bt,ini); x.olhar=y; }
-  cam.par=[a,b]; plano('dupla',7,1); mostrarDestaqueTxt(`${avatar(a.info)}${esc(a.info.name)} <span class="e">&</span> ${avatar(b.info)}${esc(b.info.name)}`); }
+  cam.par=[a,b]; plano('dupla',7,1); mostrarDestaqueTxt(`${avatar(a.info)}${rotulo(a.info,22)} <span class="e">&</span> ${avatar(b.info)}${rotulo(b.info,22)}`); }
 function trem(){ const ds=[...DS.values()].filter(d=>!d.andando&&!d.trem&&!d.noivo); if(ds.length<4) return;
   const n=Math.min(9,Math.max(4,Math.floor(ds.length/3))); const lista=ds.sort(()=>Math.random()-.5).slice(0,n); const a0=Math.random()*VOLTA;
   lista.forEach((d,i)=>{ d.trem={ini:relogio,i,a0,de:d.grupo.position.clone()}; }); cam.trem=lista[0]; plano('trem',9,2); }
@@ -474,7 +495,7 @@ function sortearSolo(ag){
     b.vistoSolo=ag; spot.ds=[a,b]; spot.ate=ag+seg*1000;
     const clip=MIX&&MIX.dancas.length?MIX.dancas[Math.floor(Math.random()*MIX.dancas.length)]:null;
     for(const [p,q] of [[a,b],[b,a]]){ if(MIX&&p.boneco.mixamo) mixDancar(p,clip,0,seg+1); p.olhar=q; }
-    cam.ate=0; cam.prioridade=0; cam.par=[a,b]; plano('dupla',seg,4); mostrarDestaqueTxt(`${avatar(a.info)}${esc(a.info.name)} <span class="e">&</span> ${avatar(b.info)}${esc(b.info.name)}`);
+    cam.ate=0; cam.prioridade=0; cam.par=[a,b]; plano('dupla',seg,4); mostrarDestaqueTxt(`${avatar(a.info)}${rotulo(a.info,22)} <span class="e">&</span> ${avatar(b.info)}${rotulo(b.info,22)}`);
   } else { spot.ds=[a]; spot.ate=ag+seg*1000; cam.ate=0; cam.prioridade=0; focar(a,seg,4); }
 }
 function cuidarSolo(){ const ag=performance.now();
@@ -483,8 +504,10 @@ function cuidarSolo(){ const ag=performance.now();
   if(!spot.ds&&ag>spot.prox&&DS.size>=2) sortearSolo(ag); }
 function focar(d,seg=7,prio=1){ if(!d||performance.now()<cam.ate&&prio<cam.prioridade) return; cam.cortar=cam.plano!=='destaque'||cam.foco!==d; cam.plano='destaque'; cam.foco=d; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; cam.lado=Math.random()<.5?-1:1; mostrarDestaque(d); if(!d.andando&&!d.trem&&!(coreo.passo&&bt<coreo.ate)&&!d.boneco.mixamo) fazer(d,rndA(SOLOS2)); }
 function plano(nome,seg=9,prio=0){ if(performance.now()<cam.ate&&prio<cam.prioridade) return; cam.cortar=cam.plano!==nome; cam.plano=nome; cam.foco=null; cam.ate=performance.now()+seg*1000; cam.t0=performance.now(); cam.prioridade=prio; esconderDestaque(); }
-function mostrarDestaqueTxt(h){ if(holo.d&&performance.now()>=holo.pausa) return; $('destaque').classList.toggle('dois',h.includes('class="e"')); if(spot.ds&&performance.now()<spot.ate&&cam.plano==='dupla'&&!h.includes(esc(spot.ds[0].info.name))) return; $('destaque').firstElementChild.innerHTML=h; $('destaque').classList.add('on'); }
-function mostrarDestaque(d){ if(holo.d&&d!==holo.d&&performance.now()>=holo.pausa) return; $('destaque').classList.remove('dois'); $('destaque').firstElementChild.innerHTML=`${avatar(d.info)}${esc(d.info.name)}`; $('destaque').classList.add('on'); }
+function mostrarDestaqueTxt(h){ if(holo.d&&performance.now()>=holo.pausa) return; $('destaque').classList.toggle('dois',h.includes('class="e"')); if(spot.ds&&performance.now()<spot.ate&&cam.plano==='dupla'&&!h.includes(rotulo(spot.ds[0].info,22))) return; $('destaque').firstElementChild.innerHTML=h; $('destaque').classList.add('on'); }
+// o que aparece no destaque: o comentário da pessoa (se tiver), senão o nome
+function rotulo(info,max=48){ const f=info&&info.fala?String(info.fala).trim():''; if(!f) return `<span class="tx">${esc(info&&info.name||'')}</span>`; const c=Array.from(f); return `<span class="tx fala">“${esc(c.length>max?c.slice(0,max-1).join('')+'…':f)}”</span>`; }
+function mostrarDestaque(d){ if(holo.d&&d!==holo.d&&performance.now()>=holo.pausa) return; $('destaque').classList.remove('dois'); $('destaque').firstElementChild.innerHTML=`${avatar(d.info)}${rotulo(d.info)}`; $('destaque').classList.add('on'); }
 function esconderDestaque(){ if(holo.d&&performance.now()>=holo.pausa) return; $('destaque').classList.remove('on'); }
 function diretor(){ // escolhe o próximo ângulo sozinho, como um drone filmando o baile
   if(performance.now()<cam.ate) return;
@@ -540,7 +563,8 @@ function posDJtag(){ if(!djDono) return; const t=$('djtag'); (dj.partes&&dj.part
 function telaDe(d,altura=2.5){ vt.set(d.grupo.position.x,altura,d.grupo.position.z).project(camera); if(vt.z>1) return null; return { x:(vt.x*.5+.5)*1080, y:(-vt.y*.5+.5)*1920, z:vt.z }; }
 
 // ================= música =================
-const musica=criarMusicaBaile();
+let vozDJ=null; // áudio do DJ comediante tocando agora (a música abaixa)
+const musica=criarMusicaBaile({ falando:()=>!!(vozDJ&&!vozDJ.paused&&!vozDJ.ended) });
 ['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>musica.ligar()));
 const NOMES_M=(window.BaileMotor&&window.BaileMotor.MUSICAS)||['Funk do Abismo','Forró da Roda','Disco Assombrado','Pagodinho do Palhaço'];
 function mostrarMusica(i,nome){ if($('musica')) $('musica').textContent='🎵 '+(musica.estilo==='mp3'?'Música '+(i+1):(nome||NOMES_M[i%NOMES_M.length])); }
@@ -645,7 +669,18 @@ function handle(m){
     case 'like': musica.esquentar(Math.min(.04,(m.likes||1)*.002)); break;
     case 'snapshot': setConn(m.tiktok); musica.config(m.musica); estadoInicial(m.baile); break;
     case 'tiktok': setConn(m); break; case 'config': musica.config(m.musica); break;
+    case 'piada': mostrarPiada(m); break;
   }
+}
+// ---------- DJ comediante: mostra o comentário escolhido e a resposta, e toca a voz ----------
+function mostrarPiada(m){ const el=$('piada'); if(!el) return; const u=m.user||{};
+  el.querySelector('.quem').innerHTML=`${avatar(u)}<span><b>${esc(u.name||'')}</b>${esc(m.comentario||'')}</span>`;
+  el.querySelector('.t').textContent=m.resposta||''; el.classList.add('on');
+  const d=DS.get(u.id); if(d){ d.info.ultimo=Date.now(); try{ acao(d,'acenar'); }catch(e){} }
+  let ms=Math.max(9000,String(m.resposta||'').split(/\s+/).length*520+3500);
+  if(vozDJ){ try{ vozDJ.pause(); }catch(e){} vozDJ=null; }
+  if(m.audio){ const a=new Audio(m.audio); a.volume=1; vozDJ=a; a.onloadedmetadata=()=>{ if(isFinite(a.duration)) { ms=Math.max(ms,a.duration*1000+2500); clearTimeout(mostrarPiada.t); mostrarPiada.t=setTimeout(()=>el.classList.remove('on'),ms); } }; a.play().catch(()=>{}); }
+  clearTimeout(mostrarPiada.t); mostrarPiada.t=setTimeout(()=>el.classList.remove('on'),ms);
 }
 function setConn(t){ if(!t||!$('conn')) return; $('conn').textContent=t.connected?`AO VIVO @${t.username}`:(t.username?`aguardando a live de @${t.username}…`:'modo teste'); }
 (function conectar(){ if(window.__demo) return; let ws; try{ ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/?pagina=baile'); }catch(e){ return; } window.__ws=ws;

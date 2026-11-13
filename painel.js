@@ -24,6 +24,7 @@ module.exports = function painel(ctx) {
       ok: true, config: CFG.publico(), tiktok: ctx.tiktok(), stats: { ...stats, minutos: Math.floor((Date.now() - stats.inicio) / 60000) },
       registro: registro.slice(-40).reverse(),
       link: `http://localtest.me:${PORT}/baile.html`, telas: ctx.somTelas(),
+      comediante: ctx.comediante ? ctx.comediante.estado() : null,
       baile: { naRoda: e.roda.length, resta: e.resta, intervalo: e.intervalo, noivo: e.noivo, noiva: e.noiva, duracao: e.cfg.duracao, maximo: e.cfg.maximo },
     };
   }
@@ -42,6 +43,14 @@ module.exports = function painel(ctx) {
       if (typeof b.atualizacao.repo === 'string' && /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(b.atualizacao.repo)) novo.atualizacao.repo = b.atualizacao.repo;
       if (b.atualizacao.removerToken) novo.atualizacao.token = '';
       else if (typeof b.atualizacao.token === 'string' && b.atualizacao.token.trim().length > 10) novo.atualizacao.token = b.atualizacao.token.trim();
+    }
+    if (b.comediante) {
+      const c = b.comediante, a = atual.comediante || {}; novo.comediante = {};
+      if (c.ligado !== undefined) novo.comediante.ligado = !!c.ligado;
+      if (c.voz !== undefined) novo.comediante.voz = !!c.voz;
+      if (c.intervalo !== undefined) novo.comediante.intervalo = num(c.intervalo, 1, 30, a.intervalo || 3);
+      if (c.removerChave) novo.comediante.chave = '';
+      else if (typeof c.chave === 'string' && c.chave.trim().length > 15) novo.comediante.chave = c.chave.trim().slice(0, 200);
     }
     CFG.atualizar(novo);
     if (novo.musica) broadcast({ type: 'config', musica: CFG.get().musica });
@@ -65,6 +74,11 @@ module.exports = function painel(ctx) {
   app.post('/api/painel/tiktok', (req, res) => {
     if ((req.body || {}).acao === 'desconectar') ctx.desconectar(); else ctx.conectar();
     setTimeout(() => res.json(estado()), 300);
+  });
+
+  // ----- DJ comediante: testar agora -----
+  app.post('/api/painel/comediante', async (_req, res) => {
+    try { res.json({ ...(await ctx.comediante.rodada(true)), estado: ctx.comediante.estado() }); } catch (e) { res.json({ ok: false, erro: e.message }); }
   });
 
   // ----- eventos de teste -----

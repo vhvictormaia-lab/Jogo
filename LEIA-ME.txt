@@ -40,6 +40,14 @@ PAINEL (http://localhost:3000/painel.html, só funciona no computador da live)
 - Botões de teste: comentário, "menina", "menino", rosa, rosquinha, presentão, seguir, compartilhar, curtidas, encher a roda.
 - Música (ligada e volume), palavras proibidas, lista do que está acontecendo e Atualizar sistema.
 
+DJ COMEDIANTE (cartão "DJ comediante" no painel)
+- A cada 3 minutos (você escolhe de 1 a 10) o DJ pega um comentário do chat e responde brincando.
+- A resposta aparece num balão no canto de cima da tela e sai na voz em português do Windows (a música abaixa enquanto ele fala).
+- Ele só fala na tela do baile: não escreve nada no chat do TikTok.
+- IA grátis (opcional): entre em aistudio.google.com com sua conta Google, clique em "Get API key" > "Create API key" e cole no painel.
+  Sem chave, ele usa piadas prontas. Palavrões e pedidos de presente são bloqueados nas respostas.
+- Se não sair voz: Configurações do Windows > Hora e idioma > Fala > adicionar a voz "Português (Brasil)".
+
 MÚSICAS (pasta sua, a atualização nunca apaga)
 - musicas-baile: seus MP3. Sem MP3, tocam as músicas do próprio jogo (funk, forró, disco e pagode).
 

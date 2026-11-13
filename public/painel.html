@@ -131,6 +131,17 @@
   </section>
 
   <section>
+    <h2>🎤 DJ comediante</h2>
+    <p class="dica">A cada X minutos o DJ escolhe um comentário do chat e responde brincando: aparece num balão na tela e sai na voz do Windows. Ele não escreve nada no chat do TikTok.</p>
+    <div class="linha"><label><input type="checkbox" id="dj-ligado"> Ligado</label><label><input type="checkbox" id="dj-voz"> Com voz</label></div>
+    <div class="faixa"><label for="dj-int">A cada</label><input type="range" id="dj-int" min="1" max="10"><output id="o-dj-int"></output></div>
+    <p class="dica">IA grátis (opcional): entre em <b>aistudio.google.com</b> com sua conta Google, clique em <b>Get API key</b> → <b>Create API key</b> e cole aqui. Sem chave, ele usa piadas prontas.</p>
+    <div class="linha"><input type="password" id="dj-chave" class="cresce" placeholder="chave da IA do Google (opcional)" autocomplete="off" aria-label="Chave da IA do Google"></div>
+    <div class="linha"><button class="pri" id="b-dj-salvar">Salvar</button><button id="b-dj-testar">Testar agora</button><button id="b-dj-tirar">Tirar a chave</button></div>
+    <div class="aviso" id="aviso-dj"></div>
+  </section>
+
+  <section>
     <h2>📜 Acontecendo agora</h2>
     <ul class="lista" id="registro"></ul>
   </section>
@@ -170,6 +181,8 @@ let cfgCarregada=false;
 function preencherConfig(c){
   $('usuario').value=c.usuario||'';
   $('mus-ligada').checked=c.musica.ligada!==false; $('mus-vol').value=c.musica.volume; $('o-mus-vol').textContent=c.musica.volume;
+  const dj=c.comediante||{}; $('dj-ligado').checked=dj.ligado!==false; $('dj-voz').checked=dj.voz!==false; $('dj-int').value=dj.intervalo||3; $('o-dj-int').textContent=(dj.intervalo||3)+' min';
+  $('dj-chave').placeholder=dj.temChave?'chave salva ✔ (cole outra para trocar)':'chave da IA do Google (opcional)';
   $('up-repo').value=c.atualizacao.repo; $('up-token').placeholder=c.atualizacao.temToken?'token salvo':'token do GitHub (opcional)';
 }
 const foto=(el,u)=>{ el.style.backgroundImage=u&&u.avatar?`url('${String(u.avatar).replace(/'/g,'%27')}')`:''; };
@@ -191,6 +204,12 @@ function mostrar(e){
   if(!baileUI){ baileUI=true; $('b-duracao').value=b.duracao; $('o-b-duracao').textContent=b.duracao+' min'; $('b-maximo').value=b.maximo; $('o-b-maximo').textContent=b.maximo; }
   $('registro').innerHTML=e.registro.length?e.registro.map(r=>`<li><span class="ft" style="${r.foto?`background-image:url('${esc(r.foto)}')`:''}"></span><span class="tx"><b>${esc(r.nome)}</b><span>${esc(r.texto)}</span></span><span class="tag ${r.tipo}">${esc(r.tipo)}</span></li>`).join(''):'<li class="vazio">Os presentes, seguidores e comentários aparecem aqui.</li>';
   if(!cfgCarregada){ cfgCarregada=true; preencherConfig(e.config); }
+  const dj=e.comediante; if(dj){ const av=$('aviso-dj'); const p=[];
+    p.push(dj.ligado===false?'Desligado.':`Próxima resposta em ${Math.floor(dj.proximaEm/60)}:${String(dj.proximaEm%60).padStart(2,'0')}.`);
+    p.push(dj.temChave?(dj.ia&&dj.ia.erro?'IA: '+dj.ia.erro+' (usando piada pronta).':'IA do Google ligada.'):'Sem chave: piadas prontas.');
+    const vi=dj.vozInfo||{}; if(dj.voz===false) p.push('Voz desligada.'); else if(vi.nome) p.push('Voz: '+vi.nome+'.'); else if(vi.erro) p.push(vi.erro); else if(!dj.windows) p.push('Voz só funciona no Windows.');
+    if(dj.ultimo) p.push(`Última: ${dj.ultimo.user.name} — "${dj.ultimo.resposta}"`);
+    av.textContent=p.join(' '); av.className='aviso'+((dj.ia&&dj.ia.erro)||vi.erro?' erro':''); }
 }
 async function atualizarEstado(){ mostrar(await api('estado')); }
 setInterval(atualizarEstado,2000); atualizarEstado();
@@ -209,6 +228,10 @@ document.addEventListener('click',async ev=>{ const b=ev.target.closest('button'
   if(b.dataset.teste!==undefined){ const [,ev2]=TESTES[+b.dataset.teste]; await api('teste',{...ev2,...pessoa()}); toast('Enviado.'); }
   if(b.id==='b-encher'){ for(let i=0;i<40;i++) await api('teste',{type:'chat',text:'eu',...pessoa()}); toast('40 pessoas comentaram.'); }
 });
+$('dj-int').oninput=e=>$('o-dj-int').textContent=e.target.value+' min';
+$('b-dj-salvar').onclick=async()=>{ const ch=$('dj-chave').value.trim(); mostrar(await api('config',{comediante:{ligado:$('dj-ligado').checked,voz:$('dj-voz').checked,intervalo:+$('dj-int').value,...(ch?{chave:ch}:{})}})); $('dj-chave').value=''; cfgCarregada=false; toast('DJ salvo.'); };
+$('b-dj-tirar').onclick=async()=>{ mostrar(await api('config',{comediante:{removerChave:true}})); cfgCarregada=false; toast('Chave removida.'); };
+$('b-dj-testar').onclick=async()=>{ const b=$('b-dj-testar'); b.disabled=true; toast('O DJ está pensando…'); const r=await api('comediante',{}); b.disabled=false; toast(r.ok?(r.daIA?'Resposta da IA':'Piada pronta')+(r.voz?' com voz':' (sem voz)')+': '+r.resposta:'Não deu: '+(r.erro||'erro')); };
 $('mus-vol').oninput=e=>$('o-mus-vol').textContent=e.target.value;
 $('b-salvar-musica').onclick=async()=>{ await api('config',{musica:{ligada:$('mus-ligada').checked,volume:+$('mus-vol').value}}); toast('Música salva.'); };
 api('palavras').then(r=>{ if(r.ok) $('palavras').value=r.texto; });

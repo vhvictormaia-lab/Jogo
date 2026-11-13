@@ -101,6 +101,10 @@ app.get('/api/baile/arquivos', (_req, res) => {
   });
 });
 
+// ---------- DJ comediante: responde um comentário a cada X minutos (texto + voz na tela do baile) ----------
+const comediante = require('./comediante')({ CFG, Texto, broadcast, baile });
+app.use('/api/voz', (req, res) => { const id = String(req.url || '').split('?')[0].replace(/^\/+|\.wav$/g, ''); const b = comediante.audio(id); if (!b) { res.statusCode = 404; return res.end(); } res.setHeader('Content-Type', 'audio/wav'); res.setHeader('Cache-Control', 'no-store'); res.end(b); });
+
 // ---------- estatísticas e registro para o painel ----------
 const stats = { espectadores: 0, curtidas: 0, presentes: 0, diamantes: 0, seguidores: 0, compartilhamentos: 0, comentarios: 0, entradas: 0, inicio: Date.now() };
 const registro = [];
@@ -122,7 +126,7 @@ function handleGift(user, giftName, diamonds, count) {
 }
 function handleFollow(user) { stats.seguidores++; registrar('seguiu', user, 'seguiu'); baile.seguiu(user); }
 function handleLike(user, likes) { stats.curtidas += likes; broadcast({ type: 'like', likes }); baile.curtidas(user, likes); }
-function handleChat(user, text) { stats.comentarios++; registrar('comentario', user, Texto.podeLer(text) || '***'); baile.chat(user, text); }
+function handleChat(user, text) { stats.comentarios++; registrar('comentario', user, Texto.podeMostrar(text) || '***'); baile.chat(user, text); comediante.comentou({ ...user, name: Texto.nomeTela(user.name) }, text); }
 function handleShare(user) { stats.compartilhamentos++; registrar('compartilhou', user, 'compartilhou a live'); baile.compartilhou(user); }
 function handleJoin(user) { stats.entradas++; baile.entrou(user); }
 
@@ -229,7 +233,7 @@ async function connectTikTok() {
 }
 
 // ---------- painel (só funciona neste computador) ----------
-require('./painel')({ app, express, CFG, stats, registro, broadcast, PORT, baile, somTelas,
+require('./painel')({ app, express, CFG, stats, registro, broadcast, PORT, baile, somTelas, comediante,
   tiktok: () => tiktokStatus, conectar: () => connectTikTok(), desconectar: () => pararTikTok(),
   trocarUsuario: (u) => { USERNAME = u; tiktokStatus = { connected: false, username: u, error: null }; },
   sim: (b) => simular(b) });
