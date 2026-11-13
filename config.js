@@ -26,7 +26,10 @@ function mesclar(base, novo) {
 }
 
 let cfg = mesclar(PADRAO, {});
-try { cfg = mesclar(PADRAO, JSON.parse(fs.readFileSync(ARQ, 'utf8'))); } catch {}
+// se o config.json estragar (PC desligou no meio, OneDrive...), usa a cópia de segurança: não perde chaves nem token
+for (const arq of [ARQ, ARQ + '.bak']) {
+  try { cfg = mesclar(PADRAO, JSON.parse(fs.readFileSync(arq, 'utf8'))); if (arq !== ARQ) console.log('⚠️  Configurações recuperadas da cópia de segurança.'); break; } catch {}
+}
 // uma vez só: o baile passa a ter 5 minutos e 30 pessoas (se depois você mudar no painel, fica o seu)
 if (!cfg.baileV3) { cfg.baile.maximo = 30; cfg.baileV3 = true; setTimeout(() => salvar(), 0); }
 if (!cfg.baileV2) { cfg.baile.duracao = 5; cfg.baile.maximo = 30; cfg.musica.volume = Math.max(40, cfg.musica.volume || 0); cfg.baileV2 = true; setTimeout(() => salvar(), 0); }
@@ -35,7 +38,13 @@ for (const k of ['modo', 'openai', 'vozes', 'vozEspectador', 'falaSolta', 'quiz'
 if (!cfg.usuario) { try { cfg.usuario = fs.readFileSync(ARQ_USUARIO, 'utf8').trim().replace(/^@/, ''); } catch {} }
 
 function salvar() {
-  try { fs.mkdirSync(DIR, { recursive: true }); fs.writeFileSync(ARQ, JSON.stringify(cfg, null, 2)); } catch (e) { console.error('Não consegui salvar as configurações:', e.message); }
+  const txt = JSON.stringify(cfg, null, 2);
+  try {
+    fs.mkdirSync(DIR, { recursive: true });
+    try { const atual = fs.readFileSync(ARQ, 'utf8'); JSON.parse(atual); fs.writeFileSync(ARQ + '.bak', atual); } catch {} // guarda a versão boa anterior
+    const tmp = ARQ + '.tmp'; fs.writeFileSync(tmp, txt);
+    try { fs.renameSync(tmp, ARQ); } catch { fs.writeFileSync(ARQ, txt); try { fs.rmSync(tmp, { force: true }); } catch {} } // OneDrive às vezes trava o arquivo
+  } catch (e) { console.error('Não consegui salvar as configurações:', e.message); }
   if (cfg.usuario) { try { fs.writeFileSync(ARQ_USUARIO, cfg.usuario); } catch {} }
 }
 function atualizar(parcial) { cfg = mesclar(cfg, parcial); salvar(); return cfg; }

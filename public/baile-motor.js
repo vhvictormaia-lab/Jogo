@@ -171,6 +171,8 @@
       for (const p of fogosEspera.values()) { const dd = entrar(p, 'presente', true); if (!dd) continue; if ((sexo.get(p.id) || 'm') === 'f') noiva = p.id; else noivo = p.id; }
       if (fogosEspera.size && (noivo || noiva)) emitir({ ev: 'noivos', noivo: noivo && roda.get(noivo) ? publicoD(roda.get(noivo)) : null, noiva: noiva && roda.get(noiva) ? publicoD(roda.get(noiva)) : null, novoNoivo: noivo, novaNoiva: noiva });
       fogosEspera.clear();
+      // live longa: esquece quem sumiu há mais de 3 horas (não deixa a memória crescer sem fim)
+      for (const [id, t] of visto) if (agora() - t > 3 * 3600e3 && !roda.has(id)) { visto.delete(id); pessoas.delete(id); sexo.delete(id); }
     }
     function iniciar() { if (timer) return; fimEm = agora() + cfg.duracao * 60000; timer = setInterval(tick, 1000); }
     function parar() { clearInterval(timer); timer = null; }

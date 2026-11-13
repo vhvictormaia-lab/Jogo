@@ -10,8 +10,6 @@ const W = (re) => new RegExp(re.source.replace(/\\b/g, '(?:(?<![\\p{L}\\p{N}])(?
 const LISTA = 'porra|porr\\w*|caralh\\w*|merda|puta|puto|putaria|putinha|fdp|vsf|vtnc|tnc|pqp|pnc|buceta|bucet\\w*|cu|cuzao|cuzão|arrombad\\w*|viad\\w*|bicha|corno|cornudo|piroca|pau|rola|foder|fode|fodase|foda|fodid\\w*|fud\\w*|desgraça\\w*|desgraca\\w*|otario\\w*|otário\\w*|idiota|imbecil|retardad\\w*|macac[oa]s?|nazi\\w*|estupr\\w*|matar|morre|suicid\\w*|sexo|sexy|nude\\w*|nudes|pelad\\w*|gostos\\w*|safad\\w*|tes[aã]o|pinto|xota|xoxota|bct|krl|crl|prr|cacet\\w*|bost\\w*|vagabund\\w*|piranh\\w*|prostitut\\w*|rapariga|quenga|punhet\\w*|siririca|boquete|chupa|chupad\\w*|penis|pênis|vagina|piru|pica|xereca|xana|babaca|cretin\\w*|escrot\\w*|nojent\\w*|lixo|fuck\\w*|shit|bitch|dick|pussy|nigg\\w*|sex';
 const PALAVROES = W(new RegExp('\\b(' + LISTA + ')\\b', 'i'));
 const semAcento = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-// mesma lista, mas com letras repetidas juntadas (porra -> pora), para pegar "porraaaa", "caaaralho"
-const PALAVROES_1 = W(new RegExp('\\b(' + semAcento(LISTA).replace(/([a-z])\1+/g, '$1') + ')\\b', 'i'));
 // troca truques comuns: p0rr4, c@ralho, p.o.r.r.a, p o r r a
 const LEET = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b', '@': 'a', '$': 's', '!': 'i' };
 function variantes(t) {
@@ -20,14 +18,16 @@ function variantes(t) {
   const c = b.replace(/(^|\s)((?:[a-z][\s.\-_*]){1,}[a-z])(?=\s|$)/g, (m, ini, letras) => ini + letras.replace(/[\s.\-_*]/g, '')); // p o r r a -> porra
   const d = c.replace(/([a-z])[.\-_*]+(?=[a-z])/g, '$1'); // p.orr-a -> porra
   const e = a.replace(/[0-9_]+/g, ' '); // fdp123 -> fdp
-  return [t, a, b, c, d, e];
+  // letras esticadas: "porraaaa", "caaaralho" (3 ou mais iguais viram 1) e "porrrrra" (viram 2)
+  const f = d.replace(/([a-z])\1{2,}/g, '$1'), g = d.replace(/([a-z])\1{2,}/g, '$1$1');
+  return [t, a, b, c, d, e, f, g];
 }
 // filtro extra (no servidor: palavras-proibidas.txt). Padrão: nada.
 let extraProibido = () => false;
 function setExtraProibido(fn) { extraProibido = typeof fn === 'function' ? fn : () => false; }
 function proibido(t) {
   for (const v of variantes(t)) {
-    if (PALAVROES.test(v) || PALAVROES_1.test(v.replace(/([a-z])\1+/g, '$1')) || extraProibido(v)) return true;
+    if (PALAVROES.test(v) || extraProibido(v)) return true;
   }
   return false;
 }

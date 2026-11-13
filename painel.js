@@ -9,11 +9,7 @@ module.exports = function painel(ctx) {
   const RAIZ = __dirname;
   const ARQ_PALAVRAS = path.join(RAIZ, 'palavras-proibidas.txt');
 
-  const local = (req, res, next) => {
-    const ip = String(req.socket.remoteAddress || '');
-    if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return next();
-    res.status(403).json({ ok: false, erro: 'O painel só funciona no computador da live.' });
-  };
+  const local = require('./local').soLocal; // só este PC, e só pelas páginas do próprio jogo
   app.use('/api/painel', local);
 
   const num = (v, min, max, padrao) => { const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : padrao; };

@@ -24,7 +24,8 @@ process.on('unhandledRejection', (e) => console.error('Erro:', e?.message || e))
 process.on('uncaughtException', (e) => console.error('Erro:', e?.message || e));
 
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+// só as páginas do próprio jogo (baile e painel) se conectam: um site qualquer aberto no navegador não
+const wss = new WebSocketServer({ server, verifyClient: ({ origin }) => { if (!origin) return true; try { return require('./local').HOST_OK.test(new URL(origin).host); } catch { return false; } } });
 let tiktokStatus = { connected: false, username: USERNAME, error: null };
 function broadcast(msg) {
   const s = JSON.stringify(msg);
@@ -102,7 +103,7 @@ app.get('/api/baile/arquivos', (_req, res) => {
 });
 
 // ---------- DJ comediante: responde um comentário a cada X minutos (texto + voz na tela do baile) ----------
-const comediante = require('./comediante')({ CFG, Texto, broadcast, baile });
+const comediante = require('./comediante')({ CFG, Texto, broadcast, baile, telas: () => somTelas() });
 app.use('/api/voz', (req, res) => { const id = String(req.url || '').split('?')[0].replace(/^\/+|\.wav$/g, ''); const b = comediante.audio(id); if (!b) { res.statusCode = 404; return res.end(); } res.setHeader('Content-Type', 'audio/wav'); res.setHeader('Cache-Control', 'no-store'); res.end(b); });
 
 // ---------- estatísticas e registro para o painel ----------
@@ -150,9 +151,8 @@ function simular(b) {
   else return false;
   return true;
 }
-app.post('/api/sim', (req, res) => {
-  const ip = String(req.socket.remoteAddress || '');
-  if (!(ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1')) return res.status(403).json({ ok: false });
+const { soLocal } = require('./local');
+app.post('/api/sim', soLocal, (req, res) => {
   if (!simular(req.body || {})) return res.status(400).json({ ok: false, error: 'tipo desconhecido' });
   res.json({ ok: true });
 });

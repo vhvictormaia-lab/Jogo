@@ -75,7 +75,7 @@ function pronta(nome, texto) {
   return sorteia(grupo ? grupo[1] : GERAIS).replace(/\{n\}/g, nome).replace(/\{t\}/g, t).replace(/\{m\}/g, m).replace(/\{M\}/g, M);
 }
 
-module.exports = function criarComediante({ CFG, Texto, broadcast, baile, porta }) {
+module.exports = function criarComediante({ CFG, Texto, broadcast, baile, telas }) {
   const recentes = []; // { t, user, texto }
   let ultimo = null, proxima = Date.now() + 60000, ocupado = false, vozInfo = { nome: null, erro: null }, ultimaIA = { ok: null, erro: null };
   const audios = new Map(); // id -> Buffer (wav)
@@ -90,7 +90,10 @@ module.exports = function criarComediante({ CFG, Texto, broadcast, baile, porta 
 
   function escolher() {
     const janela = Math.max(60, (cfg().intervalo || 3) * 60) * 1000;
-    const vale = recentes.filter((c) => Date.now() - c.t < janela && (!ultimo || c.user.id !== ultimo.user.id));
+    // só os últimos minutos, nunca a mesma pessoa duas vezes seguidas, e cada pessoa conta uma vez (o comentário mais novo dela)
+    const porPessoa = new Map();
+    for (const c of recentes) if (Date.now() - c.t < janela && !c.usado && (!ultimo || c.user.id !== ultimo.user.id)) porPessoa.set(c.user.id, c);
+    const vale = [...porPessoa.values()].slice(-8); // os mais recentes: o DJ responde o que acabou de acontecer
     if (!vale.length) return null;
     // prefere comentário com mais de uma palavra (dá mais assunto), mas qualquer um serve
     const bons = vale.filter((c) => /\p{L}{2,}/u.test(c.texto) && c.texto.length >= 4);
@@ -130,6 +133,7 @@ module.exports = function criarComediante({ CFG, Texto, broadcast, baile, porta 
           }
           const out = (j.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join(' ').trim();
           if (out) { ultimaIA = { ok: modelo + qual, erro: null, chaves: ks.length }; return out; }
+          if (j.promptFeedback?.blockReason || /SAFETY|PROHIBITED|BLOCK/i.test(String(j.candidates?.[0]?.finishReason || ''))) { ultimaIA = { ok: null, erro: 'a IA preferiu não responder esse (usei piada pronta)', chaves: ks.length }; return null; }
           erro = 'IA não respondeu nada' + qual;
         } catch (e) { erro = (e.name === 'TimeoutError' ? 'IA demorou demais' : 'sem internet para a IA') + qual; if (e.name !== 'TimeoutError') break; }
       }
@@ -195,12 +199,16 @@ try {
 
   async function rodada(forcar) {
     const c = cfg();
-    if (ocupado || (!forcar && c.ligado === false)) return { ok: false, erro: 'desligado' };
+    if (ocupado) return { ok: false, erro: 'o DJ ainda está respondendo o anterior' };
+    if (!forcar && c.ligado === false) return { ok: false, erro: 'desligado' };
     let est = null; try { est = baile.estado(); } catch {}
     if (!forcar && est && est.intervalo) return { ok: false, erro: 'intervalo do casamento' };
+    // tela do baile fechada (ninguém vendo nem ouvindo): não gasta a IA à toa
+    if (!forcar && telas && telas().abertas === 0) return { ok: false, erro: 'a tela do baile não está aberta' };
     let alvo = escolher();
     if (!alvo && forcar) alvo = recentes[recentes.length - 1] || { user: { id: 'teste', name: 'Tester', avatar: null }, texto: 'Boa noite, cheguei no baile!' };
     if (!alvo) return { ok: false, erro: 'ninguém comentou nos últimos minutos' };
+    alvo.usado = true; // o mesmo comentário não é respondido duas vezes
     ocupado = true;
     try {
       const nome = Texto.nomeFalado ? Texto.nomeFalado(alvo.user) : alvo.user.name;
