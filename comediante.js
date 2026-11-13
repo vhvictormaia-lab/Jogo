@@ -98,34 +98,44 @@ module.exports = function criarComediante({ CFG, Texto, broadcast, baile, porta 
   }
 
   // ---------- IA (Gemini, plano grátis) ----------
+  // várias chaves: revezam uma por resposta (a 1ª, depois a 2ª...). Se uma falhar, tenta a próxima.
+  let vez = 0;
+  const chaves = () => { const c = cfg(); return [...(Array.isArray(c.chaves) ? c.chaves : []), c.chave].filter((k, i, a) => k && a.indexOf(k) === i); };
   async function perguntarIA(nome, texto) {
-    const c = cfg(); if (!c.chave) return null;
+    const ks = chaves(); if (!ks.length) return null;
+    const c = cfg();
     const lista = [c.modelo, ...MODELOS].filter((m, i, a) => m && a.indexOf(m) === i);
+    const ini = vez++ % ks.length;
     let erro = null;
-    for (const modelo of lista) {
-      try {
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:generateContent`, {
-          method: 'POST', signal: AbortSignal.timeout(12000),
-          headers: { 'content-type': 'application/json', 'x-goog-api-key': c.chave },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: SISTEMA }] },
-            contents: [{ role: 'user', parts: [{ text: `Comentário de ${nome}: ${texto}` }] }],
-            generationConfig: { temperature: 1, maxOutputTokens: 400 },
-          }),
-        });
-        if (r.status === 404) { erro = 'modelo ' + modelo + ' não existe'; continue; }
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          const msg = String(j.error?.message || '').slice(0, 140);
-          erro = r.status === 429 ? 'limite grátis da IA atingido (volta sozinho depois)' : [400, 401, 403].includes(r.status) ? 'o Google recusou a chave' + (msg ? ' (' + msg + ')' : '') : 'IA respondeu ' + r.status;
-          if ([400, 401, 403, 429].includes(r.status)) break; else continue;
-        }
-        const out = (j.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join(' ').trim();
-        if (out) { ultimaIA = { ok: modelo, erro: null }; return out; }
-        erro = 'IA não respondeu nada';
-      } catch (e) { erro = e.name === 'TimeoutError' ? 'IA demorou demais' : 'sem internet para a IA'; }
+    for (let t = 0; t < ks.length; t++) {
+      const k = (ini + t) % ks.length, chave = ks[k], qual = ks.length > 1 ? ` [chave ${k + 1}]` : '';
+      let trocarChave = false;
+      for (const modelo of lista) {
+        try {
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelo)}:generateContent`, {
+            method: 'POST', signal: AbortSignal.timeout(12000),
+            headers: { 'content-type': 'application/json', 'x-goog-api-key': chave },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: SISTEMA }] },
+              contents: [{ role: 'user', parts: [{ text: `Comentário de ${nome}: ${texto}` }] }],
+              generationConfig: { temperature: 1, maxOutputTokens: 400 },
+            }),
+          });
+          if (r.status === 404) { erro = 'modelo ' + modelo + ' não existe'; continue; }
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            const msg = String(j.error?.message || '').slice(0, 140);
+            erro = (r.status === 429 ? 'limite da IA atingido (volta sozinho depois)' : [400, 401, 403].includes(r.status) ? 'o Google recusou a chave' + (msg ? ' (' + msg + ')' : '') : 'IA respondeu ' + r.status) + qual;
+            if ([400, 401, 403, 429].includes(r.status)) { trocarChave = true; break; } else continue;
+          }
+          const out = (j.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text || '').join(' ').trim();
+          if (out) { ultimaIA = { ok: modelo + qual, erro: null, chaves: ks.length }; return out; }
+          erro = 'IA não respondeu nada' + qual;
+        } catch (e) { erro = (e.name === 'TimeoutError' ? 'IA demorou demais' : 'sem internet para a IA') + qual; if (e.name !== 'TimeoutError') break; }
+      }
+      if (!trocarChave && /sem internet/.test(erro || '')) break; // sem internet: nenhuma chave vai funcionar
     }
-    ultimaIA = { ok: null, erro }; return null;
+    ultimaIA = { ok: null, erro, chaves: ks.length }; return null;
   }
 
   function limparResposta(r) {
@@ -219,7 +229,7 @@ try {
     comentou,
     rodada,
     audio: (id) => audios.get(id) || null,
-    estado: () => ({ ...cfg(), chave: undefined, temChave: !!cfg().chave, proximaEm: Math.max(0, Math.round((proxima - Date.now()) / 1000)), vozInfo, ia: ultimaIA, ultimo,
+    estado: () => ({ ...cfg(), chave: undefined, chaves: undefined, temChave: chaves().length > 0, nChaves: chaves().length, proximaEm: Math.max(0, Math.round((proxima - Date.now()) / 1000)), vozInfo, ia: ultimaIA, ultimo,
       windows: process.platform === 'win32' }),
   };
 };

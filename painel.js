@@ -49,8 +49,12 @@ module.exports = function painel(ctx) {
       if (c.ligado !== undefined) novo.comediante.ligado = !!c.ligado;
       if (c.voz !== undefined) novo.comediante.voz = !!c.voz;
       if (c.intervalo !== undefined) novo.comediante.intervalo = num(c.intervalo, 1, 30, a.intervalo || 3);
-      if (c.removerChave) novo.comediante.chave = '';
-      else if (typeof c.chave === 'string' && c.chave.trim().length > 15) novo.comediante.chave = c.chave.trim().slice(0, 200);
+      if (c.removerChave) { novo.comediante.chave = ''; novo.comediante.chaves = []; }
+      else if (typeof c.chave === 'string') {
+        // uma ou várias chaves (separadas por espaço, vírgula ou linha): revezam uma por resposta
+        const ks = [...new Set(c.chave.split(/[\s,;]+/).map((k) => k.trim()).filter((k) => k.length > 15 && k.length < 200))].slice(0, 10);
+        if (ks.length) { novo.comediante.chaves = ks; novo.comediante.chave = ''; }
+      }
     }
     CFG.atualizar(novo);
     if (novo.musica) broadcast({ type: 'config', musica: CFG.get().musica });

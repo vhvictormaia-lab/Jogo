@@ -136,7 +136,8 @@
     <div class="linha"><label><input type="checkbox" id="dj-ligado"> Ligado</label><label><input type="checkbox" id="dj-voz"> Com voz</label></div>
     <div class="faixa"><label for="dj-int">A cada</label><input type="range" id="dj-int" min="1" max="10"><output id="o-dj-int"></output></div>
     <p class="dica">IA grátis (opcional): entre em <b>aistudio.google.com</b> com sua conta Google, clique em <b>Get API key</b> → <b>Create API key</b> e cole aqui. Sem chave, ele usa piadas prontas.</p>
-    <div class="linha"><input type="password" id="dj-chave" class="cresce" placeholder="chave da IA do Google (opcional)" autocomplete="off" aria-label="Chave da IA do Google"></div>
+    <p class="dica">Tem mais de uma chave? Cole todas juntas, separadas por espaço ou vírgula: elas revezam, uma por resposta.</p>
+    <div class="linha"><input type="password" id="dj-chave" class="cresce" placeholder="chave(s) da IA do Google (opcional)" autocomplete="off" aria-label="Chaves da IA do Google"></div>
     <div class="linha"><button class="pri" id="b-dj-salvar">Salvar</button><button id="b-dj-testar">Testar agora</button><button id="b-dj-tirar">Tirar a chave</button></div>
     <div class="aviso" id="aviso-dj"></div>
   </section>
@@ -182,7 +183,7 @@ function preencherConfig(c){
   $('usuario').value=c.usuario||'';
   $('mus-ligada').checked=c.musica.ligada!==false; $('mus-vol').value=c.musica.volume; $('o-mus-vol').textContent=c.musica.volume;
   const dj=c.comediante||{}; $('dj-ligado').checked=dj.ligado!==false; $('dj-voz').checked=dj.voz!==false; $('dj-int').value=dj.intervalo||3; $('o-dj-int').textContent=(dj.intervalo||3)+' min';
-  $('dj-chave').placeholder=dj.temChave?'chave salva ✔ (cole outra para trocar)':'chave da IA do Google (opcional)';
+  $('dj-chave').placeholder=dj.temChave?(dj.nChaves>1?dj.nChaves+' chaves salvas ✔ (revezando)':'chave salva ✔')+' — cole de novo para trocar':'chave(s) da IA do Google (opcional)';
   $('up-repo').value=c.atualizacao.repo; $('up-token').placeholder=c.atualizacao.temToken?'token salvo':'token do GitHub (opcional)';
 }
 const foto=(el,u)=>{ el.style.backgroundImage=u&&u.avatar?`url('${String(u.avatar).replace(/'/g,'%27')}')`:''; };
@@ -206,7 +207,7 @@ function mostrar(e){
   if(!cfgCarregada){ cfgCarregada=true; preencherConfig(e.config); }
   const dj=e.comediante; if(dj){ const av=$('aviso-dj'); const p=[];
     p.push(dj.ligado===false?'Desligado.':`Próxima resposta em ${Math.floor(dj.proximaEm/60)}:${String(dj.proximaEm%60).padStart(2,'0')}.`);
-    p.push(dj.temChave?(dj.ia&&dj.ia.erro?'IA: '+dj.ia.erro+' (usando piada pronta).':'IA do Google ligada.'):'Sem chave: piadas prontas.');
+    p.push(dj.temChave?(dj.ia&&dj.ia.erro?'IA: '+dj.ia.erro+' (usando piada pronta).':'IA do Google ligada'+(dj.nChaves>1?` (${dj.nChaves} chaves revezando)`:'')+'.'):'Sem chave: piadas prontas.');
     const vi=dj.vozInfo||{}; if(dj.voz===false) p.push('Voz desligada.'); else if(vi.nome) p.push('Voz: '+vi.nome+'.'); else if(vi.erro) p.push(vi.erro); else if(!dj.windows) p.push('Voz só funciona no Windows.');
     if(dj.ultimo) p.push(`Última: ${dj.ultimo.user.name} — "${dj.ultimo.resposta}"`);
     av.textContent=p.join(' '); av.className='aviso'+((dj.ia&&dj.ia.erro)||vi.erro?' erro':''); }

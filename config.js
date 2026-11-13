@@ -13,7 +13,7 @@ const PADRAO = {
   musica: { ligada: true, volume: 40 },          // 0 a 100
   baile: { duracao: 5, maximo: 30 },             // minutos de cada baile · pessoas na roda
   atualizacao: { repo: 'vhvictormaia-lab/Jogo', token: '', instalado: '' },
-  comediante: { ligado: true, intervalo: 3, voz: true, chave: '', modelo: '' }, // DJ que responde um comentário a cada X minutos
+  comediante: { ligado: true, intervalo: 3, voz: true, chave: '', chaves: [], modelo: '' }, // DJ que responde um comentário a cada X minutos
 };
 
 function mesclar(base, novo) {
@@ -43,7 +43,8 @@ function atualizar(parcial) { cfg = mesclar(cfg, parcial); salvar(); return cfg;
 function publico() {
   const c = JSON.parse(JSON.stringify(cfg));
   c.atualizacao.temToken = !!cfg.atualizacao.token; c.atualizacao.token = '';
-  c.comediante.temChave = !!cfg.comediante.chave; c.comediante.chave = '';
+  const ks = [...(cfg.comediante.chaves || []), cfg.comediante.chave].filter(Boolean);
+  c.comediante.temChave = ks.length > 0; c.comediante.nChaves = new Set(ks).size; c.comediante.chave = ''; c.comediante.chaves = [];
   return c;
 }
 
